@@ -23,6 +23,7 @@ public final class TrajectoryPropagationEngine {
     terminalSpeed: Double = 650, minimumDuration: Double = 0,
     controlSnapshot: FlightControlSnapshot? = nil, previousTarget: GuidanceTarget? = nil,
     feedback: ((ControlDiagnostics) -> Void)? = nil,
+    handoff: ((FlightControlSnapshot, GuidanceTarget?) -> Void)? = nil,
     terminalCondition: ((VehicleState) -> Bool)? = nil,
     law: (VehicleState) -> PredictionAttitude
   ) -> TrajectoryPrediction {
@@ -34,7 +35,8 @@ public final class TrajectoryPropagationEngine {
     }
     let controller = FlightController(configuration: configuration, snapshot: controlSnapshot)
     let physics = ShuttlePhysicsEngine(configuration: configuration, atmosphere: dynamics.atmosphere,
-      aerodynamics: dynamics.aerodynamics, initialControls: initial.appliedControls ?? .init())
+      aerodynamics: dynamics.aerodynamics, initialControls: initial.appliedControls ?? .init(),
+      initialState: initial, pitchBalancingInput: controlSnapshot?.predictionPitchTrim(state: initial))
     let controlStep = min(configuration.guidance.controlInterval, step)
     let end = initial.time + duration
     var nextRecord = initial.time
@@ -71,7 +73,8 @@ public final class TrajectoryPropagationEngine {
       let target = limiter.update(.init(angleOfAttack: requested.alpha, bank: requested.bank),
         phase: .entry, configuration: configuration, dt: dt, dynamicPressure: s.aerodynamics.dynamicPressure,
         rollResponseSeconds: controller.diagnostics.rollResponseSeconds,
-        pitchResponseSeconds: controller.diagnostics.pitchResponseSeconds)
+        pitchResponseSeconds: controller.diagnostics.pitchResponseSeconds,
+        controlAuthority: s.controlAuthority)
       do {
         let command = try controller.command(state: s,
           solution: .init(phase: .entry, target: target), dt: dt)
@@ -80,6 +83,9 @@ public final class TrajectoryPropagationEngine {
         violations.append(.init(.actuatorAuthority, "Closed-loop forecast failed: \(error)")); break
       }
     }
+    // Carry the propagated controller and target history across a predicted
+    // phase boundary; the entry seed snapshot is no longer the terminal state.
+    handoff?(controller.snapshot, limiter.previous)
     return .init(samples: samples, terminalState: s, violations: violations,
       duration: s.time - initial.time, reachedTerminalRegion: reached)
   }

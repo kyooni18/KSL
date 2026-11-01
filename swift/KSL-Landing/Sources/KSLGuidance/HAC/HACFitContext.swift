@@ -27,4 +27,7 @@ public struct HACFitDiagnostics: Codable, Sendable {
   public var energyPricedDistance: Double
   public var liftScale: Double
   public var dragScale: Double
+  public var responseDistance: Double? = nil
+  public var requiredTurningRadius: Double? = nil
+  public var turningRadiusExceedsSearch: Bool? = nil
 }

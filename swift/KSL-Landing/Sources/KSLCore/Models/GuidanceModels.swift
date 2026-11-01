@@ -34,9 +34,13 @@ public struct GuidanceTarget: Codable, Sendable, Equatable {
   public var desiredHeight: Double
   public var desiredFlightPath: Double
   public var gearDown: Bool
+  /// Requested split-rudder deployment. nil is stowed in new commands and
+  /// absent in historical records; this is not the legacy action-group flag.
+  public var speedbrakeFraction: Double?
   public init(
     angleOfAttack: Double = 0, bank: Double = 0, desiredSpeed: Double = 0,
-    desiredHeight: Double = 0, desiredFlightPath: Double = 0, gearDown: Bool = false
+    desiredHeight: Double = 0, desiredFlightPath: Double = 0, gearDown: Bool = false,
+    speedbrakeFraction: Double? = nil
   ) {
     self.angleOfAttack = angleOfAttack
     self.bank = bank
@@ -44,6 +48,7 @@ public struct GuidanceTarget: Codable, Sendable, Equatable {
     self.desiredHeight = desiredHeight
     self.desiredFlightPath = desiredFlightPath
     self.gearDown = gearDown
+    self.speedbrakeFraction = speedbrakeFraction
   }
 }
 

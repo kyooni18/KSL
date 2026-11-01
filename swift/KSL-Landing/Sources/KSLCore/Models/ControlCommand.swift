@@ -1,7 +1,8 @@
 import Foundation
 
-/// The command vocabulary cannot request propulsion, SAS, or airbrakes. RCS
-/// is an attitude actuator the FCS may command.
+/// The command vocabulary cannot request propulsion, SAS, or the legacy
+/// airbrake action group. Split-rudder drag and body-flap trim are separate,
+/// bounded aerodynamic commands. RCS is an attitude actuator.
 public struct ControlCommand: Codable, Sendable, Equatable {
   public let pitch: Double
   public let roll: Double
@@ -11,10 +12,12 @@ public struct ControlCommand: Codable, Sendable, Equatable {
   public let wheelSteering: Double
   public let deployParachutes: Bool?
   public let rcsEnabled: Bool?
+  public let speedbrakeFraction: Double?
+  public let bodyFlapTrimFraction: Double?
   public init(
     pitch: Double = 0, roll: Double = 0, yaw: Double = 0, gearDown: Bool = false,
     wheelBrake: Double = 0, wheelSteering: Double = 0, deployParachutes: Bool? = nil,
-    rcs: Bool = false
+    rcs: Bool = false, speedbrakeFraction: Double = 0, bodyFlapTrimFraction: Double = 0
   ) {
     self.rcsEnabled = rcs ? true : nil
     self.pitch = pitch
@@ -24,6 +27,8 @@ public struct ControlCommand: Codable, Sendable, Equatable {
     self.wheelBrake = wheelBrake
     self.wheelSteering = wheelSteering
     self.deployParachutes = deployParachutes
+    self.speedbrakeFraction = speedbrakeFraction == 0 ? nil : speedbrakeFraction
+    self.bodyFlapTrimFraction = bodyFlapTrimFraction == 0 ? nil : bodyFlapTrimFraction
   }
   public var throttle: Double { 0 }
   public var sas: Bool { false }
@@ -31,6 +36,8 @@ public struct ControlCommand: Codable, Sendable, Equatable {
   public var airbrakes: Bool { false }
   public func validate(grounded: Bool) throws {
     guard [pitch, roll, yaw, wheelSteering].allSatisfy({ $0.isFinite && abs($0) <= 1 }),
+      (speedbrakeFraction ?? 0).isFinite, (0...1).contains(speedbrakeFraction ?? 0),
+      (bodyFlapTrimFraction ?? 0).isFinite, abs(bodyFlapTrimFraction ?? 0) <= 1,
       wheelBrake.isFinite, (0...1).contains(wheelBrake), grounded || wheelBrake == 0,
       grounded || deployParachutes != true
     else {

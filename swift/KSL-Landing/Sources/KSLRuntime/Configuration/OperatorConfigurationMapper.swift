@@ -111,6 +111,12 @@ public enum OperatorConfigurationMapper {
     for (name, key, angle) in vehicles { if let x = try number("vehicle."+name) { c.vehicle[keyPath: key] = angle ? radians(x) : x } }
     if let x = try number("vehicle.minimumSafeSpeed") { c.vehicle.minimumSafeSpeed = x }
     if let x = try number("vehicle.finalApproachSpeed") { c.guidance.finalSpeed = x }
+    if let x = try number("vehicle.speedbrakeFullDeploymentDragArea") {
+      c.vehicle.speedbrakeFullDeploymentDragArea = x
+    }
+    if let x = try number("vehicle.bodyFlapTrimInputAtFullDeflection") {
+      c.vehicle.bodyFlapTrimInputAtFullDeflection = x
+    }
     let powered = try boolean("vehicle.allowPoweredApproach") ?? false
     let maxApproachThrottle = try number("vehicle.maximumApproachThrottle") ?? 0
     guard !powered, maxApproachThrottle == 0 else {
@@ -163,9 +169,16 @@ public enum OperatorConfigurationMapper {
       throw FlightError.invalidConfiguration("Experimental C trajectory delivery is not a substitute for native route qualification")
     }
     c.guidance.rolloutParachutes = try boolean("guidance.rolloutParachutes")
-    if try boolean("guidance.terminalSpeedbrake") != nil {
-      setEffective("guidance", "terminalSpeedbrake", false)
-      record("guidance.terminalSpeedbrake", "policyOverride", "Airbrakes are forbidden by this mission's explicit constraints")
+    if let enabled = try boolean("guidance.terminalSpeedbrake") {
+      if enabled && c.vehicle.speedbrakeFullDeploymentDragArea == nil {
+        throw FlightError.invalidConfiguration(
+          "terminalSpeedbrake requires vehicle.speedbrakeFullDeploymentDragArea")
+      }
+      if !enabled { c.vehicle.speedbrakeFullDeploymentDragArea = nil }
+      setEffective("guidance", "terminalSpeedbrake", enabled)
+      record("guidance.terminalSpeedbrake", enabled ? "applied" : "policyOverride",
+        enabled ? "Energy-priced split-rudder control with identified drag area"
+          : "Split-rudder energy actuation disabled")
     }
     if try boolean("guidance.useTimeWarp") != nil {
       setEffective("guidance", "useTimeWarp", false)

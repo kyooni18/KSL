@@ -340,7 +340,8 @@ struct LandingCLI {
       let scenario = try scenarioFromOptions()
       let c = scenario.configuration
       let atmosphere = try AtmosphericModelEngine(planet: c.planet)
-      let aero = try AerodynamicsEngine(referenceArea: c.vehicle.referenceArea)
+ let aero = try AerodynamicsEngine(referenceArea: c.vehicle.referenceArea,
+   speedbrakeFullDeploymentDragArea: c.vehicle.speedbrakeFullDeploymentDragArea)
       let physics = ShuttlePhysicsEngine(
         configuration: c, atmosphere: atmosphere, aerodynamics: aero)
       let planner = HACPlanningEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
@@ -470,7 +471,22 @@ struct LandingCLI {
           try output(Inspection(identity: identity, state: state, attitudeCheckDegrees: check))
           await io.shutdown()
         } else {
-          let logPath = option("--log") ?? "ksl-live-\(Int(Date().timeIntervalSince1970)).jsonl"
+          // Native flights always have a discoverable KSP REPLAY journal.
+          // An explicit --log remains authoritative, but the unconfigured
+          // default now lives in runs/<unique-id>/live-sts-flight.jsonl rather
+          // than an unindexed JSONL in the shell's working directory.
+          let logPath: String
+          if let explicit = option("--log") {
+            logPath = explicit
+          } else {
+            let runs = ProcessInfo.processInfo.environment["KSL_RUNS_DIR"] ?? "runs"
+            let session = "\(Int(Date().timeIntervalSince1970))-swift-native-\(UUID().uuidString.prefix(8))"
+            logPath = URL(fileURLWithPath: runs).appendingPathComponent(session)
+              .appendingPathComponent("live-sts-flight.jsonl").path
+          }
+          try FileManager.default.createDirectory(
+            at: URL(fileURLWithPath: logPath).deletingLastPathComponent(),
+            withIntermediateDirectories: true)
           let source = try await io.readState()
           let originalRunway = config.runway
           let aero = try await PhysicsModelLoader.aerodynamics(configuration: config)
@@ -514,7 +530,7 @@ struct LandingCLI {
           let recorder = try JSONLTelemetryRecorder(url: URL(fileURLWithPath: logPath))
           let planKind = selectedDeorbitPlan?.executionQualified == true
             ? "qualified nominal orbit-to-rollout continuation"
-            : "not independently qualified; route evidence and authorization required"
+            : "physically screened orbital entry; terminal/rollout unqualified, continue live guidance"
           FileHandle.standardError.write(Data(
             "ksl-landing: automatic approach \(config.runway.name), heading \(degrees(config.runway.heading)) deg; \(planKind)\n".utf8))
           // Orbital execution owns the same IO and recorder through entry and

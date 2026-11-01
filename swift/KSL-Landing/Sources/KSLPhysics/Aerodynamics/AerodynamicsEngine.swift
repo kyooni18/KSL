@@ -18,6 +18,7 @@ public final class AerodynamicsEngine: Sendable {
   public let dragScale: Double
   public let maximumLiftToDragRatio: Double
   public let history: HistoricalAerodynamics?
+  public let speedbrakeFullDeploymentDragArea: Double?
   private let machs: [Double]
   private let alphas: [Double]
   /// Exact lift-search breakpoints are immutable for one physical model.
@@ -28,6 +29,7 @@ public final class AerodynamicsEngine: Sendable {
   private let dragTable: [[Double]]
   private init(copy: AerodynamicsEngine, liftMultiplier: Double, dragMultiplier: Double) {
     referenceArea = copy.referenceArea; history = copy.history
+    speedbrakeFullDeploymentDragArea = copy.speedbrakeFullDeploymentDragArea
     machs = copy.machs; alphas = copy.alphas; liftKnots = copy.liftKnots
     liftTable = copy.liftTable; dragTable = copy.dragTable
     liftScale = copy.liftScale * liftMultiplier; dragScale = copy.dragScale * dragMultiplier
@@ -39,7 +41,7 @@ public final class AerodynamicsEngine: Sendable {
   }
   public init(
     referenceArea: Double = 250, liftScale: Double = 1, dragScale: Double = 1, csv: String? = nil,
-    history: HistoricalAerodynamics? = nil
+    history: HistoricalAerodynamics? = nil, speedbrakeFullDeploymentDragArea: Double? = nil
   ) throws {
     guard referenceArea > 0, liftScale > 0, dragScale > 0 else {
       throw FlightError.invalidConfiguration("Invalid aerodynamic scaling")
@@ -48,6 +50,7 @@ public final class AerodynamicsEngine: Sendable {
     self.liftScale = liftScale
     self.dragScale = dragScale
     self.history = history
+    self.speedbrakeFullDeploymentDragArea = speedbrakeFullDeploymentDragArea
     let contents: String
     if let csv {
       contents = csv
@@ -107,11 +110,13 @@ public final class AerodynamicsEngine: Sendable {
   }
   public func coefficients(mach: Double, alpha: Double, dynamicPressure q: Double? = nil,
                            beta: Double = 0, gear: Bool = false, brakes: Bool = false,
-                           airbrakes: Bool = false) -> AerodynamicCoefficients {
+                           airbrakes: Bool = false, speedbrakeFraction: Double = 0) -> AerodynamicCoefficients {
+    let historicalBrake = airbrakes || (speedbrakeFullDeploymentDragArea == nil && speedbrakeFraction >= 1)
     if let q, let sample = history?.force(q: q, mach: mach, alpha: alpha, beta: beta,
-      gear: gear, brakes: brakes, airbrakes: airbrakes) {
+      gear: gear, brakes: brakes, airbrakes: historicalBrake) {
+      let brakeDrag = (speedbrakeFullDeploymentDragArea ?? 0) * speedbrakeFraction / referenceArea
       return .init(lift: sample.forcePerDynamicPressure.y * liftScale / referenceArea,
-                   drag: sample.forcePerDynamicPressure.x * dragScale / referenceArea)
+        drag: sample.forcePerDynamicPressure.x * dragScale / referenceArea + brakeDrag)
     }
     let (i, t) = bracket(machs, mach)
     let (j, u) = bracket(alphas, alpha)
@@ -119,12 +124,13 @@ public final class AerodynamicsEngine: Sendable {
       (table[i][j] * (1 - u) + table[i][j + 1] * u) * (1 - t)
         + (table[i + 1][j] * (1 - u) + table[i + 1][j + 1] * u) * t
     }
-    return .init(
-      lift: interpolate(liftTable) * liftScale, drag: max(0, interpolate(dragTable) * dragScale))
+    let brakeDrag = (speedbrakeFullDeploymentDragArea ?? 0) * speedbrakeFraction / referenceArea
+    return .init(lift: interpolate(liftTable) * liftScale,
+      drag: max(0, interpolate(dragTable) * dragScale) + brakeDrag)
   }
   public func evaluate(
     position: Vector3, velocity: Vector3, attitude: Quaternion, atmosphere: AtmosphericState,
-    gear: Bool = false, brakes: Bool = false, airbrakes: Bool = false
+    gear: Bool = false, brakes: Bool = false, airbrakes: Bool = false, speedbrakeFraction: Double = 0
   ) -> AerodynamicState {
     let va = velocity - atmosphere.wind
     let speed = va.length
@@ -141,11 +147,16 @@ public final class AerodynamicsEngine: Sendable {
     let windUp = windRight.cross(f).normalized
     let bodyUp = attitude.rotate(.init(0, 0, -1))
     result.bank = atan2(bodyUp.dot(windRight), bodyUp.dot(windUp))
-    let c = coefficients(mach: result.mach, alpha: result.angleOfAttack)
+    let historicalBrake = airbrakes || (speedbrakeFullDeploymentDragArea == nil && speedbrakeFraction >= 1)
+    let c = coefficients(mach: result.mach, alpha: result.angleOfAttack,
+      speedbrakeFraction: speedbrakeFraction)
     let observed = history?.force(q: result.dynamicPressure, mach: result.mach,
-      alpha: result.angleOfAttack, beta: result.sideslip, gear: gear, brakes: brakes, airbrakes: airbrakes)
+      alpha: result.angleOfAttack, beta: result.sideslip, gear: gear, brakes: brakes,
+      airbrakes: historicalBrake)
     result.lift = result.dynamicPressure * (observed.map { $0.forcePerDynamicPressure.y * liftScale } ?? (referenceArea * c.lift))
-    result.drag = result.dynamicPressure * (observed.map { $0.forcePerDynamicPressure.x * dragScale } ?? (referenceArea * c.drag))
+    result.drag = result.dynamicPressure * (observed.map {
+      $0.forcePerDynamicPressure.x * dragScale + (speedbrakeFullDeploymentDragArea ?? 0)*speedbrakeFraction
+    } ?? (referenceArea * c.drag))
     result.modelEvidence = observed == nil ? .provisional : .measured
     result.modelConfidence = observed?.localityConfidence
     let liftDirection = windUp * cos(result.bank) + windRight * sin(result.bank)

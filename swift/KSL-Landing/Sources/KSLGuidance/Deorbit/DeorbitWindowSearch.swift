@@ -84,6 +84,23 @@ public final class DeorbitWindowSearch {
       entryFlightPath: state.flightPathAngle, entryCourseError: courseError, crossrange: cross,
       miss: hypot(cross, range-targetRange))
   }
+  /// Necessary (not sufficient) lateral steering demand at the actual
+  /// orbital entry-interface position and cross-track velocity. The normal
+  /// window search uses this for candidate diversity; all selected windows
+  /// must still pass the SAME atmospheric force/energy/HAC rollout evaluator.
+  func lateralCaptureDemand(_ window: DeorbitWindow) -> Double {
+    let state = window.entryInterface.planetFixed(planet: configuration.planet, attitude: .init())
+    let chart = frame.coordinates(of: state.position)
+    let crossVelocity = frame.coordinateVelocity(at: state.position, velocity: state.velocity).y
+    let remaining = max(0, window.entryRange-configuration.entrySettings.terminalTargetRange)
+    let time = max(configuration.guidance.pathLookaheadTime,
+      remaining / max(1, state.horizontalSpeed))
+    let demand = EntryLateralCaptureKinematics.peakDemand(
+      crossError: configuration.entrySettings.handoffCross-chart.cross,
+      crossVelocity: crossVelocity, timeToCapture: time)
+    return demand.isFinite ? demand : .infinity
+  }
+
   public func search(from state: VehicleState, propulsion: PropulsionTelemetry) throws -> DeorbitWindowSearchResult {
     try configuration.validate(); try propulsion.validate(mass: state.mass)
     let initial = OrbitalState(fixed: state, planet: configuration.planet), elements = try orbit.elements(initial)
@@ -130,8 +147,8 @@ public final class DeorbitWindowSearch {
     // Search across distinct orbital ground-track passages. The best single
     // great-circle range/crossrange approximation is not a landing certificate:
     // the downstream controlled 3-D entry evaluator must see alternatives.
-    // Preserve both minimum total miss and low-crossrange entries so a timing
-    // trade against lateral control authority is available.
+    // Preserve minimum total miss, low crossrange and attainable-direction
+    // candidates, including those with lower lateral velocity to cancel.
     var seeds: [DeorbitWindow] = [best]
     let separation = max(120, min(period * 0.20, c.captureRadius/max(1, best.entrySpeed) * 3))
     let byMiss = coarse.sorted { $0.miss < $1.miss }
@@ -139,11 +156,16 @@ public final class DeorbitWindowSearch {
       if $0.crossrange != $1.crossrange { return $0.crossrange < $1.crossrange }
       return $0.miss < $1.miss
     }
-    // Alternate rankings: filling the budget from byMiss first leaves no
-    // low-crossrange candidates for the expensive full-route evaluator.
-    // Separation is shared, so a pass found by both rankings is sampled once.
-    let rankings = [byMiss, byCrossrange]
-    var indices = [0, 0]
+    let byLateralDemand = coarse.sorted {
+      let first = lateralCaptureDemand($0), second = lateralCaptureDemand($1)
+      if first != second { return first < second }
+      return $0.miss < $1.miss
+    }
+    // Alternate all three necessary orbital screens. A low geometric miss
+    // cannot hide a large opening cross-axis velocity, and low lateral
+    // demand does not on its own certify a runway capture or safe burn.
+    let rankings = [byMiss, byCrossrange, byLateralDemand]
+    var indices = [0, 0, 0]
     let seedBudget = min(c.candidateBudget, 6)
     while seeds.count < seedBudget {
       var added = false

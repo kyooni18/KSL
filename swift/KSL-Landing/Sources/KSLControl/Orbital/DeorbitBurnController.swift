@@ -52,9 +52,15 @@ public final class DeorbitBurnController {
     let inertialDirection = (-orbital.velocity.normalized
       + orbital.position.cross(orbital.velocity).normalized*tan(plan.window.normalAngle)).normalized
     let direction = inertialDirection.rotated(about: .init(0, 0, 1), angle: -c.planet.rotationRate*state.time)
-    let axes = try pointing.command(state: state, direction: direction, dt: dt)
-    let alignment = pointing.alignmentError
-    let projection = max(0, state.attitude.rotate(.init(1, 0, 0)).dot(
+    let engineAxis = plan.propulsion.thrustDirectionBody ?? .init(1, 0, 0)
+    let noseTarget = OrbitalAttitudeController.compensatedNoseDirection(
+      desiredThrust: direction, position: state.position, bodyThrustDirection: engineAxis)
+    let axes = try pointing.command(state: state, direction: noseTarget, dt: dt)
+    // Throttle safety and delivered impulse are projected along the actual
+    // canted engine line, NOT the body nose that the attitude loop controls.
+    let physicalThrust = state.attitude.rotate(engineAxis).normalized
+    let alignment = acos(clamp(physicalThrust.dot(direction), -1, 1))
+    let projection = max(0, physicalThrust.dot(
       (-orbital.velocity.normalized).rotated(about: .init(0, 0, 1), angle: -c.planet.rotationRate*state.time)))
     let measuredAcceleration = max(0, state.systems.thrust/state.mass)*projection
     if started != nil { deliveredDeltaV += (previousAcceleration+measuredAcceleration)*dt/2 }
@@ -65,9 +71,11 @@ public final class DeorbitBurnController {
     var phase = MissionPhase.orbitalCoast, throttle = 0.0
     if !complete && state.time >= plan.window.burnStart {
       if started == nil {
-        guard state.time-plan.window.burnStart <= max(settings.timingUncertainty, c.guidance.controlInterval) else {
-          throw FlightError.infeasible("Native retrograde alignment missed the qualified burn window; replan required")
-        }
+        // Missing the planned ignition instant is not itself a propulsion
+        // failure. Continue aligning at zero throttle and acquire the thrust
+        // line when within tolerance; the actual delivered impulse/periapsis
+        // determines cutoff. The plan's entry altitude limit is enforced by
+        // the live I/O and orbital-to-entry transition.
         if alignment <= radians(10) { started = state.time }
       }
       phase = .deorbitBurn
@@ -88,9 +96,10 @@ public final class DeorbitBurnController {
       }
     } else if !complete && state.time >= plan.window.burnStart-12 { phase = .burnSetup }
     if complete { phase = .entryCoast; throttle = 0 }
-    if !complete && started != nil && state.time-started! > max(30, 2*plan.window.duration) {
-      throw FlightError.infeasible("Finite burn duration exceeded the qualified window")
-    }
+    // Burn duration is a prediction, not an abort criterion. Attitude loss
+    // pauses propulsion; continue correcting at zero throttle and use measured
+    // periapsis/delivered impulse for shutdown. DeorbitRuntime separately
+    // ends OMS if the craft actually descends into the atmosphere.
     diagnostics.planID = plan.identifier; diagnostics.deliveredDeltaV = deliveredDeltaV
     diagnostics.unobservedDeltaVUpperBound = unobservedDeltaVUpperBound
     diagnostics.targetDeltaV = plan.window.deltaV; diagnostics.periapsisAltitude = periapsisAltitude

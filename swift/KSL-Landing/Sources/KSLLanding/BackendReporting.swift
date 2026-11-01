@@ -26,8 +26,8 @@ extension BackendServer {
       "predictedPostBurnPeriapsisAltitude": value.window.periapsisAltitude,
       "predictedEntryRange": value.window.entryRange, "predictedEntryFlightPathAngle": degrees(value.window.entryFlightPath),
       "executionQualified": value.executionQualified, "fullRouteQualified": value.fullRouteQualified,
-      "targetCaptureAchieved": value.nominalPassed, "robustPassed": value.passedCases, "robustScenarios": value.cases.count,
-      "robustPassFraction": value.passFraction, "unsafeCases": value.unsafeCases,
+      "targetCaptureAchieved": value.nominalPassed, "nominalEvaluated": value.hasNominalEvaluation,
+      "nominalPassed": value.nominalPassed, "unsafeCases": value.unsafeCases,
       "canAuthorizeReducedAssurance": value.permitsExplicitReducedAssurance,
       "modelLimitations": value.modelLimitations]
   }

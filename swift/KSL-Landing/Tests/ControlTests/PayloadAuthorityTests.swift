@@ -10,7 +10,7 @@ final class PayloadAuthorityTests: XCTestCase {
     axis.reported = 0
     XCTAssertEqual(axis.available(fallback: 0.4, blendLive: true, reportedAvailable: true), 0)
   }
-  func testSteadyOffTargetEntryResponseCanIdentifyItsLocalTrim() throws {
+  func testSteadyOffTargetEntryResponseLearnsLocalTrimWithoutInventingCeiling() throws {
     let c = MissionConfiguration(), position = Vector3(635000,0,0), velocity = Vector3(0,1300,0)
     var a = AerodynamicState(); a.airspeed = 1300; a.mach = 4; a.dynamicPressure = 3000
     a.angleOfAttack = radians(12)
@@ -24,7 +24,10 @@ final class PayloadAuthorityTests: XCTestCase {
     _ = try controller.command(state: s, solution: goal, dt: 0.1)
     s.time += 0.1
     _ = try controller.command(state: s, solution: goal, dt: 0.1)
-    XCTAssertEqual(controller.diagnostics.trimEvidence, .identified)
+    // A stable local balancing input is a feedforward observation, not
+    // identified maximum trim AoA without measured variation across incidence.
+    XCTAssertNotEqual(controller.diagnostics.trimEvidence, .identified)
+    XCTAssertNil(controller.diagnostics.trimAlphaCeiling)
     XCTAssertEqual(try XCTUnwrap(controller.diagnostics.pitchFeedforward),0.4,accuracy:1e-8)
     XCTAssertGreaterThan(abs(controller.diagnostics.pitchError),radians(10))
   }

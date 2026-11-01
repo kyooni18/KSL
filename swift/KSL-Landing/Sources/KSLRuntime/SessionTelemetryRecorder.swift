@@ -35,7 +35,17 @@ public actor SessionTelemetryRecorder: TelemetryRecording {
     // all raw telemetry, but quarantine derived observations after a dynamics
     // change until a new compatible context is explicitly established.
     if record.dynamicsChange != nil { journalContextValid = false }
-    if journalContextValid { try await journal?.observe(record.state, quality: record.calibration?.observation) }
+    if journalContextValid {
+      do { try await journal?.observe(record.state, quality: record.calibration?.observation) }
+      catch is CancellationError { throw CancellationError() }
+      catch {
+        // The primary record has already been committed. A derived journal
+        // failure must not mark it lost or interrupt live telemetry/control.
+        journalContextValid = false
+        try? FileHandle.standardError.write(contentsOf: Data((
+          "ksl-recording: observation journal disabled after failure: \(error)\n").utf8))
+      }
+    }
   }
   public func close() async throws {
     var failure: (any Error)?

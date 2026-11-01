@@ -45,6 +45,13 @@ public struct VehicleConfiguration: Codable, Sendable, Equatable {
   public var rollingFriction = 0.015
   public var aerodynamicUncertainty = 0.20
   public var controlPlant = ControlPlantConfiguration()
+  /// Measured/identified incremental drag area at full split-rudder
+  /// deployment, in m². nil means energy guidance may not request the brake.
+  public var speedbrakeFullDeploymentDragArea: Double?
+  /// Identified pitch-input equivalent of full body-flap trim deflection.
+  /// The sign is measured in the same convention as positive pitch input.
+  /// nil disables automatic trim; ordinary body-flap pitch control remains.
+  public var bodyFlapTrimInputAtFullDeflection: Double?
   public init() {}
 }
 
@@ -68,7 +75,9 @@ public struct GuidanceConfiguration: Codable, Sendable, Equatable {
   public var rolloutParachutes: Bool?
   public var maximumPredictionDuration = 1600.0
   public var predictionStep = 2.0
-  public var finalDistance = 8000.0
+  /// Final alignment / nominal energy point upstream of the selected runway
+  /// threshold, in metres (7,500 ft). Final owns the glide from this station.
+  public var finalDistance = 2286.0
   public var outerGlideAngle = radians(24)
   public var finalSpeed = 120.0
   public var touchdownAlong = 400.0
@@ -115,6 +124,12 @@ public struct MissionConfiguration: Codable, Sendable, Equatable {
       guidance.maximumHACRadius >= guidance.minimumHACRadius,
       vehicle.maximumAngleOfAttack > vehicle.minimumAngleOfAttack,
       vehicle.landingSpeed > 0,
+      vehicle.speedbrakeFullDeploymentDragArea == nil
+        || (vehicle.speedbrakeFullDeploymentDragArea!.isFinite
+          && vehicle.speedbrakeFullDeploymentDragArea! > 0),
+      vehicle.bodyFlapTrimInputAtFullDeflection == nil
+        || (vehicle.bodyFlapTrimInputAtFullDeflection!.isFinite
+          && abs(vehicle.bodyFlapTrimInputAtFullDeflection!) > 0),
       guidance.outerGlideAngle > 0, guidance.outerGlideAngle < .pi / 3,
       abs(runway.latitude) < .pi / 2, abs(runway.longitude) <= .pi,
       guidance.finalDistance >= 500, guidance.finalDistance <= 30_000,

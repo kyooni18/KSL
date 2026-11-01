@@ -57,6 +57,21 @@ public enum KRPCValue {
     let value = try decodeUInt(data)
     return Int64(bitPattern: (value >> 1) ^ (0 &- (value & 1)))
   }
+  /// SpaceCenter.railsWarpFactor is kRPC sint32, NOT uint32.
+  /// Encoding its index with uint changes the requested rate (4 -> 2).
+  public static func encodeRailsWarpFactor(_ index: UInt64) throws -> Data {
+    guard index <= 7 else {
+      throw FlightError.invalidCommand("Rails warp factor must be in 0...7")
+    }
+    return sint(Int64(index))
+  }
+  public static func decodeRailsWarpFactor(_ bytes: Data) throws -> UInt64 {
+    let index = try decodeSInt(bytes)
+    guard (0...7).contains(index) else {
+      throw FlightError.protocolViolation("Rails warp factor outside 0...7")
+    }
+    return UInt64(index)
+  }
   public static func decodeBool(_ data: Data) throws -> Bool {
     let value = try decodeUInt(data)
     guard value <= 1 else { throw FlightError.protocolViolation("Invalid bool") }

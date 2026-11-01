@@ -14,6 +14,19 @@ public struct MissionPlanningRequest: Sendable {
   public var hac: HACFitContext? = nil
   /// Dynamics revision observed before taking the planning snapshot.
   public var dynamicsRevision: UInt64? = nil
+
+  /// Preserve one immutable flight snapshot, but hand each independent worker
+  /// only the work it owns. This also preserves the historical plan API.
+  public func entryOnly() -> Self {
+    .init(time: time, entry: entry, terminalState: nil, controls: controls,
+      previousTarget: previousTarget, approach: nil, environment: environment,
+      hac: hac, dynamicsRevision: dynamicsRevision)
+  }
+  public func terminalOnly() -> Self {
+    .init(time: time, entry: nil, terminalState: terminalState, controls: controls,
+      previousTarget: previousTarget, approach: approach, environment: environment,
+      hac: hac, dynamicsRevision: dynamicsRevision)
+  }
 }
 
 public struct MissionPlanningProposal: Codable, Sendable {
@@ -56,8 +69,18 @@ public actor MissionPlanningWorker {
       let model = request.hac.map { aerodynamics.scaled(lift: $0.liftScale, drag: $0.dragScale) } ?? aerodynamics
       let planner = HACPlanningEngine(configuration: configuration,
         atmosphere: atmosphere.corrected(request.environment), aerodynamics: model)
-      return planner.plan(from: $0, allowDirect: false, preview: true,
+      let preview = planner.plan(from: $0, allowDirect: request.hac?.onSpiral != true, preview: true,
         controlSnapshot: request.controls, previousTarget: request.previousTarget, context: request.hac)
+      // The preexisting worker only ever returned previews, while MM305's
+      // actual ownership contract requires a successful closed-loop stop.
+      // Qualify only an inlet that has passed the cheap physical/geometry
+      // gate; do not spend three complete landings on rejected advisories.
+      if let candidate = preview.plan, !Task.isCancelled,
+         MM305Admission.shouldQualifyPreview($0, plan: candidate, configuration: configuration) {
+        return planner.plan(from: $0, allowDirect: request.hac?.onSpiral != true, preview: false,
+          controlSnapshot: request.controls, previousTarget: request.previousTarget, context: request.hac)
+      }
+      return preview
     }
     let entryResult = !Task.isCancelled && request.terminalState == nil
       ? request.entry.map { entry.plan($0) } : nil
@@ -66,10 +89,12 @@ public actor MissionPlanningWorker {
   }
   /// Serialization stays on the planning actor, outside the urgent loop.
   public func recordedPlan(_ request: MissionPlanningRequest) throws -> RecordedPlanningProposal {
+    try Task.checkCancellation()
     let proposal = plan(request)
+    try Task.checkCancellation()
     return .init(proposal: proposal, encoded: try JSONEncoder().encode(proposal))
   }
   public func planTerminal(from state: VehicleState) -> PlanningResult {
-    terminal.plan(from: state, allowDirect: false, preview: true)
+    terminal.plan(from: state, allowDirect: true, preview: true)
   }
 }

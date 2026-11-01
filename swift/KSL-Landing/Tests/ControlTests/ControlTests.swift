@@ -23,14 +23,51 @@ final class ControlTests: XCTestCase {
     XCTAssertGreaterThan(command.pitch, 0)
     XCTAssertGreaterThan(command.roll, 0)
     XCTAssertEqual(command.throttle, 0)
-    XCTAssertTrue(command.rcs)
+    XCTAssertTrue(command.rcs)  // configured attitude RCS is authorized during entry
     var acquired = state; acquired.time += c.guidance.controlInterval
     let terminal = try controller.command(state: acquired,
       solution: .init(phase: .acquisition, target: .init(angleOfAttack: radians(10), bank: radians(20))),
       dt: c.guidance.controlInterval)
-    XCTAssertTrue(terminal.rcs)
+    XCTAssertFalse(terminal.rcs)  // acquisition is still unpowered flight
     XCTAssertFalse(command.sas)
     XCTAssertFalse(command.airbrakes)
+  }
+  func testLocalTrimIsNotAnIdentifiedAngleOfAttackCeiling() {
+    var trim = AdaptiveTrim()
+    for i in 0...40 {
+      trim.observe(time: Double(i) * 0.2, mach: 7, pressure: 100,
+        alpha: radians(18), input: 0.03, settled: true)
+    }
+    // Enough local observations for a usable feedforward, but no measured
+    // AoA variation or slope to justify an absolute 18-degree limit.
+    XCTAssertNotNil(trim.input(alpha: radians(18)))
+    XCTAssertNil(trim.fit)
+    XCTAssertNil(trim.ceiling(maximum: radians(40)))
+  }
+
+  func testIdentifiedTrimRejectsExtrapolatedAndStaleFeedforward() {
+    var trim = AdaptiveTrim()
+    for i in 0..<35 {
+      let index = Double(i % 5)
+      trim.observe(time: Double(i) * 0.2, mach: 4, pressure: 4000,
+        alpha: radians(18 + index), input: 0.20 + 0.02 * index, settled: true)
+    }
+    XCTAssertNotNil(trim.fit)
+    // Exactly the observed sample time; 34 * 0.2 need not bit-equal 6.8.
+    let freshTime = Double(34) * 0.2
+    XCTAssertNotNil(trim.input(time: freshTime, mach: 4, pressure: 4000, alpha: radians(20)))
+    XCTAssertNil(trim.input(time: freshTime, mach: 4, pressure: 4000, alpha: radians(30)))
+    XCTAssertNil(trim.input(time: freshTime, mach: 5, pressure: 4000, alpha: radians(20)))
+    XCTAssertNil(trim.input(time: freshTime, mach: 4, pressure: 1000, alpha: radians(20)))
+    XCTAssertNil(trim.input(time: 9, mach: 4, pressure: 4000, alpha: radians(20)))
+    // Saturated observations keep local predictor evidence, not the old
+    // unsaturated feedforward alive past its observation time.
+    for i in 0..<12 {
+      trim.observe(time: 7 + Double(i) * 0.2, mach: 4, pressure: 4000,
+        alpha: radians(24), input: 1, settled: true)
+    }
+    XCTAssertNil(trim.input(time: 9.2, mach: 4, pressure: 4000, alpha: radians(20)))
+    XCTAssertNotNil(trim.predictionInput(time: 9.2, mach: 4, pressure: 4000, alpha: radians(24)))
   }
   func testControllerOwnershipReleases() {
     weak var weakController: FlightController?

@@ -62,11 +62,18 @@ def reconstruct(run):
     c = json.loads(config.read_text()); g = Geometry(c)
     e, guide = c['entry'], c['guidance']
     aim = g.position(-e.get('captureTargetRange', e['terminalTargetRange']), e['handoffCross'])
-    # KSC reference in KSL's site configuration is the original 09 threshold.
+    # There is no separate KSC/map-marker coordinate in this run. Label this
+    # reference explicitly: it is KSLCore's default 09 threshold, not "KSC".
     ksc_lat, ksc_lon = math.radians(-.0486111111), math.radians(-74.7283333333)
     ksc = [math.cos(ksc_lat)*math.cos(ksc_lon), math.cos(ksc_lat)*math.sin(ksc_lon), math.sin(ksc_lat)]
     omega = [0, 0, c['planet']['rotationRate']]
+    polar = Path(__file__).resolve().parents[1]/'Sources/KSLPhysics/Resources/STSAerodynamics.csv'
+    cells = [list(map(float, line.split(','))) for line in polar.read_text().splitlines()
+             if line and not line.startswith(('#', 'mach'))]
+    best_ld = max(max(0, x[2])/max(1e-8, x[3]) for x in cells)
+    optimistic_ld = best_ld*(1+c['vehicle']['aerodynamicUncertainty'])/(1-c['vehicle']['aerodynamicUncertainty'])
     rows, proposals, raw = [], [], []
+    objective_altitude, objective_speed = None, None
     for line_number, line in enumerate((run/'live.jsonl').open(), 1):
         a = json.loads(line); s = a.get('state')
         if s is None: continue
@@ -91,11 +98,26 @@ def reconstruct(run):
         rotating = sub(mul(cross(omega, v), -2), cross(omega, cross(omega, p)))
         ground_right = unit(cross(unit(hvel), up))
         energy = dot(v, v)/2-c['planet']['gravitationalParameter']/norm(p)-norm(cross(omega, p))**2/2
+        if d['phase'] == 'entry' or objective_altitude is None:
+            objective_altitude = d['target']['desiredHeight']
+            objective_speed = d['target']['desiredSpeed']
+        op = mul(aim, g.R+objective_altitude)
+        objective_energy = objective_speed**2/2-c['planet']['gravitationalParameter']/norm(op)-norm(cross(omega, op))**2/2
+        gravity = c['planet']['gravitationalParameter']/norm(p)**2
+        height = norm(p)-g.R-c['runway']['elevation']
+        optimistic_range = optimistic_ld*max(0, height)+(optimistic_ld/2+1)*dot(v, v)/gravity
+        stopping = vh**2/(2*c['vehicle']['brakeFriction']*gravity)
+        reachable_along = min(max(0, along), max(0, c['runway']['length']-stopping))
+        pavement_distance = g.distance(p, g.position(reachable_along, 0))
         row = dict(line=line_number, time=t, elapsed=t-t0, phase=d['phase'], altitude=norm(p)-g.R,
             mach=ae['mach'], airspeed=ae['airspeed'], horizontalSpeed=vh, verticalSpeed=vertical,
-            specificEnergy=energy, captureEnergyMargin=en.get('captureEnergyMargin'),
+            specificEnergy=energy, objectiveEnergyMargin=energy-objective_energy,
+            captureEnergyMargin=en.get('captureEnergyMargin'),
+            optimisticRange=optimistic_range, pavementDistance=pavement_distance,
             referenceDrag=en.get('referenceDrag'), drag=drag, lift=lift,
-            runwayRange=g.distance(p, g.up), targetRange=g.distance(p, aim), kscRange=g.distance(p, ksc),
+            runwayRange=g.distance(p, g.up), targetRange=g.distance(p, aim), runway09ReferenceRange=g.distance(p, ksc),
+            runway09ReferenceBearing=math.degrees(g.heading(p, project(ksc, up))),
+            thresholdBearing=math.degrees(bearing), targetBearing=math.degrees(aim_bearing),
             along=along, cross=right, controllerCrossRate=cross_rate,
             course=math.degrees(course), runwayHeadingError=math.degrees(wrap(runway_course-course)),
             runwayBearingError=math.degrees(wrap(bearing-course)), targetBearingError=math.degrees(wrap(aim_bearing-course)),
@@ -144,6 +166,8 @@ def main():
     events = {'initial': rows[0], 'firstTargetAlongCrossing': first(lambda r: r['along'] <= target_along),
         'closestTarget': min(rows, key=lambda r: r['targetRange']),
         'closestRunway': min(rows, key=lambda r: r['runwayRange']),
+        'firstOptimisticRangeExhausted': first(lambda r: r['airspeed'] < 500 and r['altitude'] < 20000
+            and r['pavementDistance'] > r['optimisticRange']),
         'firstMM305Diagnostic': first(lambda r: r['searched']),
         'firstAcquisition': first(lambda r: r['phase'] == 'acquisition'),
         'firstSpiral': first(lambda r: r['phase'] == 'headingAlignment'), 'last': rows[-1]}
@@ -151,6 +175,11 @@ def main():
     if terminal:
         events['firstMM305Request'] = near(terminal[0]['requested'])
         events['firstMM305Completion'] = near(terminal[0]['received'])
+    survey_path = args.output/'survey.json'
+    if survey_path.exists():
+        survey = json.loads(survey_path.read_text())
+        opportunity = next((s for s in survey if s['envelope']['feasible'] > 0), None)
+        if opportunity: events['firstSurveyFamilyOpportunity'] = near(opportunity['elapsed'])
     for t in [60, 120, 180, 240, 300, 360, 400, 420, 440, 460, 480, 500, 540, 600, 700, 800]:
         events[f'sample{t}'] = near(t)
     args.output.joinpath('events.json').write_text(json.dumps(events, indent=2)+'\n')
@@ -162,7 +191,7 @@ def main():
     args.output.joinpath('source-hashes.json').write_text(json.dumps(hashes, indent=2)+'\n')
     keys = ['elapsed', 'altitude', 'mach', 'airspeed', 'verticalSpeed', 'along', 'cross', 'targetRange',
             'runwayRange', 'runwayHeadingError', 'targetBearingError', 'bankTarget', 'bankActual',
-            'alphaTarget', 'alphaActual', 'captureEnergyMargin']
+            'alphaTarget', 'alphaActual', 'objectiveEnergyMargin', 'captureEnergyMargin']
     for name, r in events.items():
         if r is None:
             print(name, 'not observed')

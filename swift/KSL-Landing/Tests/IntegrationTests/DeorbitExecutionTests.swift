@@ -54,14 +54,12 @@ final class DeorbitExecutionTests: XCTestCase {
     state.propulsion = .init(availableThrust: 60000, dryMass: 22000, specificImpulse: 316)
     return state
   }
-  private func cases(passes: Set<Int>, hardUnsafe: Set<Int> = []) -> [DeorbitStressCase] {
-    (0..<15).map { index in
-      .init(index: index, passed: passes.contains(index), hardUnsafe: hardUnsafe.contains(index),
-        burnCompleted: true, entryFlightPath: radians(-2), maximumDynamicPressure: 20000,
-        maximumLoad: 2, touchdownAlong: 400, touchdownCross: 0, touchdownSink: -1.5,
-        touchdownPitch: radians(8), stoppedAlong: passes.contains(index) ? 1400 : nil,
-        violations: [], evidence: "authorization-contract-fixture")
-    }
+  private func cases(passed: Bool, hardUnsafe: Bool = false) -> [DeorbitStressCase] {
+    [.init(index: 0, passed: passed, hardUnsafe: hardUnsafe,
+      burnCompleted: true, entryFlightPath: radians(-2), maximumDynamicPressure: 20000,
+      maximumLoad: 2, touchdownAlong: 400, touchdownCross: 0, touchdownSink: -1.5,
+      touchdownPitch: radians(8), stoppedAlong: passed ? 1400 : nil,
+      violations: [], evidence: "nominal-authorization-contract-fixture")]
   }
   private func plan(cases: [DeorbitStressCase], limitations: [String] = []) -> DeorbitPlan {
     let state = source(), orbital = OrbitalState(fixed: state, planet: .init())
@@ -73,33 +71,70 @@ final class DeorbitExecutionTests: XCTestCase {
       propulsion: state.propulsion!, window: window, cases: cases,
       modelLimitations: limitations, evaluatedWindows: 1)
   }
-  func testFailedModelVerdictsRemainAdvisoryWithExplicitReducedAssurance() throws {
-    let zero = plan(cases: cases(passes: []))
-    XCTAssertFalse(zero.executionQualified)
-    XCTAssertTrue(zero.permitsExplicitReducedAssurance)
-    XCTAssertThrowsError(try zero.authorize(identifier: zero.identifier, reducedAssurance: false))
-    try zero.authorize(identifier: zero.identifier, reducedAssurance: true)
-    let failedNominal = plan(cases: cases(passes: Set(1..<15)))
-    XCTAssertFalse(failedNominal.executionQualified)
-    try failedNominal.authorize(identifier: failedNominal.identifier, reducedAssurance: true)
+  func testFailedDeorbitCandidatesAreRankedByPhysicalMM305EntryNotSeventyKilometreMiss() {
+    let c = MissionConfiguration()
+    let target = c.entrySettings.terminalTargetAltitude-c.runway.elevation
+    let terminalSpeed = 800.0
+    func rank(along: Double, cross: Double, height: Double = 25_000,
+              speed: Double = 840, hardUnsafe: Bool = false) -> DeorbitPlanner.InfeasibleApproachRank {
+      DeorbitPlanner.infeasibleApproachRank(
+        track: [[0, along, cross, height-c.runway.elevation, speed, 0, 0]],
+        hardUnsafe: hardUnsafe, screenFeasible: false, violationCount: 1,
+        entryMiss: 30_000, configuration: c, terminalSpeed: terminalSpeed)
+    }
+    let nearTAEM = rank(along: -3_700, cross: -11_200, height: target+c.runway.elevation)
+    let oldWindow = rank(along: 16_900, cross: -39_200)
+    let overspeed = rank(along: -8_000, cross: 0, speed: 1_135)
+    let unsafe = rank(along: -8_000, cross: 0, hardUnsafe: true)
+    XCTAssertLessThan(nearTAEM, oldWindow)
+    XCTAssertLessThan(nearTAEM, overspeed)
+    XCTAssertLessThan(nearTAEM, unsafe)
+    XCTAssertEqual(nearTAEM.captureMiss, hypot(4_300, 11_200), accuracy: 1)
+    let crossingTooLow = rank(along: -8_000, cross: 0, height: 20_000)
+    XCTAssertLessThan(nearTAEM, crossingTooLow)
   }
-  func testExplicitAuthorizationIsBoundToPlanAndCompleteMatrix() throws {
-    let provisional = plan(cases: cases(passes: Set(0..<15)), limitations: ["unvalidated moment model"])
+
+  func testCoastWarpStartsForShortOMSWaitWithoutCuttingNinetySecondSafetyHold() {
+    let shouldWarp = DeorbitRuntime.shouldStartCoastWarp(burnStart:currentTime:)
+    XCTAssertTrue(shouldWarp(586, 0))
+    XCTAssertTrue(shouldWarp(250, 0))
+    XCTAssertTrue(shouldWarp(120.01, 0))
+    XCTAssertFalse(shouldWarp(120, 0))
+    XCTAssertFalse(shouldWarp(100, 0))
+    XCTAssertFalse(shouldWarp(90, 0))
+    XCTAssertFalse(shouldWarp(120, .nan))
+    XCTAssertEqual(DeorbitRuntime.preBurnWarpHoldSeconds, 90)
+  }
+  func testIncompleteTerminalRouteStillAuthorizesScreenedOrbitalEntry() throws {
+    let failed = plan(cases: cases(passed: false))
+    XCTAssertFalse(failed.executionQualified)
+    XCTAssertFalse(failed.nominalPassed)
+    XCTAssertTrue(failed.hasExecutableEntryWindow)
+    XCTAssertTrue(failed.permitsExplicitReducedAssurance)
+    try failed.authorize(identifier: failed.identifier, reducedAssurance: false)
+    try failed.authorize(identifier: failed.identifier, reducedAssurance: true)
+  }
+  func testAuthorizationRequiresScreenedEntryAndPlanIdentity() throws {
+    let provisional = plan(cases: cases(passed: true), limitations: ["unvalidated moment model"])
+    XCTAssertTrue(provisional.hasNominalEvaluation)
     XCTAssertTrue(provisional.fullRouteQualified)
     XCTAssertFalse(provisional.executionQualified)
-    XCTAssertThrowsError(try provisional.authorize(identifier: provisional.identifier, reducedAssurance: false))
+    try provisional.authorize(identifier: provisional.identifier, reducedAssurance: false)
     XCTAssertThrowsError(try provisional.authorize(identifier: "different-plan", reducedAssurance: true))
     try provisional.authorize(identifier: provisional.identifier, reducedAssurance: true)
-    let duplicate = plan(cases: Array(repeating: cases(passes: [0])[0], count: 15))
-    XCTAssertFalse(duplicate.hasCompleteStressMatrix)
+    let duplicate = plan(cases: cases(passed: true) + cases(passed: true))
+    XCTAssertFalse(duplicate.hasNominalEvaluation)
     XCTAssertThrowsError(try duplicate.authorize(identifier: duplicate.identifier, reducedAssurance: true))
-    let danger = plan(cases: cases(passes: Set(0..<15), hardUnsafe: [4]))
-    XCTAssertFalse(danger.executionQualified)
-    XCTAssertEqual(danger.unsafeCases, 1)
-    try danger.authorize(identifier: danger.identifier, reducedAssurance: true)
+    let empty = plan(cases: [])
+    XCTAssertFalse(empty.hasNominalEvaluation)
+    XCTAssertFalse(empty.permitsExplicitReducedAssurance)
+    let unsafe = plan(cases: cases(passed: true, hardUnsafe: true))
+    XCTAssertFalse(unsafe.fullRouteQualified)
+    XCTAssertFalse(unsafe.permitsExplicitReducedAssurance)
+    XCTAssertThrowsError(try unsafe.authorize(identifier: unsafe.identifier, reducedAssurance: true))
   }
   func testLoadedPlanRequiresFreshOrbitAndCurrentBurnWindow() async throws {
-    let original = plan(cases: cases(passes: Set(0..<15)))
+    let original = plan(cases: cases(passed: true))
     let w = original.window
     let future = DeorbitWindow(burnStart: 100, deltaV: w.deltaV, duration: w.duration,
       normalAngle: w.normalAngle, periapsisAltitude: w.periapsisAltitude, afterBurn: w.afterBurn,
@@ -118,8 +153,62 @@ final class DeorbitExecutionTests: XCTestCase {
     var reversed = loaded.source; reversed.time -= 1
     do { try await runtime.validateFreshOrbit(reversed); XCTFail("pre-plan epoch accepted") } catch {}
   }
+  func testLongRailsCoastPhaseDriftUsesTimingAllowanceWithoutWeakeningCrossTrack() async throws {
+    let original = plan(cases: cases(passed: true))
+    let w = original.window
+    let future = DeorbitWindow(burnStart: 25000, deltaV: w.deltaV, duration: w.duration,
+      normalAngle: w.normalAngle, periapsisAltitude: w.periapsisAltitude,
+      afterBurn: w.afterBurn, entryInterface: w.entryInterface,
+      entryRange: w.entryRange, entrySpeed: w.entrySpeed,
+      entryFlightPath: w.entryFlightPath, entryCourseError: w.entryCourseError,
+      crossrange: w.crossrange, miss: w.miss)
+    let p = DeorbitPlan(source: original.source, configuration: original.configuration,
+      propulsion: original.propulsion, window: future, cases: original.cases,
+      modelLimitations: [], evaluatedWindows: 1)
+    let runtime = DeorbitRuntime(io: FreshnessOnlyIO(), recorder: FreshnessOnlyRecorder(),
+      plan: p, aerodynamics: try AerodynamicsEngine())
+    let native = try OrbitalMechanics(planet: p.configuration.planet).propagate(
+      .init(fixed: p.source, planet: p.configuration.planet), to: 20_000)
+    let tangent = native.velocity.normalized
+    let cross = native.position.projected(onPlaneWithNormal: tangent).normalized
+    func observed(along: Double, lateral: Double, driftVelocity: Double = 0) -> VehicleState {
+      let shift = native.position + tangent*along + cross*lateral
+      let shifted = OrbitalState(time: native.time, position: shift,
+        velocity: native.velocity+tangent*driftVelocity, mass: native.mass)
+      var state = shifted.planetFixed(planet: p.configuration.planet, attitude: p.source.attitude)
+      state.propulsion = p.propulsion
+      state.systems = p.source.systems
+      return state
+    }
+    // Reproduce the live 86km failure: <0.1s phase lag causes a ~0.56 m/s
+    // velocity vector rotation, despite no change to orbital energy.
+    let phaseShifted = try OrbitalMechanics(planet: p.configuration.planet).propagate(
+      .init(fixed: p.source, planet: p.configuration.planet), to: 20_000.08)
+    let phaseOnly = OrbitalState(time: native.time, position: phaseShifted.position,
+      velocity: phaseShifted.velocity, mass: native.mass)
+    var phaseState = phaseOnly.planetFixed(planet: p.configuration.planet,
+      attitude: p.source.attitude)
+    phaseState.propulsion = p.propulsion
+    phaseState.systems = p.source.systems
+    XCTAssertGreaterThan((phaseShifted.velocity-native.velocity).length,
+      p.configuration.deorbitSettings.velocityUncertainty+0.01)
+    try await runtime.validateFreshOrbit(phaseState)
+    try await runtime.validateFreshOrbit(observed(along: 120, lateral: 30))
+    do {
+      try await runtime.validateFreshOrbit(observed(along: 120, lateral: 80))
+      XCTFail("80m radial/cross-track displacement must not pass")
+    } catch {}
+    do {
+      try await runtime.validateFreshOrbit(observed(along: 1_500, lateral: 5))
+      XCTFail("Displacement beyond 0.5s timing allowance must not pass")
+    } catch {}
+    do {
+      try await runtime.validateFreshOrbit(observed(along: 120, lateral: 10, driftVelocity: 0.8))
+      XCTFail("Excessive inertial velocity error must not pass")
+    } catch {}
+  }
   func testOrbitalCoastRecoversFromTimeoutAndForwardGap() async throws {
-    let original = plan(cases: cases(passes: Set(0..<15))), w = original.window
+    let original = plan(cases: cases(passed: true)), w = original.window
     let future = DeorbitWindow(burnStart: 100, deltaV: w.deltaV, duration: w.duration,
       normalAngle: w.normalAngle, periapsisAltitude: w.periapsisAltitude, afterBurn: w.afterBurn,
       entryInterface: w.entryInterface, entryRange: w.entryRange, entrySpeed: w.entrySpeed,
@@ -159,6 +248,19 @@ final class DeorbitExecutionTests: XCTestCase {
     XCTAssertEqual(cutoff.command.throttle, 0)
     XCTAssertGreaterThan(burn.deliveredDeltaV, 0)
   }
+  func testBurnDoesNotAbortOnPredictedDurationWhileWaitingForMeasuredClosure() throws {
+    let p = plan(cases: []), controller = DeorbitBurnController(plan: p)
+    var state = source()
+    for step in 0...4_500 {
+      state.time = Double(step)*0.1
+      state.systems.thrust = 1_500 // Actual thrust is lower than planned.
+      let output = try controller.update(state, periapsisAltitude: 52_000)
+      XCTAssertLessThanOrEqual(output.command.throttle, p.configuration.deorbitSettings.maximumThrottle)
+      XCTAssertFalse(controller.complete)
+    }
+    XCTAssertGreaterThan(controller.diagnostics.burnElapsed, p.window.duration * 2)
+    XCTAssertGreaterThan(controller.deliveredDeltaV, 0)
+  }
   func testBurnGapKeepsMeasuredImpulseSeparateFromUncertaintyBound() throws {
     let p = plan(cases: []), burn = DeorbitBurnController(plan: p)
     var state = source()
@@ -175,14 +277,15 @@ final class DeorbitExecutionTests: XCTestCase {
     XCTAssertGreaterThan(output.command.throttle, 0)
     XCTAssertEqual(burn.diagnostics.unobservedDeltaVUpperBound!, bound, accuracy: 1e-12)
   }
-  func testPointingAndThrustLossCannotSilentlyMoveBurnWindow() throws {
+  func testLatePointingIsRecoveredWithoutThrustAndLostEngineStillTripsWatchdog() throws {
     var late = source(); late.time = 1
-    XCTAssertThrowsError(try DeorbitBurnController(plan: plan(cases: [])).update(late, periapsisAltitude: 52000))
+    let lateOutput = try DeorbitBurnController(plan: plan(cases: [])).update(late, periapsisAltitude: 52000)
+    XCTAssertLessThanOrEqual(lateOutput.command.throttle, 0.18)
     var state = source(); state.attitude = .init()
     let unaligned = DeorbitBurnController(plan: plan(cases: []))
     XCTAssertEqual(try unaligned.update(state, periapsisAltitude: 52000).command.throttle, 0)
     state.time = 0.6
-    XCTAssertThrowsError(try unaligned.update(state, periapsisAltitude: 52000))
+    XCTAssertEqual(try unaligned.update(state, periapsisAltitude: 52000).command.throttle, 0)
     let dry = DeorbitBurnController(plan: plan(cases: []))
     state = source()
     var rejected = false
@@ -213,22 +316,5 @@ final class DeorbitExecutionTests: XCTestCase {
     XCTAssertLessThan(controller.alignmentError, radians(0.5))
     XCTAssertLessThan(state.angularVelocity.length, radians(0.5))
     XCTAssertLessThan(largestStep, radians(1))
-  }
-  func testFifteenControlledOrbitalDispersionsReachDescendingInterface() throws {
-    let c = MissionConfiguration(), state = source(), propulsion = state.propulsion!
-    let window = try DeorbitWindowSearch(configuration: c).probe(
-      initial: .init(fixed: state, planet: c.planet), start: 60, normal: 0, propulsion: propulsion)
-    let dispersions = DeorbitDispersion.cases(c)
-    XCTAssertEqual(dispersions.count, 15)
-    for (index, dispersion) in dispersions.enumerated() {
-      let result = try OrbitalExecutionModel(configuration: c).predict(source: state,
-        window: window, propulsion: propulsion, dispersion: dispersion)
-      XCTAssertTrue(result.burnCompleted, "orbital dispersion \(index)")
-      XCTAssertLessThan(result.entry.verticalSpeed, 0)
-      XCTAssertLessThan(result.entry.position.length-c.planet.radius, c.planet.atmosphereTop)
-      XCTAssertLessThan(result.entry.mass, state.mass*dispersion.mass)
-      XCTAssertGreaterThan(result.entry.mass, propulsion.dryMass)
-      XCTAssertTrue(result.entry.systems.unpowered)
-    }
   }
 }

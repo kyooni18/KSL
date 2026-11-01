@@ -7,6 +7,7 @@ public final class PathTrackingEngine {
   private let frame: RunwayFrame
   private let aero: AerodynamicsEngine
   private let rotation: RotationalDynamicsEngine
+  private let speedbrake: TAEMSpeedbrakeController
   public private(set) var index = 0
   public private(set) var trackingError = 0.0
   public private(set) var reference: PathStation?
@@ -15,11 +16,13 @@ public final class PathTrackingEngine {
   public private(set) var allocatedLateralAcceleration = 0.0
   public private(set) var lookaheadDistance = 0.0
   public private(set) var lookaheadHeadingError = 0.0
-  public init(configuration: MissionConfiguration, aerodynamics: AerodynamicsEngine, initialIndex: Int = 0) {
+  public init(configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine,
+              aerodynamics: AerodynamicsEngine, initialIndex: Int = 0) {
     self.configuration = configuration
     frame = .init(runway: configuration.runway, planet: configuration.planet)
     aero = aerodynamics
     rotation = .init(configuration: configuration.vehicle, planet: configuration.planet)
+    speedbrake = .init(configuration: configuration, atmosphere: atmosphere)
     index = max(0, initialIndex)
   }
   public func reset() {
@@ -138,6 +141,7 @@ public final class PathTrackingEngine {
                      pitchResponseSeconds: Double? = nil, referenceDynamicsCurrent: Bool = true) -> (GuidanceTarget, PathStation) {
     let (lateral, ref) = lateralDemand(state, plan: plan, rollResponseSeconds: rollResponseSeconds)
     let p = frame.coordinates(of: state.position)
+    let a = state.aerodynamics
     let speed = state.aerodynamics.airspeed
     let g = configuration.planet.gravitationalParameter / state.position.squaredLength
     let gamma = atan(ref.slope)
@@ -145,8 +149,11 @@ public final class PathTrackingEngine {
     // An unpriced geometric tail has no predicted speed to exchange for height.
     let priced = referenceDynamicsCurrent && ref.speed > 0
       && ref.distance <= (plan.assessment.predictedThroughDistance ?? plan.length)
+    // Convert excess kinetic energy to height when fast. When slow, the only
+    // available correction is to lower the reference and recover airspeed;
+    // raising it would spend kinetic energy that the vehicle does not have.
     let exchange = ref.segment != .final && priced
-      ? (ref.speed * ref.speed - speed * speed) / (2 * g) : 0
+      ? min(0, (ref.speed * ref.speed - speed * speed) / (2 * g)) : 0
     let heightTarget = ref.height - exchange
     let rateTime = max(5, pitchFloor), heightTime = rateTime * 12 / 5
     let desiredVertical = speed * sin(gamma) + clamp((heightTarget - p.height) / heightTime, -35, 35)
@@ -163,11 +170,11 @@ public final class PathTrackingEngine {
     let force = NormalForceEnvelope(
       maximumLift: min(available, configuration.vehicle.maximumLoadFactor * 9.80665),
       maximumBank: configuration.vehicle.maximumBank)
-    // Preserve the pre-existing support-first recovery for infeasible geometry.
-    // A priced, feasible positive normal vector may unload along its reference.
-    let reservedVertical = plan.assessment.feasible && priced && vertical > 0
-      ? vertical : max(support, vertical)
-    let allocation = force.allocate(vertical: reservedVertical, lateral: lateral)
+    // Follow the force required by the best available descending reference. A
+    // support floor here would turn every energy-short recovery into a pull-up
+    // and prevent the vehicle from exchanging height for airspeed. The force
+    // allocator itself limits normal force to the physically positive cone.
+    let allocation = force.allocate(vertical: vertical, lateral: lateral)
     allocatedLateralAcceleration = allocation.lateral
     let lift = aero.liftSolution(acceleration: allocation.lift / scale, mass: state.mass,
       dynamicPressure: state.aerodynamics.dynamicPressure, mach: state.aerodynamics.mach,
@@ -182,9 +189,22 @@ public final class PathTrackingEngine {
       alpha = min(alpha, aero.bestGlideAlpha(mach: state.aerodynamics.mach, maximumAlpha: maxAlpha,
         dynamicPressure: state.aerodynamics.dynamicPressure, gear: state.systems.gearDown))
     }
+    let brake: Double
+    if ref.segment != .final, priced, let nepDistance = plan.nominalEnergyStation?.distance {
+      let existing = a.dynamicPressure * (configuration.vehicle.speedbrakeFullDeploymentDragArea ?? 0)
+        * (state.systems.speedbrakeFraction ?? 0)
+      let cleanDrag = a.measuredForces ? max(0, a.drag-existing)/state.mass
+        : a.dynamicPressure*aero.referenceArea*aero.coefficients(mach: a.mach,
+          alpha: a.angleOfAttack, dynamicPressure: a.dynamicPressure, beta: a.sideslip,
+          gear: state.systems.gearDown).drag/state.mass
+      brake = speedbrake.fraction(speed: speed, position: state.position, time: state.time,
+        mass: state.mass, remainingDistance: nepDistance-ref.distance,
+        target: plan.nominalEnergyPoint, cleanDragAcceleration: cleanDrag)
+    } else { brake = 0 }
     return (.init(angleOfAttack: alpha, bank: allocation.bank,
       desiredSpeed: priced ? ref.speed : (configuration.vehicle.minimumSafeSpeed ?? configuration.vehicle.landingSpeed),
       desiredHeight: heightTarget, desiredFlightPath: desiredGamma,
-      gearDown: state.systems.gearDown || p.height <= (configuration.guidance.gearDeploymentAltitude ?? 1500)), ref)
+      gearDown: state.systems.gearDown || p.height <= (configuration.guidance.gearDeploymentAltitude ?? 1500),
+      speedbrakeFraction: brake), ref)
   }
 }

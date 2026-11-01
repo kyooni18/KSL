@@ -1,4 +1,5 @@
 import Foundation
+import KSLControl
 import KSLCore
 import KSLDiagnostics
 import KSLGuidance
@@ -7,6 +8,59 @@ import KSLPhysics
 /// Matched-state evidence, not a landing certificate. Replays recorded actuator
 /// commands for each interval, resetting to measured state at every boundary.
 enum EntryEnergyProbe {
+  static func compare(input: String, configuration c: MissionConfiguration, elapsed: Double, duration: Double) async throws {
+    let reader = try JSONLReader(url: URL(fileURLWithPath: input))
+    defer { try? reader.close() }
+    var records: [FlightRecord] = []
+    while let data = try reader.nextLine() { records.append(try JSONDecoder().decode(FlightRecord.self, from: data)) }
+    guard let first = records.first,
+      let start = records.firstIndex(where: { $0.state.time >= first.state.time+elapsed }) else {
+      throw FlightError.invalidConfiguration("Probe start outside recording")
+    }
+    let atm = try AtmosphericModelEngine(planet: c.planet)
+    let aero = try await PhysicsModelLoader.aerodynamics(configuration: c)
+    let frame = RunwayFrame(runway: c.runway, planet: c.planet)
+    let warm = FlightController(configuration: c)
+    for i in 1..<start {
+      let dt = records[i].state.time-records[i-1].state.time
+      if dt > 0 && dt <= 1 { _ = try warm.command(state: records[i].state, solution: records[i].guidance, dt: dt) }
+      else { warm.resumeAfterTelemetryGap(at: records[i].state) }
+    }
+    let initial = records[start].state, dt = c.guidance.controlInterval
+    print("branch,elapsed,altitude,mach,speed,specificEnergy,range,verticalSpeed,alpha,bank,alphaTarget,bankTarget,drag,lift,referenceDrag,captureEnergyMargin")
+    for corrected in [false, true] {
+      let controller = FlightController(configuration: c, snapshot: warm.snapshot)
+      let plant = ShuttlePhysicsEngine(configuration: c, atmosphere: atm, aerodynamics: aero,
+        initialControls: initial.appliedControls ?? .init(), initialState: initial,
+        pitchBalancingInput: warm.snapshot.predictionPitchTrim(state: initial))
+      let law = EntryGuidanceEngine(configuration: c, atmosphere: atm, aerodynamics: aero)
+      var limiter = GuidanceTargetLimiter(previous: records[start].guidance.target)
+      var state = plant.observe(initial), index = start, nextOutput = initial.time
+      while state.time-initial.time < duration && !state.contact.isGrounded && state.contact != .crashed {
+        while index+1 < records.count && records[index+1].state.time <= state.time { index += 1 }
+        let request = corrected ? law.update(state, synchronousPlanning: false, feedback: controller.diagnostics)
+          : records[index].guidance.target
+        let target = limiter.update(request, phase: .entry, configuration: c, dt: dt,
+          dynamicPressure: state.aerodynamics.dynamicPressure,
+          rollResponseSeconds: controller.diagnostics.rollResponseSeconds, pitchResponseSeconds: controller.diagnostics.pitchResponseSeconds,
+          controlAuthority: state.controlAuthority)
+        if state.time >= nextOutput {
+          nextOutput += 1
+          let a = state.aerodynamics
+          let e = state.velocity.squaredLength/2-c.planet.gravitationalParameter/state.position.length
+            - c.planet.angularVelocity.cross(state.position).squaredLength/2
+          let numbers = [state.time-first.state.time,state.position.length-c.planet.radius,a.mach,a.airspeed,e,
+            frame.distance(from: state.position,to:frame.origin),state.verticalSpeed,degrees(a.angleOfAttack),degrees(a.bank),
+            degrees(target.angleOfAttack),degrees(target.bank),a.drag/state.mass,a.lift/state.mass,
+            law.diagnostics.referenceDrag,law.diagnostics.captureEnergyMargin ?? .nan]
+          print(([corrected ? "corrected" : "recorded-targets"]+numbers.map { String($0) }).joined(separator: ","))
+        }
+        let command = try controller.command(state: state, solution: .init(phase: .entry,target:target),dt:dt)
+        state = try plant.advance(state,command:command,duration:dt)
+      }
+    }
+  }
+
   static func run(input: String, configuration c: MissionConfiguration) async throws {
     let reader = try JSONLReader(url: URL(fileURLWithPath: input))
     defer { try? reader.close() }
@@ -35,7 +89,7 @@ enum EntryEnergyProbe {
       let dt = s.time-p.state.time
       guard dt > 0, dt <= 1 else { continue }
       let physics = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero,
-        initialControls: p.state.appliedControls ?? p.command)
+        initialControls: p.state.appliedControls ?? p.command, initialState: p.state)
       let predicted = try physics.advance(p.state, command: p.command, duration: dt)
       let accel = rotation.angularAcceleration(state: p.state, surfaces: .init(command: p.command)).y
       let measuredAccel = (s.angularVelocity.y-p.state.angularVelocity.y)/dt

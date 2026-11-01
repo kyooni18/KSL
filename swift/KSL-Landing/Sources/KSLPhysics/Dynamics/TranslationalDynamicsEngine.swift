@@ -29,7 +29,8 @@ public final class TranslationalDynamicsEngine: Sendable {
     let atm = atmosphere.sample(position: state.position, time: time)
     let aero = aerodynamics.evaluate(
       position: state.position, velocity: state.velocity, attitude: attitude, atmosphere: atm,
-      gear: systems.gearDown, brakes: systems.brakes, airbrakes: systems.airbrakes)
+      gear: systems.gearDown, brakes: systems.brakes, airbrakes: systems.airbrakes,
+      speedbrakeFraction: systems.speedbrakeFraction ?? 0)
     return planet.fixedAcceleration(
       position: state.position, velocity: state.velocity, specificForce: aero.force / mass)
   }

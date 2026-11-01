@@ -27,11 +27,37 @@ private final class ScriptedTransport: RPCTransport {
 }
 
 struct ProtocolTests {
+  @Test func testSTSSurfaceRolesKeepPitchRollAndYawSeparate() {
+    #expect(STSSurfaceAllocation.axes(partName: "benjee10.shuttle.elevon2") == [true, false, false])
+    #expect(STSSurfaceAllocation.axes(partName: "benjee10_shuttle_elevon1") == [false, true, false])
+    #expect(STSSurfaceAllocation.axes(partName: "benjee10.shuttle.bodyFlap") == [true, false, false])
+    #expect(STSSurfaceAllocation.axes(partName: "benjee10.shuttle.rudder") == [false, false, true])
+    #expect(STSSurfaceAllocation.axes(partName: "unrelated.part") == nil)
+  }
+  @Test func testRailsWarpWireRejectsInvalidIndices() throws {
+    for value in UInt64(0)...UInt64(7) {
+      let encoded = try KRPCValue.encodeRailsWarpFactor(value)
+      #expect(try KRPCValue.decodeRailsWarpFactor(encoded) == value)
+    }
+    #expect(throws: (any Error).self) {
+      try KRPCValue.encodeRailsWarpFactor(8)
+    }
+    #expect(throws: (any Error).self) {
+      try KRPCValue.decodeRailsWarpFactor(KRPCValue.sint(-1))
+    }
+  }
+
   @Test func testScalarAndTupleGoldenVectors() throws {
     #expect(Array(KRPCValue.double(1)) == [0, 0, 0, 0, 0, 0, 240, 63])
     #expect(Array(KRPCValue.float(1)) == [0, 0, 128, 63])
     #expect(Array(KRPCValue.sint(-1)) == [1])
     #expect(Array(KRPCValue.sint(5)) == [10])
+    // kRPC SpaceCenter rails warp factor is sint32: raw uint gave 4 -> 2.
+    #expect(Array(try KRPCValue.encodeRailsWarpFactor(4)) == [8])
+    #expect(Array(try KRPCValue.encodeRailsWarpFactor(3)) == [6])
+    #expect(try KRPCValue.decodeRailsWarpFactor(Data([6])) == 3)
+    #expect(try KRPCValue.decodeRailsWarpFactor(Data([8])) == 4)
+    #expect(try KRPCValue.decodeUInt(Data([6])) == 6)
     #expect(Array(KRPCValue.string("STS")) == [3, 83, 84, 83])
     let value = Vector3(1, -2, 3)
     let data = KRPCValue.tuple([KRPCValue.double(1), KRPCValue.double(-2), KRPCValue.double(3)])

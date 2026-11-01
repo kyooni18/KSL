@@ -10,34 +10,56 @@ public final class ShuttlePhysicsEngine {
   public let rotation: RotationalDynamicsEngine
   private let ground: GroundDynamicsEngine
   private var surfaces = SurfaceActuatorState()
+  private var authorityAnchor: ControlAuthorityTelemetry?
   public private(set) var touchdown: TouchdownEvent?
   public init(
     configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine,
-    aerodynamics: AerodynamicsEngine, initialControls: ControlCommand = .init()
+    aerodynamics: AerodynamicsEngine, initialControls: ControlCommand = .init(),
+    initialState: VehicleState? = nil, pitchBalancingInput: Double? = nil
   ) {
     self.configuration = configuration
     self.atmosphere = atmosphere
     self.aerodynamics = aerodynamics
     surfaces = .init(command: initialControls)
+    authorityAnchor = initialState?.controlAuthority.flatMap {
+      $0.isValid && [.measured, .identified].contains($0.evidence) ? $0 : nil
+    }
     translation = .init(
       planet: configuration.planet, atmosphere: atmosphere, aerodynamics: aerodynamics)
-    rotation = .init(configuration: configuration.vehicle, planet: configuration.planet)
+    rotation = .init(configuration: configuration.vehicle, planet: configuration.planet,
+      pitchBalancingInput: pitchBalancingInput)
     ground = .init(configuration: configuration)
   }
   public func observe(_ state: VehicleState) -> VehicleState {
+    // Refresh only from an external measurement, never from this engine's
+    // extrapolated .identified output.
+    if let report = state.controlAuthority,
+      report.isValid, report.evidence == .measured { authorityAnchor = report }
     var s = state
     s.atmosphere = atmosphere.sample(position: s.position, time: s.time)
     s.aerodynamics = aerodynamics.evaluate(
       position: s.position, velocity: s.velocity, attitude: s.attitude, atmosphere: s.atmosphere,
-      gear: s.systems.gearDown, brakes: s.systems.brakes, airbrakes: s.systems.airbrakes)
+      gear: s.systems.gearDown, brakes: s.systems.brakes, airbrakes: s.systems.airbrakes,
+      speedbrakeFraction: s.systems.speedbrakeFraction ?? 0)
     let p = configuration.vehicle.controlPlant
     let kPa = max(0, s.aerodynamics.dynamicPressure / 1000)
     let acceleration = Vector3(min(p.rollAccelerationMaximum, p.rollAccelerationPerKPa * kPa),
       min(p.pitchAccelerationMaximum, p.pitchAccelerationPerKPa * kPa),
       min(p.yawAccelerationMaximum, p.yawAccelerationPerKPa * kPa))
-    let torque = acceleration.multiplied(componentwise: configuration.vehicle.inertia)
-    s.controlAuthority = .init(positiveTorque: torque, negativeTorque: -torque,
-      inertia: configuration.vehicle.inertia, evidence: .provisional)
+    // A measured total includes surfaces, wheels and the enabled RCS. Taking
+    // max(total, q-only prior) double-counted/inflated authority and then
+    // mislabeled that prior as identified. Hold the measured local torque and
+    // inertia instead; its extrapolation away from the seed remains unvalidated.
+    if var anchor = authorityAnchor {
+      anchor.evidence = .identified
+      anchor.actuatorSources = "measured/identified seed total torque and inertia held locally; q evolution unvalidated"
+      s.controlAuthority = anchor
+    } else {
+      let torque = acceleration.multiplied(componentwise: configuration.vehicle.inertia)
+      s.controlAuthority = .init(positiveTorque: torque, negativeTorque: -torque,
+        inertia: configuration.vehicle.inertia, evidence: .provisional)
+      s.controlAuthority?.actuatorSources = "provisional q-only moment model; no measured anchor"
+    }
     s.appliedControls = .init(pitch: surfaces.pitch, roll: surfaces.roll, yaw: surfaces.yaw,
                               gearDown: s.systems.gearDown)
     let r = RunwayFrame(runway: configuration.runway, planet: configuration.planet).coordinates(
@@ -61,6 +83,7 @@ public final class ShuttlePhysicsEngine {
       let dt = min(maximumStep, left)
       left -= dt
       s.systems.gearDown = command.gearDown
+      s.systems.rcs = command.rcsEnabled ?? false
       s.systems.brakes = command.wheelBrake > 0.5
       if s.contact.isGrounded {
         ground.step(state: &s, command: command, dt: dt)
@@ -70,6 +93,7 @@ public final class ShuttlePhysicsEngine {
       let previous = s
       surfaces.advance(
         command: command, dt: dt / 2, rate: configuration.vehicle.controlPlant.surfaceRate)
+      s.systems.speedbrakeFraction = surfaces.speedbrake
       let acceleration = rotation.angularAcceleration(state: s, surfaces: surfaces)
       let midRate = s.angularVelocity + acceleration * (dt / 2)
       let midAttitude = s.attitude.advanced(bodyRate: midRate, dt: dt / 2)
@@ -90,6 +114,7 @@ public final class ShuttlePhysicsEngine {
       s.angularVelocity = s.angularVelocity + midpointAcceleration * dt
       s.time += dt
       surfaces.advance(command: command, dt: dt / 2, rate: configuration.vehicle.controlPlant.surfaceRate)
+      s.systems.speedbrakeFraction = surfaces.speedbrake
       s = observe(s)
       if let event = ground.detectContact(previous: previous, current: &s), touchdown == nil {
         touchdown = event

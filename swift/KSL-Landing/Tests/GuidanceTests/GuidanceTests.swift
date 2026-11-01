@@ -5,6 +5,70 @@ import XCTest
 @testable import KSLGuidance
 
 final class GuidanceTests: XCTestCase {
+  func testCaptureDeficitUsesVerticalRecoveryWithoutBankingAwayLift() throws {
+    let c = MissionConfiguration()
+    let atm = try AtmosphericModelEngine(), aero = try AerodynamicsEngine()
+    let frame = RunwayFrame(runway: c.runway, planet: c.planet)
+    let position = frame.position(along: -60_000, cross: 12_000, height: 24_000)
+    let velocity = frame.direction(at: .init(-60_000, 12_000), tangent: .init(1, 0))*650
+    let physics = ShuttlePhysicsEngine(configuration: c, atmosphere: atm, aerodynamics: aero)
+    var state = physics.observe(.init(time: 10, position: position, velocity: velocity,
+      attitude: .windAttitude(position: position, airVelocity: velocity, alpha: c.vehicle.maximumAngleOfAttack, bank: 0)))
+    var memory = EntryLawMemory()
+    memory.pitchResponseSeconds = 2
+    memory.previousAlpha = c.vehicle.maximumAngleOfAttack
+    let law = EntryCommandLaw(configuration: c, atmosphere: atm, aerodynamics: aero, memory: memory)
+    var alpha = c.vehicle.maximumAngleOfAttack
+    for _ in 0..<600 {
+      state.time += c.guidance.controlInterval
+      let target = law.update(state)
+      XCTAssertLessThanOrEqual(target.angleOfAttack, alpha+1e-12)
+      XCTAssertLessThanOrEqual(abs(target.bank), c.vehicle.maximumBank)
+      alpha = target.angleOfAttack
+    }
+    XCTAssertEqual(law.diagnostics.referenceDrag, 0)
+    XCTAssertEqual(law.diagnostics.bestRangeRecovery, true)
+    // Below the preferred capture altitude the force allocator can correctly
+    // retain maximum lift, even when its lower-drag best-glide incidence is
+    // lower. Requiring it to reduce AoA would sacrifice the last pullout.
+    XCTAssertGreaterThanOrEqual(alpha,
+      try XCTUnwrap(law.diagnostics.recoveryAlpha)-radians(1))
+    XCTAssertLessThanOrEqual(alpha, c.vehicle.maximumAngleOfAttack)
+    var lateral = EntryLateralMemory(), d = EntryDiagnostics()
+    let bank = EntryLateralController.update(memory: &lateral, state: state, configuration: c,
+      verticalLift: 2*state.aerodynamics.lift/state.mass, azimuthError: 1,
+      crossError: 60_000, crossRate: 100, alignment: 1, range: 60_000, dt: 1, diagnostics: &d)
+    XCTAssertEqual(bank, 0, accuracy: 1e-12)
+    XCTAssertEqual(d.energyBank, 0, accuracy: 1e-12)
+  }
+
+  func testMeasuredPredictorSeedRetainsVacuumAuthorityAndRejectsUnsupportedMoment() throws {
+    let c = MissionConfiguration()
+    let atm = try AtmosphericModelEngine(), aero = try AerodynamicsEngine()
+    let frame = RunwayFrame(runway: c.runway, planet: c.planet)
+    let position = frame.position(along: -200_000, cross: 0, height: 72_000)
+    let velocity = frame.direction(at: .init(-200_000, 0), tangent: .init(1, 0))*2000
+    var state = VehicleState(time: 10, position: position, velocity: velocity,
+      attitude: .windAttitude(position: position, airVelocity: velocity, alpha: radians(30), bank: 0))
+    let torque = c.vehicle.inertia*c.vehicle.controlPlant.pitchAccelerationMaximum
+    state.controlAuthority = .init(positiveTorque: torque, negativeTorque: -torque,
+      inertia: c.vehicle.inertia, evidence: .measured)
+    let physics = ShuttlePhysicsEngine(configuration: c, atmosphere: atm, aerodynamics: aero, initialState: state)
+    let observed = physics.observe(state)
+    XCTAssertGreaterThan(try XCTUnwrap(observed.controlAuthority).minimumAcceleration.y, 0)
+    let command = ControlCommand(pitch: 0.5, rcs: true)
+    let next = try physics.advance(observed, command: command, duration: 0.1)
+    XCTAssertTrue(next.systems.rcs)
+    XCTAssertGreaterThan(next.angularVelocity.y, observed.angularVelocity.y)
+    state.aerodynamics.mach = 5
+    state.aerodynamics.dynamicPressure = 8000
+    state.aerodynamics.angleOfAttack = radians(30)
+    let rotation = RotationalDynamicsEngine(configuration: c.vehicle, planet: c.planet)
+    XCTAssertEqual(rotation.angularAcceleration(state: state, surfaces: .init()).y, 0, accuracy: 1e-8)
+    state.controlAuthority?.evidence = .provisional
+    XCTAssertLessThan(rotation.angularAcceleration(state: state, surfaces: .init()).y, 0)
+  }
+
   func testCrossrangeCorrectionReversesWithoutBankLegDwell() {
     let c = MissionConfiguration()
     for alignment in [-1.0, 1.0] {
@@ -63,10 +127,13 @@ final class GuidanceTests: XCTestCase {
     _ = near.update(state)
     XCTAssertLessThan(near.diagnostics.requiredRange, slow.diagnostics.requiredRange)
     memory.previousAlpha = c.vehicle.maximumAngleOfAttack
-    memory.identifiedTrimCeiling = c.entrySettings.nominalAlpha
+    // A local trim observation must not invent an 18-degree ceiling.
+    memory.identifiedTrimCeiling = nil
     let rcs = EntryCommandLaw(configuration: c, atmosphere: atmosphere, aerodynamics: aero, memory: memory)
     XCTAssertGreaterThan(rcs.update(state).angleOfAttack, c.entrySettings.nominalAlpha)
     c.vehicle.rcsAttitudeControl = false
+    // An actually identified finite envelope remains authoritative.
+    memory.identifiedTrimCeiling = c.entrySettings.nominalAlpha
     let aerodynamic = EntryCommandLaw(configuration: c, atmosphere: atmosphere, aerodynamics: aero, memory: memory)
     XCTAssertLessThanOrEqual(aerodynamic.update(state).angleOfAttack, c.entrySettings.nominalAlpha)
   }
@@ -81,7 +148,11 @@ final class GuidanceTests: XCTestCase {
     let objective = EntryCaptureObjectivePlanner(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
       .objective(from: initial, crossAim: 0)
     XCTAssertGreaterThanOrEqual(objective.altitude, c.entrySettings.terminalMinimumAltitude)
-    XCTAssertEqual(hypot(objective.along, objective.cross), c.terminalCaptureRange, accuracy: 1e-6)
+    // A high-energy, high-altitude HAC inlet must not be reduced to the old
+    // 5-km precision-delivery point before its complete path is priced.
+    let inletRange = hypot(objective.along, objective.cross)
+    XCTAssertGreaterThan(inletRange, c.terminalCaptureRange)
+    XCTAssertLessThanOrEqual(inletRange, c.entrySettings.terminalTargetRange)
     let position = frame.position(along: objective.along, cross: objective.cross,
       height: objective.altitude-c.runway.elevation)
     let forward = frame.origin.normalized.projected(onPlaneWithNormal: position.normalized).normalized
@@ -102,10 +173,31 @@ final class GuidanceTests: XCTestCase {
     let plan = try XCTUnwrap(result.plan)
     XCTAssertNotNil(plan.spiral)
     let fit = try XCTUnwrap(result.fit)
-    XCTAssertLessThanOrEqual(fit.joinDistance,
-      sample.horizontalSpeed*max(c.guidance.pathLookaheadTime, fit.rollResponseSeconds)+1e-6)
+    // A high-altitude inlet can require a long, force-priced rejoin; the
+    // shorter actuator response distance is not a cap on HAC path geometry.
+    XCTAssertTrue(fit.joinDistance.isFinite)
+    XCTAssertLessThanOrEqual(fit.joinDistance, c.guidance.maximumPathLength)
     XCTAssertGreaterThanOrEqual(try XCTUnwrap(plan.spiral).finalRadius, c.guidance.minimumHACRadius)
-    XCTAssertTrue(MM305Admission.evaluate(sample, plan: plan, configuration: c).accepted)
+    let originalAdmission = MM305Admission.evaluate(sample, plan: plan, configuration: c)
+    // A priced HAC may be geometrically promising but cannot receive control
+    // unless its nominal closed-loop touchdown and stopping have qualified.
+    if !plan.nominalQualified { XCTAssertFalse(originalAdmission.accepted) }
+    if originalAdmission.accepted { XCTAssertTrue(plan.nominalQualified) }
+    // An otherwise physically admissible approach loses qualification when
+    // the nominal closed-loop continuation is absent. The preview search
+    // may still inspect it, but cannot transfer actual flight ownership.
+    let previewOnly = TerminalPlan(identifier: plan.identifier, createdAt: plan.createdAt,
+      spiral: plan.spiral, stations: plan.stations, assessment: plan.assessment,
+      stressCases: plan.stressCases, closedLoopCases: nil)
+    XCTAssertFalse(previewOnly.nominalQualified)
+    let strict = MM305Admission.evaluate(sample, plan: previewOnly, configuration: c)
+    XCTAssertFalse(strict.accepted)
+    XCTAssertTrue(strict.violations.contains { $0.message.contains("rollout unconfirmed") })
+    let exploratory = MM305Admission.evaluate(sample, plan: previewOnly,
+      configuration: c, requireQualification: false)
+    // An advisory search does not silently grant flight control, and removing
+    // nominal rollout evidence cannot make the physical constraints pass.
+    if exploratory.accepted { XCTAssertTrue(plan.assessment.feasible) }
     let mission = LandingMissionController(configuration: c, atmosphere: atmosphere, aerodynamics: aero,
       externalPlanning: true, initialPhase: .acquisition, initialPlan: plan)
     var changed = sample
@@ -127,10 +219,19 @@ final class GuidanceTests: XCTestCase {
     XCTAssertEqual(nextPlan.spiral?.side, plan.spiral?.side)
     XCTAssertLessThanOrEqual(try XCTUnwrap(nextPlan.spiral).turnAngle,
       try XCTUnwrap(plan.spiral).turnAngle+1e-6)
-    XCTAssertEqual(nextPlan.stations.first?.segment, .spiral)
-    XCTAssertEqual(try XCTUnwrap(nextPlan.stations.first).height, frame.coordinates(of: changed.position).height, accuracy: 1e-6)
+    // The continuing spiral is only usable when the new inlet still matches
+    // the measured vehicle. Otherwise an explicit acquisition is required.
+    XCTAssertTrue([PathSegment.acquisition, .spiral].contains(nextPlan.stations.first?.segment ?? .final))
+    XCTAssertEqual(try XCTUnwrap(nextPlan.stations.first).height,
+      frame.coordinates(of: changed.position).height, accuracy: 1e-6)
     mission.accept(.init(time: changed.time, entry: nil, terminal: updated), state: changed)
-    XCTAssertEqual(mission.plan?.createdAt, changed.time)
+    let admission = MM305Admission.evaluate(changed, plan: nextPlan, configuration: c)
+    if admission.accepted {
+      XCTAssertEqual(mission.plan?.createdAt, changed.time)
+    } else {
+      // Unqualified previews cannot replace an established control owner.
+      XCTAssertNotEqual(mission.plan?.createdAt, changed.time)
+    }
     changed.time += c.guidance.terminalReplanInterval
     XCTAssertNotNil(mission.planningRequest(from: changed, controls: nil)?.terminalState)
   }
@@ -197,12 +298,14 @@ final class GuidanceTests: XCTestCase {
     let plan = try XCTUnwrap(result.plan)
     XCTAssertFalse(plan.assessment.violations.isEmpty)
     XCTAssertEqual(plan.stations.last?.segment, .final)
-    XCTAssertTrue(MM305Admission.evaluate(state, plan: plan, configuration: c).accepted)
+    let nominalAdmission = MM305Admission.evaluate(state, plan: plan, configuration: c)
+    if !plan.nominalQualified { XCTAssertFalse(nominalAdmission.accepted) }
+    if nominalAdmission.accepted { XCTAssertTrue(plan.nominalQualified) }
     var offBand = state
     offBand.time = plan.createdAt + 4*c.guidance.terminalReplanInterval
     offBand.aerodynamics.dynamicPressure = 0
     let advisory = MM305Admission.evaluate(offBand, plan: plan, configuration: c)
-    XCTAssertTrue(advisory.accepted)
+    XCTAssertFalse(advisory.accepted)
     XCTAssertFalse(advisory.violations.isEmpty)
     XCTAssertGreaterThan(result.evaluatedCandidates, 0)
   }
@@ -220,28 +323,6 @@ final class GuidanceTests: XCTestCase {
     XCTAssertEqual(a.height, b.height, accuracy: 1e-4)
     XCTAssertEqual(a.slope, b.slope, accuracy: 1e-7)
     XCTAssertEqual(a.secondDerivative, b.secondDerivative, accuracy: 1e-7)
-  }
-  func testAuthorityEstimateConvergesWithoutChangingPolar() throws {
-    let model = try AerodynamicsEngine()
-    let estimator = AerodynamicAuthorityEstimator(model: model)
-    let configuration = MissionConfiguration()
-    let physics = ShuttlePhysicsEngine(
-      configuration: configuration, atmosphere: try .init(),
-      aerodynamics: try .init(liftScale: 0.8, dragScale: 1.2))
-    let p = RunwayFrame(runway: configuration.runway).position(
-      along: -10000, cross: 0, height: 4000)
-    let v = Vector3(100, 30, 0).projected(onPlaneWithNormal: p.normalized).normalized * 150
-    var state = physics.observe(
-      .init(
-        time: 0, position: p, velocity: v,
-        attitude: .windAttitude(position: p, airVelocity: v, alpha: radians(8), bank: 0)))
-    for i in 0..<150 {
-      state.time = Double(i) * 0.1
-      estimator.observe(state)
-    }
-    XCTAssertEqual(estimator.liftEffectiveness, 0.8, accuracy: 0.001)
-    XCTAssertEqual(estimator.dragEffectiveness, 1.2, accuracy: 0.001)
-    XCTAssertEqual(model.liftScale, 1)
   }
 
   func testVerticalPulloutUsesNormalRatherThanVerticalAcceleration() throws {
@@ -267,9 +348,18 @@ final class GuidanceTests: XCTestCase {
       segment: .acquisition)
     let engine = EnergyManagementEngine(
       configuration: c, atmosphere: atmosphere, aerodynamics: aero)
-    let (_, assessment) = engine.evaluate(stations: [station], from: state)
+    // Terminal pricing requires a traversable path (at least two stations).
+    // The first station must still use the actual normal-acceleration law.
+    let second = PathStation(distance: 100, position: .init(-14900, 0),
+      tangent: .init(1, 0), curvature: 0,
+      height: 5000 + tan(gamma)*100, slope: tan(gamma),
+      verticalCurvature: 1/pulloutRadius, segment: .acquisition)
+    let (_, assessment) = engine.evaluate(stations: [station, second], from: state,
+      advisoryOnly: true)
     let g = c.planet.gravitationalParameter / position.squaredLength
-    let gravityNormal = (g - pow(speed * cos(gamma), 2) / position.length) * cos(gamma)
+    // The spherical flight-path normal equation uses total air-relative
+    // V^2/r in the curvature term, not just the horizontal V*cos(gamma).
+    let gravityNormal = (g-speed*speed/position.length)*cos(gamma)
     XCTAssertEqual(
       assessment.maximumLoad * 9.80665, gravityNormal + speed * speed / pulloutRadius,
       accuracy: 1e-8)

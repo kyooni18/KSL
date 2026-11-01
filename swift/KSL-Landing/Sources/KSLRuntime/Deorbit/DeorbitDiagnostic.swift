@@ -6,16 +6,39 @@ import KSLGuidance
 
 /// Offline diagnostic of the planner's nominal model, not flight authorization.
 public enum DeorbitDiagnostic {
-  public static func traceNominal(plan: DeorbitPlan, output: URL) async throws {
-    let c = plan.configuration, dispersion = DeorbitDispersion.cases(c)[0]
+  /// Evaluate the nominal full native route with actual configured physics.
+  /// This is offline model
+  /// evidence, not an authorization to fly or an independent validation.
+  public static func evaluateWindow(plan: DeorbitPlan, caseIndex: Int,
+                                    entryReplanning: Bool = true) async throws -> DeorbitStressCase {
+    let c = plan.configuration
+    guard caseIndex == 0 else {
+      throw FlightError.invalidConfiguration("Invalid deorbit diagnostic case index")
+    }
+    let aero = try await PhysicsModelLoader.aerodynamics(configuration: c)
+    return try await DeorbitPlanner.evaluate(configuration: c, aero: aero, source: plan.source,
+      window: plan.window, propulsion: plan.propulsion,
+      index: caseIndex, candidateIndex: 0, progress: { _ in }, entryReplanning: entryReplanning)
+  }
+  public static func traceNominal(plan: DeorbitPlan, output: URL, entryReplanning: Bool = false) async throws {
+    try await trace(plan: plan, caseIndex: 0, output: output, entryReplanning: entryReplanning)
+  }
+  /// Record the nominal orbital state, atmosphere and aerodynamic plant.
+  /// This is diagnostic evidence only, not a route admission or live flight.
+  public static func trace(plan: DeorbitPlan, caseIndex: Int, output: URL,
+                           entryReplanning: Bool = false) async throws {
+    let c = plan.configuration
+    guard caseIndex == 0 else {
+      throw FlightError.invalidConfiguration("Invalid deorbit diagnostic case index")
+    }
     let orbital = try OrbitalExecutionModel(configuration: c).predict(source: plan.source,
-      window: plan.window, propulsion: plan.propulsion, dispersion: dispersion)
+      window: plan.window, propulsion: plan.propulsion)
     let atmosphere = try AtmosphericModelEngine(planet: c.planet)
     let aero = try await PhysicsModelLoader.aerodynamics(configuration: c)
-    let computer = try FlightComputer(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+    let computer = try FlightComputer(configuration: c, atmosphere: atmosphere,
+      aerodynamics: aero, entryReplanning: entryReplanning)
     let plant = ShuttlePhysicsEngine(configuration: c,
-      atmosphere: try .init(planet: c.planet, densityScale: dispersion.atmosphere),
-      aerodynamics: aero.scaled(lift: dispersion.lift, drag: dispersion.drag),
+      atmosphere: try .init(planet: c.planet), aerodynamics: aero,
       initialControls: orbital.entry.appliedControls ?? .init())
     guard !FileManager.default.fileExists(atPath: output.path),
       FileManager.default.createFile(atPath: output.path, contents: nil) else {

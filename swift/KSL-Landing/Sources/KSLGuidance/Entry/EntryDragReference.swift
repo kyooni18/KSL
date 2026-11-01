@@ -2,6 +2,46 @@ import Foundation
 import KSLCore
 import KSLPhysics
 
+/// Flight-measured lift and drag calibrate the reference polar at the
+/// *observed* Mach, AoA, dynamic pressure, mass and part/gear state. A
+/// ballistic coefficient changes with incidence: measured drag at 30 deg
+/// must not be extrapolated as if its CD applied at the best-glide angle.
+struct EntryAerodynamicCalibration {
+  let ballisticCoefficient: Double
+  let liftToDrag: Double
+  let evidence: EvidenceKind
+
+  static func evaluate(_ s: VehicleState, configuration c: MissionConfiguration,
+                       model: AerodynamicsEngine, maximumAlpha: Double) -> Self {
+    let fallback = Self(ballisticCoefficient: c.entrySettings.estimatedBallisticCoefficient,
+      liftToDrag: c.entrySettings.estimatedLiftToDrag, evidence: .provisional)
+    let a = s.aerodynamics, q = a.dynamicPressure
+    guard a.measuredForces, s.mass > 0, q.isFinite, q > 1,
+      a.drag.isFinite, a.drag > 1, a.lift.isFinite, a.lift > 1,
+      a.mach.isFinite, a.angleOfAttack.isFinite else { return fallback }
+    let now = model.coefficients(mach: a.mach, alpha: a.angleOfAttack,
+      dynamicPressure: q, beta: a.sideslip, gear: s.systems.gearDown)
+    guard now.drag > 1e-8, now.lift > 1e-8 else { return fallback }
+    let modelArea = c.vehicle.referenceArea
+    let dragGain = a.drag / (q * modelArea * now.drag)
+    let liftGain = a.lift / (q * modelArea * now.lift)
+    guard dragGain.isFinite, dragGain > 0, liftGain.isFinite, liftGain > 0 else {
+      return fallback
+    }
+    let bestAlpha = model.bestGlideAlpha(mach: a.mach,
+      maximumAlpha: maximumAlpha, dynamicPressure: q)
+    let best = model.coefficients(mach: a.mach, alpha: bestAlpha,
+      dynamicPressure: q, gear: s.systems.gearDown)
+    guard best.drag > 1e-8, best.lift > 0 else { return fallback }
+    let coefficient = s.mass / (modelArea * best.drag * dragGain)
+    let ratio = best.lift * liftGain / (best.drag * dragGain)
+    guard coefficient.isFinite, coefficient > 0, ratio.isFinite, ratio > 0 else {
+      return fallback
+    }
+    return .init(ballisticCoefficient: coefficient, liftToDrag: ratio, evidence: .measured)
+  }
+}
+
 /// Active f1eebdc DRAGREF law. The measured-table/history polar replaces only
 /// the retired analytic incidence multiplier; the range/vertical law is kept.
 final class EntryDragReference {
@@ -15,20 +55,24 @@ final class EntryDragReference {
     let x = clamp(value, 0, 1); return x * x * (3 - 2 * x)
   }
   func compute(_ s: VehicleState, phase: EntryPhase, range: Double,
-               targetAltitude: Double, targetSpeed: Double, targetRange: Double) -> EntryDiagnostics {
+               referenceRangeScale: Double = 1,
+               objective: EntryCaptureObjective, maximumAlpha: Double) -> EntryDiagnostics {
     let c = configuration, e = c.entrySettings, a = s.aerodynamics
+    let targetAltitude = objective.altitude, targetSpeed = objective.speed
     let speed = a.airspeed, height = s.position.length - c.planet.radius
+    let polar = EntryAerodynamicCalibration.evaluate(s, configuration: c,
+      model: aero, maximumAlpha: maximumAlpha)
     let minimum = 0.04
     let targetRadius = c.planet.radius + targetAltitude
     let targetGravity = c.planet.gravitationalParameter / (targetRadius * targetRadius)
     let maximum = max(minimum, min(0.72 * c.vehicle.maximumLoadFactor * targetGravity,
-      c.vehicle.maximumDynamicPressure / e.estimatedBallisticCoefficient))
+      c.vehicle.maximumDynamicPressure / polar.ballisticCoefficient))
     func equilibrium(_ velocity: Double, _ h: Double) -> Double {
       let r = c.planet.radius + h, g = c.planet.gravitationalParameter / (r * r)
       return clamp(g - velocity * velocity / r, 0.12 * g, 0.995 * g)
     }
     func equilibriumDrag(_ velocity: Double) -> Double {
-      clamp(equilibrium(velocity, targetAltitude) / max(0.05, e.estimatedLiftToDrag), minimum, maximum)
+      clamp(equilibrium(velocity, targetAltitude) / max(0.05, polar.liftToDrag), minimum, maximum)
     }
     let anchor = max(targetSpeed + 1, targetSpeed * 3.40)
     func progress(_ velocity: Double) -> Double { clamp((anchor - velocity) / max(1, anchor - targetSpeed), 0, 1) }
@@ -39,16 +83,20 @@ final class EntryDragReference {
         - pow(c.planet.rotationRate * radius * cos(latitude), 2) / 2
     }
     let remaining = rotatingEnergy(radius: s.position.length, latitude: geo.latitude, speed: speed)
-      - rotatingEnergy(radius: targetRadius, latitude: c.runway.latitude, speed: targetSpeed)
-    let requiredRange = max(0, range - targetRange)
-    let average = clamp(max(0, remaining) / max(1000, requiredRange), minimum, maximum)
+      - objective.specificEnergy(configuration: c)
+    // The physical geodesic distance is never a drag-tuning parameter.
+    // A planner may tune the reference profile, but cannot shorten the actual
+    // runway/capture distance or claim a tighter achievable range by scaling it.
+    let requiredRange = max(0, range)
+    let referenceTargetRange = requiredRange * clamp(referenceRangeScale, 0.1, 2)
+    let average = clamp(max(0, remaining) / max(1000, referenceTargetRange), minimum, maximum)
     let constant = clamp(exp(0.70 * log(max(average, 1e-9))
       + 0.30 * log(max(equilibriumDrag(velocity(0.58)), 1e-9))), minimum, maximum)
     func sample(_ h: Double) -> AtmosphericState {
       atmosphere.sample(position: s.position.normalized * (c.planet.radius + h), time: s.time)
     }
     let targetDensity = sample(targetAltitude).density
-    let targetDrag = clamp(0.5 * targetDensity * targetSpeed * targetSpeed / e.estimatedBallisticCoefficient, minimum, maximum)
+    let targetDrag = clamp(0.5 * targetDensity * targetSpeed * targetSpeed / polar.ballisticCoefficient, minimum, maximum)
     let nowDensity = sample(height).density
     let qNow = 0.5 * nowDensity * speed * speed
     let modeled = aero.coefficients(mach: a.mach, alpha: a.angleOfAttack, dynamicPressure: a.dynamicPressure,
@@ -63,8 +111,9 @@ final class EntryDragReference {
       let fraction = clamp((v - targetSpeed) / max(1, speed - targetSpeed), 0, 1)
       let h = targetAltitude + (height - targetAltitude) * smooth(fraction)
       let atm = sample(h), q = 0.5 * atm.density * v * v
-      let ceiling = c.vehicle.rcsAttitudeControl ? c.vehicle.maximumAngleOfAttack
-        : min(c.vehicle.maximumAngleOfAttack, e.nominalAlpha)
+      // Drag feasibility must use the same attainable incidence envelope as
+      // the guidance command, not the pre-entry nominal attitude as a cap.
+      let ceiling = clamp(maximumAlpha, c.vehicle.minimumAngleOfAttack, c.vehicle.maximumAngleOfAttack)
       let floorAlpha = aero.bestGlideAlpha(mach: v/atm.speedOfSound, maximumAlpha: ceiling, dynamicPressure: q)
       let ceilingCD = aero.coefficients(mach: v/atm.speedOfSound, alpha: ceiling,
         dynamicPressure: q, gear: s.systems.gearDown).drag
@@ -104,7 +153,7 @@ final class EntryDragReference {
       let mean = sqrt(max(minimum, feasible(max(speed, targetSpeed), scale)) * max(minimum, feasible(targetSpeed, scale)))
       return max(0, kineticRange + other / mean)
     }
-    let rangeScale = max(10_000, max(1000, requiredRange) * 0.28)
+    let rangeScale = max(10_000, max(1000, referenceTargetRange) * 0.28)
     // Solve the same capture-energy/range integral, within the plant's drag
     // envelope. A fixed scale floor could keep shedding energy far too early.
     var low = points.map { $0.2/max(Double.leastNormalMagnitude, $0.1) }.min() ?? 1
@@ -113,7 +162,7 @@ final class EntryDragReference {
     var scale = (low+high)/2
     for _ in 0...Double.significandBitCount {
       scale = (low+high)/2
-      let error = predictedRange(scale)-requiredRange
+      let error = predictedRange(scale)-referenceTargetRange
       if abs(error) <= tolerance || scale == low || scale == high { break }
       if error > 0 { low = scale } else { high = scale }
     }
@@ -122,11 +171,19 @@ final class EntryDragReference {
     let inertial = c.planet.inertialVelocity(position: s.position, fixedVelocity: s.velocity)
     let support = inertial.projected(onPlaneWithNormal: s.position.normalized).length
     let correction = clamp(0.28 * clamp(errorFraction, -1.5, 1.5)
-      + 0.22 * clamp((predicted - requiredRange) / rangeScale, -1.5, 1.5), -0.72, 0.72)
+      + 0.22 * clamp((predicted - referenceTargetRange) / rangeScale, -1.5, 1.5), -0.72, 0.72)
     var out = EntryDiagnostics()
     out.phase = phase; out.referenceDrag = reference; out.observedDrag = observed
+    out.referenceBallisticCoefficient = polar.ballisticCoefficient
+    out.referenceLiftToDrag = polar.liftToDrag
+    out.referencePolarEvidence = polar.evidence
     out.verticalLift = equilibrium(support, height) * clamp(1 - correction, 0.10, 1.50)
-    out.predictedRange = predicted; out.requiredRange = requiredRange; out.rangeError = predicted - requiredRange
+    // predictedRange is the INVERSE-SOLVED drag-reference integral, not an
+    // independent forward trajectory / MM305 capture feasibility forecast.
+    out.predictedRange = predicted
+    out.requiredRange = requiredRange
+    out.referenceTargetRange = referenceTargetRange
+    out.rangeError = predicted - referenceTargetRange
     out.dragScale = scale; out.confidence = confidence
     out.dragFloorActive = baseDrag(speed) * scale < projectedBounds(speed).0
     out.degraded = !a.measuredForces || confidence < 0.20 || remaining <= 0 || speed <= targetSpeed

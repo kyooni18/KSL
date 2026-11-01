@@ -48,6 +48,9 @@ public struct SystemState: Codable, Sendable, Equatable {
   public var sas = false
   public var rcs = false
   public var airbrakes = false
+  /// Measured split-rudder deployment, normalized to each surface's range.
+  /// nil means unavailable; the legacy action-group flag is not this signal.
+  public var speedbrakeFraction: Double?
   public var brakes = false
   public init() {}
   /// RCS is a commanded attitude actuator, not propulsion.
@@ -75,6 +78,8 @@ public struct VehicleState: Codable, Sendable, Equatable {
   public var propulsion: PropulsionTelemetry?
   /// Additive topology and CoM evidence; absent in archived FlightRecords.
   public var vesselConfiguration: VesselConfigurationTelemetry?
+  /// Optional sensors may be unavailable while the kinematic snapshot is valid.
+  public var telemetryIssues: [String]?
   public init(
     time: Double, position: Vector3, velocity: Vector3, attitude: Quaternion,
     angularVelocity: Vector3 = .zero, mass: Double = 25_000,
@@ -131,6 +136,7 @@ public struct VehicleState: Codable, Sendable, Equatable {
       atmosphere.pressure >= 0, atmosphere.temperature > 0, atmosphere.speedOfSound > 0,
       atmosphere.wind.isFinite,
       systems.throttle >= 0, systems.throttle <= 1, systems.thrust >= 0,
+      (systems.speedbrakeFraction ?? 0).isFinite, (0...1).contains(systems.speedbrakeFraction ?? 0),
       vesselConfiguration?.isCoherent ?? true
     else {
       throw FlightError.invalidTelemetry("Nonfinite, incoherent, or nonphysical flight snapshot")

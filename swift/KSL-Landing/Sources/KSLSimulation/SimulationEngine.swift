@@ -31,31 +31,17 @@ public final class SimulationEngine {
   public let scenario: SimulationScenario
   private let physics: ShuttlePhysicsEngine
   private let computer: FlightComputer
-  public init(
-    scenario: SimulationScenario, liftScale: Double = 1, dragScale: Double = 1,
-    densityScale: Double = 1, windENU: Vector3 = .zero, controlAuthorityScale: Double = 1
-  ) throws {
-    guard scenario.maximumDuration > 0, scenario.maximumDuration.isFinite,
-      controlAuthorityScale.isFinite,
-      controlAuthorityScale > 0, controlAuthorityScale <= 2, windENU.isFinite
-    else { throw FlightError.invalidConfiguration("Invalid simulation duration or dispersion") }
+  public init(scenario: SimulationScenario) throws {
+    guard scenario.maximumDuration > 0, scenario.maximumDuration.isFinite
+    else { throw FlightError.invalidConfiguration("Invalid simulation duration") }
     self.scenario = scenario
     let c = scenario.configuration
-    let nominalAtmosphere = try AtmosphericModelEngine(planet: c.planet)
-    let nominalAero = try AerodynamicsEngine(referenceArea: c.vehicle.referenceArea)
-    computer = try .init(configuration: c, atmosphere: nominalAtmosphere, aerodynamics: nominalAero)
-    var plantConfiguration = c
-    plantConfiguration.vehicle.controlPlant.pitchAccelerationPerKPa *= controlAuthorityScale
-    plantConfiguration.vehicle.controlPlant.pitchAccelerationMaximum *= controlAuthorityScale
-    plantConfiguration.vehicle.controlPlant.rollAccelerationPerKPa *= controlAuthorityScale
-    plantConfiguration.vehicle.controlPlant.rollAccelerationMaximum *= controlAuthorityScale
-    plantConfiguration.vehicle.controlPlant.yawAccelerationPerKPa *= controlAuthorityScale
-    plantConfiguration.vehicle.controlPlant.yawAccelerationMaximum *= controlAuthorityScale
-    physics = .init(
-      configuration: plantConfiguration,
-      atmosphere: try .init(planet: c.planet, densityScale: densityScale, windENU: windENU),
-      aerodynamics: try .init(
-        referenceArea: c.vehicle.referenceArea, liftScale: liftScale, dragScale: dragScale))
+    let atmosphere = try AtmosphericModelEngine(planet: c.planet)
+  let aerodynamics = try AerodynamicsEngine(referenceArea: c.vehicle.referenceArea,
+    speedbrakeFullDeploymentDragArea: c.vehicle.speedbrakeFullDeploymentDragArea)
+    // The plant and FCS use the same actual configured vehicle model.
+    computer = try .init(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
+    physics = .init(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
   }
   public func run(logURL: URL? = nil, logEvery: Int = 1, physicsStep: Double = 0.02) throws
     -> SimulationResult

@@ -5,7 +5,7 @@ import KSLPhysics
 
 final class DeorbitForecastPolicyTests: XCTestCase {
   func testUnpricedFailuresUseOneRunwayResidual() {
-    let c = MissionConfiguration(), along = c.entrySettings.handoffAlong
+    let c = MissionConfiguration(), along = c.nepOverheadCaptureAlong
     let close = EntryGuidanceEngine.fallbackDeliveryCost(along: along, cross: 1000, configuration: c)
     let distant = EntryGuidanceEngine.fallbackDeliveryCost(along: along, cross: 40_000, configuration: c)
     XCTAssertLessThan(close, distant)

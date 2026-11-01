@@ -14,7 +14,7 @@ struct Screen: Decodable { let candidates: [DeorbitWindow] }
   for (i, window) in screen.candidates.enumerated() {
    let t = Date()
    do {
-    let r = try OrbitalExecutionModel(configuration: c).predict(source: s, window: window, propulsion: s.propulsion!, dispersion: DeorbitDispersion.cases(c)[0])
+    let r = try OrbitalExecutionModel(configuration: c).predict(source: s, window: window, propulsion: s.propulsion!)
     print("candidate=\(i) burnUT=\(window.burnStart) completed=\(r.burnCompleted) entryUT=\(r.entry.time) fpa=\(r.entry.flightPathAngle) burnEndUT=\(r.actualBurnEnd) seconds=\(Date().timeIntervalSince(t))")
    } catch { print("candidate=\(i) burnUT=\(window.burnStart) error=\(error) seconds=\(Date().timeIntervalSince(t))") }
    fflush(stdout)

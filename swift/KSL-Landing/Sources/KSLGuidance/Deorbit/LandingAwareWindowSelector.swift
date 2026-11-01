@@ -9,9 +9,6 @@ public struct LandingAwareCandidate: Codable, Sendable {
   public let pass: Int
   public let burnOffset: Double
   public let nominal: EntryCaptureForecast
-  /// Plant lift/drag dispersions flown by the same nominal guidance.
-  public var dispersed: [EntryCaptureForecast] = []
-  public var robustPasses: Int { dispersed.filter(\.feasible).count }
   /// Capture-feasible span of burn offsets on this pass (s), when bracketed.
   public var corridor: [Double]?
   public var rejection: String? {
@@ -76,9 +73,11 @@ public final class LandingAwareWindowSelector {
       // The lateral aim is planned with the window: each burn option is
       // flown to each candidate aim and keeps the best capture.
       let entry = entryState(w)
-      let aims = forecaster.lateralAims(at: entry.time)
-      count += aims.count
-      let forecasts = aims.map { forecaster.forecast(from: entry, crossAim: $0) }
+      let baseline = forecaster.forecast(from: entry, crossAim: 0)
+      let aims = forecaster.lateralAims(from: entry, track: baseline.track)
+      let forecasts = [baseline] + aims.filter { abs($0) > configuration.entrySettings.handoffRadius }
+        .map { forecaster.forecast(from: entry, crossAim: $0) }
+      count += forecasts.count
       var best = forecasts.max { rank($0) < rank($1) }!
       if certify && best.feasible { count += 1; best = forecaster.forecast(from: entry, crossAim: best.crossAim, certify: true) }
       return .init(window: w, pass: pass, burnOffset: offset, nominal: best)
@@ -150,15 +149,7 @@ public final class LandingAwareWindowSelector {
         chosen = scanned.values.max { $0.nominal.capture.envelope.energyMargin < $1.nominal.capture.envelope.energyMargin }
       }
       survey += scanned.values.sorted { $0.burnOffset < $1.burnOffset }.map(compact)
-      guard var best = chosen else { continue }
-      if best.nominal.feasible {
-        let u = configuration.vehicle.aerodynamicUncertainty
-        let entry = entryState(best.window)
-        best.dispersed = [(1 - u, 1 + u), (1 + u, 1 - u), (1 - u, 1), (1, 1 + u)].map {
-          count += 1
-          return forecaster.forecast(from: entry, crossAim: best.nominal.crossAim, liftScale: $0.0, dragScale: $0.1)
-        }.map(compact)
-      }
+      guard let best = chosen else { continue }
       ranked.append(best)
     }
     ranked.sort(by: better)
@@ -184,7 +175,6 @@ public final class LandingAwareWindowSelector {
     if abs(envelopeRatio(x) - envelopeRatio(y)) > u { return envelopeRatio(x) < envelopeRatio(y) }
     let mx = x.capture.envelope.energyMargin, my = y.capture.envelope.energyMargin
     if abs(mx - my) > u * max(abs(mx), abs(my)) { return mx > my }
-    if a.robustPasses != b.robustPasses { return a.robustPasses > b.robustPasses }
     if abs(a.window.deltaV - b.window.deltaV) > 0.5 { return a.window.deltaV < b.window.deltaV }
     return a.window.miss < b.window.miss
   }

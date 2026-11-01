@@ -20,7 +20,8 @@ public enum TAEMCaptureDeficit: String, Codable, Sendable {
   case inadequateControlAuthority
   /// Dynamic pressure or load envelope violated by every candidate.
   case envelopeViolation
-  /// The upstream MM304 forecast never reached a TAEM-interface state.
+  /// No assessed complete terminal reference within the planning/entry region.
+  /// Search coverage alone does not establish physical runway unreachability.
   case terminalRegionNotReached
   /// Energy/geometry admissible, but the closed-loop vehicle failed to stop.
   case closedLoopFailure
@@ -38,10 +39,14 @@ public struct TAEMReachableEnvelope: Codable, Sendable {
   public var longestFeasiblePath: Double?
   public var shortestExaminedPath: Double?
   public var longestExaminedPath: Double?
-  /// Heading change to point at the runway, and the coordinated turn rate
-  /// available at the vehicle's maximum bank (rad, rad/s).
+  /// Heading change to align with the selected runway, and the local turn
+  /// rate from the current force/trim-constrained HAC survey (rad, rad/s).
   public var requiredHeadingChange = 0.0
   public var availableTurnRate = 0.0
+  /// A legacy zero rate can mean unassessed; preserve that distinction.
+  public var turnAuthorityAssessed: Bool?
+  public var minimumRequiredPathLength: Double?, maximumSearchedPathLength: Double?
+  public var searchHorizonExceeded: Bool?
   public var candidatesExamined = 0
   public var candidatesCompleted = 0
   public var candidatesFeasible = 0
@@ -62,6 +67,7 @@ public struct TAEMCaptureAssessment: Codable, Sendable {
   public var mach = 0.0
   public var rangeToRunway = 0.0
   public var headingError = 0.0
+  public var runwayHeadingError: Double? = nil
   public var planIdentifier: Int?
   public var planLength: Double?
   public var hacRadius: Double?
@@ -93,15 +99,21 @@ public final class TAEMCaptureEvaluator {
 
   public func evaluate(_ state: VehicleState, certify: Bool = false,
                        controlSnapshot: FlightControlSnapshot? = nil,
-                       previousTarget: GuidanceTarget? = nil) -> TAEMCaptureAssessment {
+                       previousTarget: GuidanceTarget? = nil,
+                       context: HACFitContext? = nil) -> TAEMCaptureAssessment {
     let c = configuration
-    let preview = planner.plan(from: state, allowDirect: false, preview: true)
+    let preview = planner.plan(from: state, allowDirect: context?.onSpiral != true, preview: true,
+      controlSnapshot: controlSnapshot, previousTarget: previousTarget, context: context)
     var a = Self.assess(preview, state: state, configuration: c)
     guard a.feasible, certify else { return a }
-    let closed = planner.plan(from: state, allowDirect: false,
-      controlSnapshot: controlSnapshot, previousTarget: previousTarget)
+    let closed = planner.plan(from: state, allowDirect: context?.onSpiral != true,
+      controlSnapshot: controlSnapshot, previousTarget: previousTarget, context: context)
     if let plan = closed.plan {
       a.certified = plan.nominalQualified; Self.describe(plan, into: &a)
+      if !a.certified {
+        a.feasible = false; a.deficit = .closedLoopFailure
+        a.violations = plan.closedLoopCases?.flatMap(\.violations) ?? plan.assessment.violations
+      }
     } else {
       a.feasible = false; a.deficit = .closedLoopFailure
       a.violations = closed.closedLoopAdvisories?.flatMap(\.violations) ?? []
@@ -121,9 +133,19 @@ public final class TAEMCaptureEvaluator {
     a.rangeToRunway = frame.distance(from: state.position, to: frame.origin)
     a.headingError = wrapAngle(frame.bearing(from: state.position, to: frame.origin) - state.course)
     a.envelope.energyHeight = p.height + airspeed * airspeed / (2 * g)
-    a.envelope.requiredHeadingChange = abs(a.headingError)
-    a.envelope.availableTurnRate = g * tan(v.maximumBank) / airspeed
+    let runwayDirection = frame.direction(at: p.horizontal, tangent: .init(1, 0))
+    a.runwayHeadingError = wrapAngle(state.localFrame.heading(of: runwayDirection) - state.course)
+    a.envelope.requiredHeadingChange = abs(a.runwayHeadingError ?? 0)
+    // g*tan(bank) assumes a supported coordinated turn; it was not an
+    // available-acceleration measurement for this descending, lift-limited shuttle.
+    a.envelope.availableTurnRate = result.fit?.availableTurnRate ?? 0
+    a.envelope.turnAuthorityAssessed = result.fit != nil
     let summary = result.envelope ?? .init()
+    a.envelope.minimumRequiredPathLength = summary.minimumRequiredLength
+    a.envelope.maximumSearchedPathLength = summary.pathLengthLimit
+    if let required = summary.minimumRequiredLength, let limit = summary.pathLengthLimit {
+      a.envelope.searchHorizonExceeded = required > limit
+    }
     a.envelope.candidatesExamined = summary.examined
     a.envelope.candidatesCompleted = summary.completed
     a.envelope.candidatesFeasible = summary.feasible
@@ -132,7 +154,10 @@ public final class TAEMCaptureEvaluator {
     a.envelope.longestFeasiblePath = summary.longestFeasibleLength
     a.envelope.shortestExaminedPath = summary.shortestExaminedLength
     a.envelope.longestExaminedPath = summary.longestExaminedLength
-    let gs = 2 * 9.80665
+    // Energy-height margins share the same runway-gravity normalization as
+    // EnergyManagementEngine.energyHeight, not Earth's standard gravity.
+    let referenceGravity = c.planet.gravitationalParameter / frame.origin.squaredLength
+    let gs = 2 * referenceGravity
     if let slow = summary.slowestTouchdown {
       a.envelope.excessEnergyMargin = (v.maximumTouchdownSpeed.squared - slow.squared) / gs
     }
@@ -140,8 +165,14 @@ public final class TAEMCaptureEvaluator {
       a.envelope.deficitEnergyMargin = (fast.squared - (v.landingSpeed * EnergyManagementEngine.minimumTouchdownFraction).squared) / gs
     }
     guard let candidate = result.plan else {
-      a.deficit = classify(summary, headingError: a.headingError, envelope: a.envelope)
+      a.deficit = classify(summary, headingError: a.runwayHeadingError ?? a.headingError, envelope: a.envelope)
       a.violations = result.bestAdvisory?.violations ?? []
+      if a.envelope.searchHorizonExceeded == true,
+        let required = summary.minimumRequiredLength, let limit = summary.pathLengthLimit {
+        a.violations.append(.init(.invalidGeometry,
+          "Complete runway path exceeds the configured search horizon; physical reachability is unassessed",
+          value: required, limit: limit))
+      }
       if a.deficit == .none || summary.feasible > 0 {
         // Priced paths existed but none survived closed-loop flight.
         a.deficit = .closedLoopFailure
@@ -150,7 +181,7 @@ public final class TAEMCaptureEvaluator {
       return a
     }
     a.feasible = candidate.assessment.feasible
-    a.deficit = a.feasible ? .none : classify(summary, headingError: a.headingError, envelope: a.envelope)
+    a.deficit = a.feasible ? .none : classify(summary, headingError: a.runwayHeadingError ?? a.headingError, envelope: a.envelope)
     a.violations = candidate.assessment.violations
     a.certified = candidate.nominalQualified
     describe(candidate, into: &a)
@@ -168,21 +199,39 @@ public final class TAEMCaptureEvaluator {
   /// Attribute the failure to the mechanism that eliminated the family.
   private static func classify(_ s: TerminalEnvelopeSummary, headingError: Double,
                         envelope: TAEMReachableEnvelope) -> TAEMCaptureDeficit {
-    // No path fits the maximum path length: the runway is out of reach.
-    if s.examined == 0 { return abs(headingError) > .pi / 2 ? .adverseHeading : .insufficientEnergy }
+    // An empty searched family supplies no force/energy evidence. In
+    // particular, a configured path-length ceiling is not physical unreachability.
+    if s.examined == 0 { return .terminalRegionNotReached }
     if s.completed > 0 {
       // Energy alone decided the completed paths: compare the two extremes.
-      if envelope.excessEnergyMargin < 0 { return .excessiveEnergy }
-      if envelope.deficitEnergyMargin < 0 { return .insufficientEnergy }
+      if envelope.excessEnergyMargin > -Double.greatestFiniteMagnitude,
+        envelope.excessEnergyMargin < 0 { return .excessiveEnergy }
+      if envelope.deficitEnergyMargin > -Double.greatestFiniteMagnitude,
+        envelope.deficitEnergyMargin < 0 { return .insufficientEnergy }
     }
+    let exhausted = s.violationCounts[FailureClassification.insufficientEnergy.rawValue] ?? 0
+    let excessive = s.violationCounts[FailureClassification.excessiveEnergy.rawValue] ?? 0
+    // All examined paths ran out of energy. Low-speed lift and slew failures
+    // on those same paths must not suppress MM304's lower-drag recovery branch.
+    let liftFailures = s.violationCounts[FailureClassification.insufficientLift.rawValue] ?? 0
+    let actuatorFailures = s.violationCounts[FailureClassification.actuatorAuthority.rawValue] ?? 0
+    if s.completed == 0, max(liftFailures, actuatorFailures) >= s.examined {
+      // A family with no completed path and universal force/trim rejection
+      // cannot prove that changing drag alone would restore MM305 capture.
+      return .inadequateControlAuthority
+    }
+    if s.completed == 0, exhausted >= s.examined, excessive == 0 { return .insufficientEnergy }
     func count(_ kinds: [FailureClassification]) -> Int {
-      kinds.reduce(0) { $0 + (s.violationCounts[$1.rawValue] ?? 0) }
+      // Counts by kind can overlap. Their maximum is an evidenced lower bound
+      // on affected candidates; their sum double-counts multi-cause failures.
+      kinds.reduce(0) { max($0, s.violationCounts[$1.rawValue] ?? 0) }
     }
     let turning = count([.excessiveBank]), authority = count([.insufficientLift, .actuatorAuthority])
     let altitude = count([.terrainCollision, .invalidGeometry])
     let envelopeCount = count([.excessiveDynamicPressure, .excessiveLoad])
     let energy = count([.excessiveEnergy, .insufficientEnergy])
     let top = max(turning, authority, altitude, envelopeCount, energy)
+    guard top > 0 else { return .terminalRegionNotReached }
     if top == energy {
       return (s.violationCounts[FailureClassification.excessiveEnergy.rawValue] ?? 0)
         >= (s.violationCounts[FailureClassification.insufficientEnergy.rawValue] ?? 0)

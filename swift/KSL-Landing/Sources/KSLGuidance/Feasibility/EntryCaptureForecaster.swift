@@ -12,8 +12,6 @@ public struct EntryCaptureForecast: Codable, Sendable {
   public let createdAt: Double
   public let rangeMultiplier: Double
   public var crossAim = 0.0
-  public let liftScale: Double
-  public let dragScale: Double
   public let reachedTerminalRegion: Bool
   public let violations: [ConstraintViolation]
   public let terminalTime: Double
@@ -48,29 +46,40 @@ public final class EntryCaptureForecaster {
   /// MM304's terminal target speed; capture is then searched beyond it.
   public func terminalSpeed(at time: Double) -> Double {
     let e = configuration.entrySettings
-    let point = frame.position(along: e.handoffAlong, cross: e.handoffCross, height: 0)
+    let point = frame.position(along: configuration.nepOverheadCaptureAlong, cross: e.handoffCross, height: 0)
     return e.terminalTargetMach * atmosphere.sample(
       position: point.normalized * (configuration.planet.radius + e.terminalTargetAltitude), time: time).speedOfSound
   }
 
-  /// TAEM turning reach at the MM304 terminal speed: the coordinated turn
-  /// radius at the acquisition bank. Lateral aims and the reversal corridor
-  /// are expressed in this physical unit.
+  /// Legacy coordinated-level-turn length scale, retained for API compatibility.
+  /// This assumes sufficient lift; it is not a reachability or force bound.
+  /// Capture assessment and the reversal corridor use the priced force envelope.
   public func turningReach(at time: Double) -> Double {
     let v = terminalSpeed(at: time), c = configuration
     let g = c.planet.gravitationalParameter / pow(c.planet.radius + c.entrySettings.terminalTargetAltitude, 2)
     return v * v / (g * tan(max(1e-3, EnergyManagementEngine.acquisitionBank(c))))
   }
 
-  /// Candidate lateral aims: on the handoff point and one turning reach to
-  /// either side of the runway axis.
-  public func lateralAims(at time: Double) -> [Double] {
-    return [0] // Operator target: runway centerline, 5 km before threshold.
+  /// Propose a crossrange inlet from the *predicted* TAEM-height miss, not
+  /// from today's surface cross-track as if it were the future miss. The HAC
+  /// radius supplies a bounded search extent, NOT a reachability claim.
+  /// The separate closed-loop forecast and HAC fit must judge this candidate.
+  public func lateralAims(from state: VehicleState, track: [[Double]]) -> [Double] {
+    let c = configuration
+    let targetHeight = c.entrySettings.terminalTargetAltitude-c.runway.elevation
+    let sampled = track.filter { $0.count >= 4 }
+      .min { abs($0[3]-targetHeight) < abs($1[3]-targetHeight) }
+    guard let sampled, sampled[2].isFinite else { return [0] }
+    let limit = min(c.guidance.maximumHACRadius,
+      c.entrySettings.terminalTargetRange-c.guidance.finalDistance)
+    guard limit > c.entrySettings.handoffRadius else { return [0] }
+    let aim = clamp(sampled[2]-c.entrySettings.handoffCross, -limit, limit)
+    guard abs(aim) > c.entrySettings.handoffRadius else { return [0] }
+    return [0, aim]
   }
 
   /// Forecast from a fresh MM304 executive (deorbit planning).
   public func forecast(from state: VehicleState, rangeMultiplier: Double = 1, crossAim: Double = 0,
-                       liftScale: Double = 1, dragScale: Double = 1,
                        certify: Bool = false) -> EntryCaptureForecast {
     var memory = EntryLawMemory(); memory.crossAim = crossAim
     // A fresh deorbit rollout has no accepted MM304 proposal yet. Match its
@@ -78,81 +87,106 @@ public final class EntryCaptureForecaster {
     // objective was installed in the mission controller before entry.
     memory.objective = EntryCaptureObjective.seed(configuration: configuration,
       atmosphere: atmosphere, frame: frame, crossAim: crossAim, time: state.time)
-    return forecast(from: state, memory: memory, rangeMultiplier: rangeMultiplier, liftScale: liftScale,
-      dragScale: dragScale, certify: certify, controls: nil, previousTarget: nil)
+    return forecast(from: state, memory: memory, rangeMultiplier: rangeMultiplier,
+      certify: certify, controls: nil, previousTarget: nil)
   }
 
   func forecast(from state: VehicleState, memory: EntryLawMemory, rangeMultiplier: Double,
-                liftScale: Double = 1, dragScale: Double = 1, certify: Bool = false,
+                certify: Bool = false,
                 controls: FlightControlSnapshot?, previousTarget: GuidanceTarget?) -> EntryCaptureForecast {
     let c = configuration
     var memory = memory
     if memory.objective == nil { memory.objective = objectivePlanner.objective(from: state, crossAim: memory.crossAim) }
-    let plantAero = liftScale == 1 && dragScale == 1 ? aerodynamics
-      : aerodynamics.scaled(lift: liftScale, drag: dragScale)
-    let predictor = TrajectoryPropagationEngine(configuration: c, atmosphere: atmosphere, aerodynamics: plantAero)
+    let predictor = TrajectoryPropagationEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
     // Guidance keeps the nominal model: dispersions live in the plant only.
     let law = EntryCommandLaw(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics, memory: memory)
     let evaluator = TAEMCaptureEvaluator(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
+    func captureContext() -> HACFitContext {
+      var context = HACFitContext()
+      context.rollResponseSeconds = law.memory.rollResponseSeconds
+      context.pitchResponseSeconds = law.memory.pitchResponseSeconds
+      context.trimAlphaCeiling = law.memory.identifiedTrimCeiling
+      context.previousSpiral = law.memory.terminalAdvice?.spiral
+      context.previousPlanID = law.memory.terminalAdvice?.identifier
+      return context
+    }
     func evaluateCapture(_ state: VehicleState) -> TAEMCaptureAssessment {
-      let admission = MM305Admission.physicalAdmission(state, configuration: c)
-      let belowCaptureBand = state.position.length-c.planet.radius < c.entrySettings.terminalMinimumAltitude
-      if !admission.violations.isEmpty || belowCaptureBand {
-        var assessment = TAEMCaptureAssessment()
-        let p = frame.coordinates(of: state.position)
-        let g = c.planet.gravitationalParameter / pow(state.position.length, 2)
-        let speed = state.aerodynamics.airspeed
-        assessment.time = state.time; assessment.altitude = p.height
-        assessment.mach = state.aerodynamics.mach
-        assessment.rangeToRunway = frame.distance(from: state.position, to: frame.origin)
-        assessment.headingError = wrapAngle(frame.bearing(from: state.position, to: frame.origin) - state.course)
-        assessment.envelope.requiredHeadingChange = abs(assessment.headingError)
-        assessment.envelope.availableTurnRate = g * tan(c.vehicle.maximumBank) / max(1, speed)
-        assessment.envelope.energyHeight = p.height + speed * speed / (2 * g)
-        assessment.violations = admission.violations
-        if belowCaptureBand { assessment.deficit = .insufficientAltitude }
-        return assessment
+      // Explore at the same early range as the live owner. A useful advisory
+      // can shape MM304 without satisfying the MM305 ownership contract yet.
+      var assessment = evaluator.evaluate(state, context: captureContext())
+      // Match the live MM304 owner: a diagnostic best-effort HAC that has
+      // failed its own physical assessment must not steer entry. Keeping it
+      // here makes the forecast fly a different energy/lateral policy from
+      // the native mission controller, even with identical initial state.
+      law.memory.terminalAdvice = assessment.plan.flatMap {
+        $0.assessment.feasible && $0.assessment.predictionComplete != false ? $0 : nil
       }
-      var assessment = evaluator.evaluate(state)
+      law.memory.terminalProjectionIndex = 0
+      law.memory.terminalDeficit = assessment.deficit
       if let plan = assessment.plan {
         let admission = MM305Admission.evaluate(state, plan: plan, configuration: c, requireQualification: false)
         if !admission.accepted {
-          assessment.feasible = false; assessment.deficit = .terminalRegionNotReached
+          assessment.feasible = false
+          if assessment.deficit == .none { assessment.deficit = .terminalRegionNotReached }
           assessment.violations += admission.violations
         }
       }
       return assessment
     }
+    var terminalControls = controls, terminalTarget = previousTarget
     var capture = TAEMCaptureAssessment()
     var searched = false, nextCapture = state.time
     let first = predictor.predict(from: state, duration: c.guidance.maximumPredictionDuration,
       step: c.guidance.predictionStep, recordEvery: 10, terminalSpeed: 0,
       controlSnapshot: controls, previousTarget: previousTarget,
-      feedback: { law.memory.pitchResponseSeconds = $0.pitchResponseSeconds },
+      feedback: {
+        law.memory.pitchResponseSeconds = $0.pitchResponseSeconds
+        law.memory.rollResponseSeconds = $0.rollResponseSeconds
+        law.memory.identifiedTrimCeiling = $0.trimEvidence == .identified ? $0.trimAlphaCeiling : nil
+      },
+      handoff: { terminalControls = $0; terminalTarget = $1 },
       terminalCondition: { s in
         let altitude = s.position.length-c.planet.radius
         if !searched {
-          guard altitude <= c.entrySettings.terminalMaximumAltitude,
-            s.aerodynamics.mach <= c.entrySettings.terminalTargetMach+c.entrySettings.terminalMachHalfWidth,
-            s.verticalSpeed < 0 else { return false }
+          let runwayRange = self.frame.distance(from: s.position, to: self.frame.origin)
+          guard runwayRange <= TerminalExploration.searchRange(state: s, configuration: c,
+            minimumTurnTime: law.diagnostics.minimumTurnTime, rollResponseSeconds: law.memory.rollResponseSeconds)
+          else { return false }
         }
         guard s.time >= nextCapture else { return false }
-        searched = true; nextCapture = s.time+c.guidance.terminalReplanInterval
+        searched = true
         capture = evaluateCapture(s)
-        let runwayRange = self.frame.distance(from: s.position, to: self.frame.origin)
-        if runwayRange > c.terminalCaptureRange + s.horizontalSpeed*c.guidance.terminalReplanInterval {
-          capture.feasible = false
-        }
-        // Verdicts do not end the survey. Keep the same FCS, limiter and
-        // physical integrator until a HAC exists or the high capture band ends.
-        return capture.feasible || altitude < c.entrySettings.terminalMinimumAltitude
+        // A forecast needs physical capture surveys at distinct approach
+        // states, not a full HAC family every five simulated seconds while
+        // still well above the MM305 altitude envelope. Survey the current
+        // state, then aim the next forecast at the upper inlet altitude or
+        // halfway to its lower tolerance. The real MM305 planner retains
+        // its original 5-second cadence, and a feasible capture still ends
+        // this branch immediately. Never skip the near-inlet survey.
+        let cadence = c.guidance.terminalReplanInterval
+        let upperInlet = c.entrySettings.terminalMaximumAltitude
+        let lowerInlet = c.entrySettings.terminalMinimumAltitude - c.entrySettings.handoffRadius
+        let nextHeight = altitude > upperInlet ? upperInlet : (altitude + lowerInlet) / 2
+        let descent = max(1.0, -s.verticalSpeed)
+        let travel = max(0, altitude - nextHeight) / descent
+        nextCapture = s.time + clamp(travel, cadence, altitude > upperInlet ? 12*cadence : 3*cadence)
+        // A failed MM305 capture must be diagnosed while entry altitude and
+        // speed still exist. Flying the *forecast* to a near-stall at 3 km
+        // before returning an entry proposal wastes its entire freshness
+        // budget and supplies a misleading terminal-energy classification.
+        // The operator's 22-km inlet floor is conservatively extended by its
+        // allowed position tolerance, not by an arbitrary ground altitude.
+        let predictionFloor = c.entrySettings.terminalMinimumAltitude
+          - c.entrySettings.handoffRadius
+        return capture.feasible || altitude <= predictionFloor
       }) { s in
         let target = law.update(s, rangeMultiplier: rangeMultiplier)
         return .init(alpha: target.angleOfAttack, bank: target.bank)
       }
     let samples = first.samples, violations = first.violations, end = first.terminalState
     if capture.feasible && certify {
-      capture = evaluator.evaluate(end, certify: true, controlSnapshot: controls, previousTarget: previousTarget)
+      capture = evaluator.evaluate(end, certify: true, controlSnapshot: terminalControls,
+        previousTarget: terminalTarget, context: captureContext())
     }
     let p = frame.coordinates(of: end.position)
     if !searched {
@@ -171,8 +205,8 @@ public final class EntryCaptureForecaster {
       let q = frame.coordinates(of: s.position)
       return [s.time, q.along, q.cross, q.height, s.velocity.length, s.angleOfAttack, s.bank]
     }
-    var result = EntryCaptureForecast(createdAt: state.time, rangeMultiplier: rangeMultiplier, liftScale: liftScale,
-      dragScale: dragScale, reachedTerminalRegion: searched,
+    var result = EntryCaptureForecast(createdAt: state.time, rangeMultiplier: rangeMultiplier,
+      reachedTerminalRegion: searched,
       violations: violations, terminalTime: end.time, terminalAltitude: p.height,
       terminalMach: end.aerodynamics.mach, terminalAlong: p.along, terminalCross: p.cross,
       maximumDynamicPressure: maxQ, maximumLoad: maxLoad, capture: capture, track: track)
@@ -185,7 +219,7 @@ public final class EntryCaptureForecaster {
     // re-fly the objective; waiting for an already feasible trajectory would
     // leave an infeasible seed objective permanently in command.
     if end.position.length - c.planet.radius >= c.entrySettings.terminalMinimumAltitude,
-      frame.distance(from: end.position, to: frame.origin) <= c.terminalCaptureRange
+      frame.distance(from: end.position, to: frame.origin) <= c.entrySettings.terminalTargetRange
         + end.horizontalSpeed*c.guidance.terminalReplanInterval,
       envelope.excessEnergyMargin > -Double.greatestFiniteMagnitude,
       envelope.deficitEnergyMargin > -Double.greatestFiniteMagnitude,
@@ -199,9 +233,13 @@ public final class EntryCaptureForecaster {
       let centeredSpeed = clamp(sqrt(max(0, 2*gravity*(energy-p.height))),
         (c.entrySettings.terminalTargetMach-c.entrySettings.terminalMachHalfWidth)*sound,
         (c.entrySettings.terminalTargetMach+c.entrySettings.terminalMachHalfWidth)*sound)
-      result.suggestedObjective = .init(along: p.along, cross: p.cross,
-        altitude: end.position.length-c.planet.radius,
-        speed: centeredSpeed, energyHeight: p.height+centeredSpeed*centeredSpeed/(2*gravity), flightPath: end.flightPathAngle)
+      // The optimizer may refine the capture energy, not move the five-km
+      // centerline objective to wherever an unsuccessful rollout happened to end.
+      let target = result.objective!
+      result.suggestedObjective = .init(along: target.along, cross: target.cross,
+        altitude: target.altitude, speed: centeredSpeed,
+        energyHeight: target.altitude-c.runway.elevation+centeredSpeed*centeredSpeed/(2*gravity),
+        flightPath: target.flightPath)
     }
     return result
   }

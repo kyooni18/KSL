@@ -17,8 +17,10 @@ extension BackendServer {
     planning = Task { [weak self] in
       do {
         guard let input = try await self?.preparePlanning(generation: epoch) else { return }
-        let worker = DeorbitPlanner(configuration: input.configuration, aerodynamics: input.aerodynamics)
-        let value = try await worker.plan(from: input.state) { [weak self] progress in
+        let allowReciprocal = await self?.settings.allowReciprocal ?? true
+        let value = try await DeorbitPlanner.planSelectingRunway(from: input.state,
+          configuration: input.configuration, aerodynamics: input.aerodynamics,
+          allowReciprocal: allowReciprocal) { [weak self] progress in
           await self?.reportPlanning(progress, generation: epoch)
         }
         try Task.checkCancellation()
@@ -42,13 +44,22 @@ extension BackendServer {
     guard epoch == generation else { return }
     planningProgress = progress; status = progress.stage; publish()
   }
-  func planningEnded(_ result: DeorbitPlan?, error: String?, generation epoch: UInt64) {
+  func planningEnded(_ result: DeorbitPlan?, error: String?, generation epoch: UInt64) async {
     guard epoch == generation else { return }
     planning = nil; preparing = false; planningProgress = nil
     if let result {
+      if result.configuration != configuration {
+        // The selected runway is part of the immutable plan identity. The
+        // IO and telemetry recorder must use those same chart coordinates.
+        configuration = result.configuration
+        if let old = io {
+          io = nil; connection = "disconnected"
+          await old.shutdown()
+        }
+      }
       plan = result; phase = "Idle"
       status = result.executionQualified ? "Full route and model evidence qualified for execution"
-        : "Plan report ready; execution is not qualified (\(result.passedCases)/15 full-route passes)"
+        : "OMS-to-entry screened; terminal/rollout not qualified (nominal=\(result.nominalPassed), unresolved model limitations=\(result.modelLimitations.count))"
       do {
         let directory = URL(fileURLWithPath: "runs", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -85,7 +96,14 @@ extension BackendServer {
       let result = await worker.planTerminal(from: state)
       guard let candidate = result.plan else { throw FlightError.infeasible("No complete robust MM305 route: \(result.advisoryCounts)") }
       let fresh = try await value.readState()
-      let admission = MM305Admission.evaluate(fresh, plan: candidate, configuration: configuration)
+      let trim = RotationalDynamicsEngine(configuration: configuration.vehicle, planet: configuration.planet)
+        .supportedTrimAlpha(fresh)
+      let available = aero.liftSolution(acceleration: 0, mass: fresh.mass,
+        dynamicPressure: fresh.aerodynamics.dynamicPressure, mach: fresh.aerodynamics.mach,
+        minimumAlpha: configuration.vehicle.minimumAngleOfAttack, maximumAlpha: trim,
+        beta: fresh.aerodynamics.sideslip, gear: fresh.systems.gearDown).maximumAcceleration
+      let admission = MM305Admission.evaluate(fresh, plan: candidate, configuration: configuration,
+        availableLift: available)
       guard admission.accepted else { throw FlightError.infeasible("MM305 admission rejected: \(admission.violations.map(\.message))") }
       terminalPlan = candidate
     }

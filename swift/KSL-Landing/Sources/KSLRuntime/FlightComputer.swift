@@ -16,8 +16,8 @@ public final class FlightComputer {
   public var dynamicsRevision: UInt64 { dynamics.revision }
   public var lastDynamicsChange: VehicleDynamicsChange? { dynamics.lastChange }
   @discardableResult public func observeConfiguration(_ state: VehicleState) -> Bool {
-    guard let _ = dynamics.observe(state) else { return false }
-    controller.invalidateDynamics(at: state)
+    guard let change = dynamics.observe(state) else { return false }
+    controller.adaptToDynamicsChange(change, at: state)
     mission.invalidateDynamics(at: state)
     calibration.invalidateDynamics()
     return true
@@ -27,7 +27,7 @@ public final class FlightComputer {
   public init(
     configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine,
     aerodynamics: AerodynamicsEngine, externalPlanning: Bool = false, initialPhase: MissionPhase = .entry,
-    initialPlan: TerminalPlan? = nil
+    initialPlan: TerminalPlan? = nil, entryReplanning: Bool = true
   ) throws {
     try configuration.validate()
     self.configuration = configuration
@@ -35,13 +35,16 @@ public final class FlightComputer {
     encodedInitialPlan = try initialPlan.map { try JSONEncoder().encode($0) }
     mission = .init(
       configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics,
-      externalPlanning: externalPlanning, initialPhase: initialPhase, initialPlan: initialPlan)
+      externalPlanning: externalPlanning, initialPhase: initialPhase, initialPlan: initialPlan,
+      entryReplanning: entryReplanning)
     controller = .init(configuration: configuration)
     calibration = try .init(configuration: configuration, atmosphere: atmosphere)
   }
-  public func planningRequest(from state: VehicleState) -> MissionPlanningRequest? {
+  public func planningRequest(from state: VehicleState, allowEntry: Bool = true,
+                              allowTerminal: Bool = true) -> MissionPlanningRequest? {
     prepare(state)
-    guard var request = mission.planningRequest(from: state, controls: controller.snapshot) else { return nil }
+    guard var request = mission.planningRequest(from: state, controls: controller.snapshot,
+      allowEntry: allowEntry, allowTerminal: allowTerminal) else { return nil }
     request.dynamicsRevision = dynamics.revision
     return request
   }

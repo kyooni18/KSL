@@ -19,7 +19,8 @@ public final class AerodynamicAuthorityEstimator {
     guard a.dynamicPressure > 200, a.lift > 1000, !state.contact.isGrounded else { return }
     let c = model.coefficients(mach: a.mach, alpha: a.angleOfAttack,
       dynamicPressure: a.dynamicPressure, beta: a.sideslip,
-      gear: state.systems.gearDown, brakes: state.systems.brakes, airbrakes: state.systems.airbrakes)
+      gear: state.systems.gearDown, brakes: state.systems.brakes, airbrakes: state.systems.airbrakes,
+      speedbrakeFraction: state.systems.speedbrakeFraction ?? 0)
     let scale = a.dynamicPressure * model.referenceArea
     let filter = 1 - exp(-dt / 2)
     if c.lift > 0.05 {

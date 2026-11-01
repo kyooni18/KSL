@@ -22,8 +22,9 @@ public final class TerminalTrajectoryEvaluator {
     let controller = FlightController(configuration: c, snapshot: controlSnapshot)
     let plant = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere,
       aerodynamics: aerodynamics.scaled(lift: lift, drag: drag),
-      initialControls: initial.appliedControls ?? .init())
-    let tracker = PathTrackingEngine(configuration: c, aerodynamics: aerodynamics)
+      initialControls: initial.appliedControls ?? .init(), initialState: initial,
+      pitchBalancingInput: controlSnapshot?.predictionPitchTrim(state: initial))
+    let tracker = PathTrackingEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
     let approach = ApproachGuidanceEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
     let authority = AerodynamicAuthorityEstimator(model: aerodynamics)
     let touchdown = TouchdownMonitor(configuration: c)
@@ -81,7 +82,8 @@ public final class TerminalTrajectoryEvaluator {
       let target = limiter.update(raw.target, phase: phase, configuration: c, dt: dt,
         dynamicPressure: state.aerodynamics.dynamicPressure,
         rollResponseSeconds: controller.diagnostics.rollResponseSeconds,
-        pitchResponseSeconds: controller.diagnostics.pitchResponseSeconds)
+        pitchResponseSeconds: controller.diagnostics.pitchResponseSeconds,
+        controlAuthority: state.controlAuthority)
       if let reference = lastReference { trace?(state, reference, target) }
       do {
         let command = try controller.command(state: state, solution: .init(phase: phase, target: target), dt: dt)

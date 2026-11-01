@@ -16,13 +16,13 @@ final class DeorbitRCSAuthorityTests: XCTestCase {
     source.propulsion = propulsion; source.systems.rcs = true
     let window = try DeorbitWindowSearch(configuration: c).probe(
       initial: .init(fixed: source, planet: p), start: 60, normal: 0, propulsion: propulsion)
-    let model = OrbitalExecutionModel(configuration: c), dispersion = DeorbitDispersion.cases(c)[0]
+    let model = OrbitalExecutionModel(configuration: c)
     XCTAssertThrowsError(try model.predict(source: source, window: window,
-      propulsion: propulsion, dispersion: dispersion))
+      propulsion: propulsion))
     source.controlAuthority?.rcsExcludedPositiveTorque = .init(8000, 8000, 8000)
     source.controlAuthority?.rcsExcludedNegativeTorque = .init(-8000, -8000, -8000)
     let entry = try model.predict(source: source, window: window,
-      propulsion: propulsion, dispersion: dispersion).entry
+      propulsion: propulsion).entry
     XCTAssertFalse(entry.systems.rcs)
     XCTAssertEqual(entry.controlAuthority?.positiveTorque.x, 8000)
     XCTAssertEqual(entry.controlAuthority?.negativeTorque.y, -8000)

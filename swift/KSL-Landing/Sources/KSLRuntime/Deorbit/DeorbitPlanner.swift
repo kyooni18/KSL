@@ -87,9 +87,11 @@ public actor DeorbitPlanner {
     func ranksAhead(_ x: DeorbitPlan, _ y: DeorbitPlan) -> Bool {
       if x.executionQualified != y.executionQualified { return x.executionQualified }
       if x.fullRouteQualified != y.fullRouteQualified { return x.fullRouteQualified }
+      // Hard physical entry limits outrank a nominal endpoint success in the
+      // provisional plant; never prefer an unsafe burn just for a rollout.
+      if x.unsafeCases != y.unsafeCases { return x.unsafeCases < y.unsafeCases }
       if x.nominalPassed != y.nominalPassed { return x.nominalPassed }
       if x.passedCases != y.passedCases { return x.passedCases > y.passedCases }
-      if x.unsafeCases != y.unsafeCases { return x.unsafeCases < y.unsafeCases }
       let a = x.window.entryInterface.planetFixed(planet: x.configuration.planet,
         attitude: .init())
       let b = y.window.entryInterface.planetFixed(planet: y.configuration.planet,
@@ -101,18 +103,19 @@ public actor DeorbitPlanner {
       }
       return x.window.miss < y.window.miss
     }
-    // A diagnostic failure is not a selected runway. Previously the ranking
-    // returned its least-bad failure as an executable-looking plan. That
-    // corrupted both CLI reporting and the web runway/OMS display.
-    let nominallyLanding = evaluated.filter { $0.fullRouteQualified }
-    guard !nominallyLanding.isEmpty else {
+    // A missed/unqualified MM305 or rollout forecast is not proof that an
+    // orbital entry window is unusable. Choose the best physically screened
+    // runway/OMS continuation and carry its unqualified terminal evidence
+    // forward. Do NOT mark any failed continuation as a successful landing.
+    // Actual burn authority, window freshness and propulsion limits remain
+    // checked by DeorbitPlan, DeorbitRuntime and KRPCFlightIO.
+    let safeEntry = evaluated.filter { $0.hasExecutableEntryWindow }
+    guard let choice = safeEntry.sorted(by: ranksAhead).first else {
       throw FlightError.infeasible(
-        "Neither runway has a nominally qualified orbit-to-stop continuation. "
-        + "The provisional model's miss distances are diagnostic, not "
-        + "validated live landing predictions; no runway or OMS burn selected. "
+        "No physically admissible OMS-to-entry window for either runway. "
         + errors.joined(separator: "; "))
     }
-    return nominallyLanding.sorted(by: ranksAhead).first!
+    return choice
   }
 
   /// A failed full-route flight cannot be qualified, but its approximate
@@ -180,7 +183,7 @@ public actor DeorbitPlanner {
     return .init(hardUnsafe: hardUnsafe, screenFeasible: screenFeasible,
       altitudeRejected: abs(point[3]-targetHeight) > e.handoffRadius,
       machRejected: abs(mach-e.terminalTargetMach) > e.terminalMachHalfWidth,
-      captureMiss: hypot(point[1]-e.handoffAlong, point[2]-e.handoffCross),
+      captureMiss: hypot(point[1]-c.nepOverheadCaptureAlong, point[2]-e.handoffCross),
       violationCount: violationCount, entryMiss: entryMiss)
   }
   public func plan(from source: VehicleState,
@@ -248,11 +251,13 @@ public actor DeorbitPlanner {
       }
       // An unreachable HAC is not a valid burn target. When no candidate
       // is feasible, try the smallest modeled inlet miss first, not the
-      // closest nominal 70-km entry-interface ground track.
+      // closest nominal 70-km entry-interface ground track. The miss is
+      // measured from the same NEP-overhead objective MM304 flies to.
       let target = configuration.entrySettings
-      let missA = hypot(a.forecast.terminalAlong - target.handoffAlong,
+      let along = configuration.nepOverheadCaptureAlong
+      let missA = hypot(a.forecast.terminalAlong - along,
         a.forecast.terminalCross - target.handoffCross)
-      let missB = hypot(b.forecast.terminalAlong - target.handoffAlong,
+      let missB = hypot(b.forecast.terminalAlong - along,
         b.forecast.terminalCross - target.handoffCross)
       if missA != missB { return missA < missB }
       return a.window.miss < b.window.miss

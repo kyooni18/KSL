@@ -156,8 +156,6 @@ class NativeTelemetryPublication:
                     "deficit": (r.get("nominal") or {}).get("capture", {}).get("deficit"),
                     "excessEnergyMargin": (r.get("nominal") or {}).get("capture", {}).get("envelope", {}).get("excessEnergyMargin"),
                     "deficitEnergyMargin": (r.get("nominal") or {}).get("capture", {}).get("envelope", {}).get("deficitEnergyMargin"),
-                    "robustPasses": sum(1 for d in r.get("dispersed") or [] if (d.get("capture") or {}).get("feasible")),
-                    "dispersedCases": len(r.get("dispersed") or []),
                 } for r in ranked]}
         changed = self.last_phase != phase
         self.last_phase = phase

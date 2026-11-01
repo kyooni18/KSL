@@ -14,11 +14,13 @@ public struct PathStation: Codable, Sendable {
   public let angleOfAttack: Double
   public let bank: Double
   public let segment: PathSegment
+  /// Modeled split-rudder command at this station, absent in old records.
+  public let speedbrakeFraction: Double?
   public init(
     distance: Double, position: Vector2, tangent: Vector2, curvature: Double, height: Double,
     slope: Double,
     verticalCurvature: Double = 0, speed: Double = 0, angleOfAttack: Double = 0, bank: Double = 0,
-    segment: PathSegment
+    segment: PathSegment, speedbrakeFraction: Double? = nil
   ) {
     self.distance = distance
     self.position = position
@@ -31,6 +33,7 @@ public struct PathStation: Codable, Sendable {
     self.angleOfAttack = angleOfAttack
     self.bank = bank
     self.segment = segment
+    self.speedbrakeFraction = speedbrakeFraction
   }
 }
 
@@ -44,6 +47,12 @@ public struct TerminalAssessment: Codable, Sendable {
   public let maximumLoad: Double
   public let score: Double
   public let uncertaintyFraction: Double
+  /// Optional in historical records. Completion is point-mass pricing, not
+  /// a closed-loop or live-flight certificate.
+  public var predictionComplete: Bool? = nil
+  public var predictedThroughDistance: Double? = nil
+  public var energyExhaustionDistance: Double? = nil
+  public var unpricedDistance: Double? = nil
 }
 
 public struct TerminalStressCase: Codable, Sendable {
@@ -76,7 +85,10 @@ public struct TerminalPlan: Codable, Sendable {
   public let assessment: TerminalAssessment
   public let stressCases: [TerminalStressCase]
   public let closedLoopCases: [TerminalClosedLoopCase]?
+  public let nominalEnergyPoint: NominalEnergyPoint?
   public var length: Double { stations.last?.distance ?? 0 }
+  /// Last station owned by TAEM. Final owns the following straight suffix.
+  public var nominalEnergyStation: PathStation? { stations.last(where: { $0.segment != .final }) }
   public var nominalQualified: Bool {
     assessment.feasible && closedLoopCases?.first(where: {
       abs($0.liftMultiplier-1) < 1e-12 && abs($0.dragMultiplier-1) < 1e-12
@@ -89,7 +101,7 @@ public struct TerminalPlan: Codable, Sendable {
   public init(
     identifier: Int, createdAt: Double, spiral: SpiralHAC?, stations: [PathStation],
     assessment: TerminalAssessment, stressCases: [TerminalStressCase] = [],
-    closedLoopCases: [TerminalClosedLoopCase]? = nil
+    closedLoopCases: [TerminalClosedLoopCase]? = nil, nominalEnergyPoint: NominalEnergyPoint? = nil
   ) {
     self.identifier = identifier
     self.createdAt = createdAt
@@ -98,6 +110,7 @@ public struct TerminalPlan: Codable, Sendable {
     self.assessment = assessment
     self.stressCases = stressCases
     self.closedLoopCases = closedLoopCases
+    self.nominalEnergyPoint = nominalEnergyPoint
   }
   public func nearest(to p: Vector2, startingAt: Int = 0) -> Int {
     guard !stations.isEmpty else { return 0 }
@@ -134,6 +147,7 @@ public struct TerminalPlan: Codable, Sendable {
       height: blend(a.height, b.height), slope: blend(a.slope, b.slope),
       verticalCurvature: blend(a.verticalCurvature, b.verticalCurvature),
       speed: blend(a.speed, b.speed), angleOfAttack: blend(a.angleOfAttack, b.angleOfAttack),
-      bank: blend(a.bank, b.bank), segment: b.segment)
+      bank: blend(a.bank, b.bank), segment: distance >= b.distance ? b.segment : a.segment,
+      speedbrakeFraction: blend(a.speedbrakeFraction ?? 0, b.speedbrakeFraction ?? 0))
   }
 }

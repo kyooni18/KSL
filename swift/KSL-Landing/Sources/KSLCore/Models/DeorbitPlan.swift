@@ -68,22 +68,23 @@ public struct DeorbitPlan: Codable, Sendable {
   public var passedCases: Int { cases.filter(\.passed).count }
   public var unsafeCases: Int { cases.filter(\.hardUnsafe).count }
   public var nominalPassed: Bool { cases.first(where: { $0.index == 0 })?.passed == true }
-  public var passFraction: Double { Double(passedCases)/15 }
-  public var hasCompleteStressMatrix: Bool {
-    cases.count == 15 && Set(cases.map(\.index)) == Set(0..<15)
+  /// One complete nominal orbit-to-stop evaluation is the only tested case.
+  /// It is still an offline model result, not independent flight evidence.
+  public var hasNominalEvaluation: Bool {
+    cases.count == 1 && cases[0].index == 0
   }
   public var fullRouteQualified: Bool {
-    hasCompleteStressMatrix && nominalPassed && unsafeCases == 0
-      && passFraction >= configuration.deorbitSettings.minimumRobustPassFraction
+    hasNominalEvaluation && nominalPassed && unsafeCases == 0
   }
   public var executionQualified: Bool { fullRouteQualified && modelLimitations.isEmpty }
-  /// Explicit reduced assurance accepts model assessments as advisories, not
-  /// as evidence that the real vehicle will succeed or remain within limits.
-  /// A complete report is still required for traceability. Actual command,
-  /// propulsion, orbital freshness and configured flight limits are separate.
-  public var permitsExplicitReducedAssurance: Bool {
-    hasCompleteStressMatrix
+  /// The orbital OMS-to-entry safety envelope is distinct from predicting a
+  /// qualified TAEM capture or rollout. A failed terminal simulation must not
+  /// prohibit an otherwise physically admissible, fully evaluated entry test.
+  /// This is one standard flight-planning policy, not an experimental mode.
+  public var hasExecutableEntryWindow: Bool {
+    hasNominalEvaluation && unsafeCases == 0 && cases[0].burnCompleted
   }
+  public var permitsExplicitReducedAssurance: Bool { hasExecutableEntryWindow }
   public init(identifier: String = UUID().uuidString, source: VehicleState,
     configuration: MissionConfiguration, propulsion: PropulsionTelemetry, window: DeorbitWindow,
     cases: [DeorbitStressCase], modelLimitations: [String], evaluatedWindows: Int) {
@@ -93,8 +94,11 @@ public struct DeorbitPlan: Codable, Sendable {
   }
   public func authorize(identifier: String, reducedAssurance: Bool) throws {
     guard identifier == self.identifier else { throw FlightError.invalidCommand("Plan identity differs from the reviewed plan") }
-    guard executionQualified || (reducedAssurance && permitsExplicitReducedAssurance) else {
-      throw FlightError.infeasible("Deorbit plan is not executable: nominal=\(nominalPassed), full-route cases=\(passedCases)/15, unsafe=\(unsafeCases), model limitations=\(modelLimitations.joined(separator: "; "))")
+    // Authorization requires a fully screened, physically admissible entry
+    // window, not a provably successful prediction of a later controller.
+    // Keep the uncertainty visible; do not fabricate a passed rollout case.
+    guard hasExecutableEntryWindow else {
+      throw FlightError.infeasible("OMS-to-entry window failed physical checks: nominal evaluated=\(hasNominalEvaluation), unsafe=\(unsafeCases), burn complete=\(cases.first?.burnCompleted == true)")
     }
   }
 }

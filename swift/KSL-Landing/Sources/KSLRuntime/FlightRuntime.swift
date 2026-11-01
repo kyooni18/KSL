@@ -12,16 +12,26 @@ public enum RuntimeOutcome: String, Codable, Sendable {
 /// No detached tasks, callbacks, timers retaining self, or unchecked Sendable classes.
 public actor FlightRuntime {
   private let io: any FlightIO
-  private let recorder: any TelemetryRecording
+  private let recorder: ResilientTelemetryRecorder
   private let computer: FlightComputer
-  private let planner: MissionPlanningWorker
+  private let entryPlanner: any MissionPlanningService
+  private let terminalPlanner: any MissionPlanningService
   private var planningTask: Task<Void, Never>?
+  private var terminalTask: Task<Void, Never>?
   private var completedPlan: RecordedPlanningProposal?
+  private var completedTerminalPlan: RecordedPlanningProposal?
   private var planningError: String?
+  private var terminalError: String?
   private var generation: UInt64 = 0
-  private var planningTerminal = false
   private var planningPhase: MissionPhase?
   private var planningTaskGeneration: UInt64?
+  private var terminalTaskGeneration: UInt64?
+  private var planningRequestedAt: Double?
+  private var terminalRequestedAt: Double?
+  private var maximumTerminalPlanningAge: Double = 0
+  private let maximumEntryPlanningAge: Double
+  private let terminalReplanInterval: Double
+  private let approachPredictionInterval: Double
   private var dynamicsRevision: UInt64 = 0
   private let interval: Double
   private var running = false
@@ -31,20 +41,29 @@ public actor FlightRuntime {
     io: any FlightIO, recorder: any TelemetryRecording, configuration: MissionConfiguration,
     maximumOutage: Double = 20, maximumPause: Double = 600, maximumUnsafe: Double = 3,
     aerodynamics: AerodynamicsEngine? = nil, initialPhase: MissionPhase = .entry,
-    initialPlan: TerminalPlan? = nil
+    initialPlan: TerminalPlan? = nil,
+    entryPlanningService: (any MissionPlanningService)? = nil,
+    terminalPlanningService: (any MissionPlanningService)? = nil
   ) throws {
     self.maximumOutage = maximumOutage
     self.maximumPause = maximumPause
     self.maximumUnsafe = maximumUnsafe
     self.io = io
-    self.recorder = recorder
+    self.recorder = (recorder as? ResilientTelemetryRecorder) ?? .init(sink: recorder)
     interval = configuration.guidance.controlInterval
+    maximumEntryPlanningAge = 2 * configuration.guidance.entryReplanInterval
+    terminalReplanInterval = configuration.guidance.terminalReplanInterval
+    approachPredictionInterval = configuration.guidance.approachPredictionInterval ?? 1.5
     let atmosphere = try AtmosphericModelEngine(planet: configuration.planet)
-    let aerodynamics = try aerodynamics ?? AerodynamicsEngine(referenceArea: configuration.vehicle.referenceArea)
+  let aerodynamics = try aerodynamics ?? AerodynamicsEngine(referenceArea: configuration.vehicle.referenceArea,
+    speedbrakeFullDeploymentDragArea: configuration.vehicle.speedbrakeFullDeploymentDragArea)
     computer = try .init(
       configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics,
       externalPlanning: true, initialPhase: initialPhase, initialPlan: initialPlan)
-    planner = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
+    entryPlanner = entryPlanningService ?? MissionPlanningWorker(
+      configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
+    terminalPlanner = terminalPlanningService ?? MissionPlanningWorker(
+      configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
   }
   public func run(maximumDuration: Double = 2400, realTime: Bool = true) async throws
     -> RuntimeOutcome
@@ -54,80 +73,140 @@ public actor FlightRuntime {
     generation += 1
     do {
       let result = try await execute(maximumDuration: maximumDuration, realTime: realTime)
-      await cancelPlanning()
-      await io.shutdown()
-      try await recorder.close()
+      await finishFlight()
       running = false
       return result
     } catch {
-      await cancelPlanning()
-      let io = self.io
-      let recorder = self.recorder
-      // A bounded, explicitly awaited cleanup task is intentionally not a
-      // child of the cancelled operation, so cancellation cannot skip I/O
-      // neutralisation on a still usable connection.
-      let cleanup = Task {
-        await io.shutdown()
-        try? await recorder.close()
-      }
+      // Cleanup must not inherit the failed operation's cancellation state.
+      // Neutralise I/O before joining workers: cancellation is cooperative and
+      // a planner may still be returning from an expensive synchronous call.
+      let cleanup = Task { await finishFlight() }
       await cleanup.value
       running = false
       if error is CancellationError { return .cancelled }
       throw error
     }
   }
-  private func cancelPlanning() async {
-    generation += 1
-    let task = planningTask
-    task?.cancel()
-    await task?.value
-    planningTask = nil; completedPlan = nil; planningError = nil
+  private func invalidatePlanning() {
+    generation &+= 1
+    planningTask?.cancel(); terminalTask?.cancel()
+    completedPlan = nil; completedTerminalPlan = nil
+    planningError = nil; terminalError = nil
   }
-  private func receive(_ proposal: RecordedPlanningProposal?, error: String? = nil, generation: UInt64) {
-    guard planningTaskGeneration == generation else { return }
-    planningTask = nil; planningTaskGeneration = nil
-    guard running, generation == self.generation else { return }
-    completedPlan = proposal
-    planningError = error
+  private func finishFlight() async {
+    invalidatePlanning()
+    let entry = planningTask, terminal = terminalTask
+    await io.shutdown()
+    await entry?.value
+    await terminal?.value
+    planningTask = nil; terminalTask = nil
+    planningTaskGeneration = nil; terminalTaskGeneration = nil
+    planningRequestedAt = nil; terminalRequestedAt = nil
+    completedPlan = nil; completedTerminalPlan = nil
+    planningError = nil; terminalError = nil
+    await recorder.close()
   }
-  private func schedulePlanning(from state: VehicleState) throws -> Data? {
+  private func receive(_ proposal: RecordedPlanningProposal?, error: String? = nil,
+                       generation: UInt64, terminal: Bool) {
+    if terminal {
+      guard terminalTaskGeneration == generation else { return }
+      terminalTask = nil; terminalTaskGeneration = nil; terminalRequestedAt = nil
+      guard running, generation == self.generation else { return }
+      completedTerminalPlan = proposal; terminalError = error
+    } else {
+      guard planningTaskGeneration == generation else { return }
+      planningTask = nil; planningTaskGeneration = nil; planningRequestedAt = nil
+      guard running, generation == self.generation else { return }
+      completedPlan = proposal; planningError = error
+    }
+  }
+  private func schedulePlanning(from state: VehicleState) -> Data? {
     computer.observeConfiguration(state)
     if dynamicsRevision != computer.dynamicsRevision {
       dynamicsRevision = computer.dynamicsRevision
-      generation &+= 1; planningTask?.cancel()
-      completedPlan = nil; planningError = nil
+      generation &+= 1
+      planningTask?.cancel(); terminalTask?.cancel()
+      completedPlan = nil; completedTerminalPlan = nil
+      planningError = nil; terminalError = nil
     }
-    if let planningError { throw FlightError.io("Planning proposal could not be recorded: \(planningError)") }
+    if let planningError {
+      note("entry planning proposal discarded: \(planningError)")
+      self.planningError = nil
+    }
+    if let terminalError {
+      note("terminal planning proposal discarded: \(terminalError)")
+      self.terminalError = nil
+    }
+    // Publish at most one planning proposal per control record. The other
+    // remains buffered for the next 100-ms tick, preserving deterministic replay.
     var accepted: Data?
-    if let proposal = completedPlan {
-      computer.accept(proposal.proposal, state: state)
-      accepted = proposal.encoded
+    if let proposal = completedTerminalPlan {
+      if computer.accept(proposal.proposal, state: state) { accepted = proposal.encoded }
+      completedTerminalPlan = nil
+    } else if let proposal = completedPlan {
+      if computer.accept(proposal.proposal, state: state) { accepted = proposal.encoded }
       completedPlan = nil
     }
-    // Terminal capture cannot wait behind a long MM304 forecast. Cancellation
-    // is cooperative in the predictor and the capture continuation loop.
-    if planningTask != nil && !planningTerminal && computer.mission.shouldPrioritizeTerminalSearch(state) {
-      planningTask?.cancel()
-      return accepted
+    if planningTask != nil, computer.mission.phase != .entry { planningTask?.cancel() }
+    if planningTask != nil, let requestedAt = planningRequestedAt,
+       state.time - requestedAt > maximumEntryPlanningAge {
+      // A 10-s-old entry rollout can no longer be flown as the current state.
+      // Its own worker receives cancellation; terminal surveys run separately.
+      if planningTask?.isCancelled == false {
+        note("discarding expired entry forecast; terminal planning unaffected")
+        planningTask?.cancel()
+      }
     }
-    if planningTask != nil && planningPhase != computer.mission.phase { planningTask?.cancel(); return accepted }
-    guard planningTask == nil, let request = computer.planningRequest(from: state) else { return accepted }
-    planningPhase = computer.mission.phase
-    planningTerminal = request.terminalState != nil
-    let epoch = generation, worker = planner
-    planningTaskGeneration = epoch
-    planningTask = Task { [weak self] in
-      do {
-        let proposal = try await worker.recordedPlan(request)
-        await self?.receive(Task.isCancelled ? nil : proposal, generation: epoch)
-      } catch {
-        await self?.receive(nil, error: Task.isCancelled ? nil : String(describing: error), generation: epoch)
+    if terminalTask != nil, let requestedAt = terminalRequestedAt,
+       state.time - requestedAt > maximumTerminalPlanningAge,
+       terminalTask?.isCancelled == false {
+      // A result older than the relevant admission/approach freshness limit
+      // cannot be used. Cancel the terminal worker independently so a long
+      // search does not starve fresh surveys while entry remains in control.
+      note("discarding expired terminal forecast; entry planning unaffected")
+      terminalTask?.cancel()
+    }
+    let entryFree = planningTask == nil && completedPlan == nil
+    let terminalFree = terminalTask == nil && completedTerminalPlan == nil
+    guard entryFree || terminalFree,
+          let request = computer.planningRequest(from: state,
+            allowEntry: entryFree, allowTerminal: terminalFree) else { return accepted }
+    let epoch = generation
+    if request.terminalState != nil || request.approach != nil {
+      let worker = terminalPlanner
+      terminalTaskGeneration = epoch
+      terminalRequestedAt = request.time
+      maximumTerminalPlanningAge = request.approach != nil
+        ? 3 * approachPredictionInterval : 2 * terminalReplanInterval
+      terminalTask = Task { [weak self] in
+        do {
+          let proposal = try await worker.recordedPlan(request.terminalOnly())
+          await self?.receive(Task.isCancelled ? nil : proposal, generation: epoch, terminal: true)
+        } catch {
+          await self?.receive(nil, error: Task.isCancelled ? nil : String(describing: error),
+            generation: epoch, terminal: true)
+        }
+      }
+    }
+    if request.entry != nil {
+      let worker = entryPlanner
+      planningPhase = computer.mission.phase
+      planningTaskGeneration = epoch
+      planningRequestedAt = request.time
+      planningTask = Task { [weak self] in
+        do {
+          let proposal = try await worker.recordedPlan(request.entryOnly())
+          await self?.receive(Task.isCancelled ? nil : proposal, generation: epoch, terminal: false)
+        } catch {
+          await self?.receive(nil, error: Task.isCancelled ? nil : String(describing: error),
+            generation: epoch, terminal: false)
+        }
       }
     }
     return accepted
   }
   private func note(_ message: String) {
-    FileHandle.standardError.write(Data(("ksl-landing: " + message + "\n").utf8))
+    try? FileHandle.standardError.write(contentsOf: Data(("ksl-landing: " + message + "\n").utf8))
   }
   private func execute(maximumDuration: Double, realTime: Bool) async throws -> RuntimeOutcome {
     let clock = ContinuousClock()
@@ -136,7 +215,6 @@ public actor FlightRuntime {
     var lastFresh = clock.now
     var outageSince: ContinuousClock.Instant?
     var unsafeSince: ContinuousClock.Instant?
-    var heldAttitude: AttitudeTarget?
     var pausedNoted = false
     var faults = 0
     var previousWallTick: ContinuousClock.Instant?
@@ -185,21 +263,20 @@ public actor FlightRuntime {
         let simulationInterval = lastTime.map { state.time - $0 } ?? interval
         if outageSince != nil || simulationInterval > 1 {
           // Results and sample derivatives from before the outage are stale.
-          await cancelPlanning()
+          // Invalidate old snapshots without blocking the resumed command
+          // loop on a cancelled worker. Its lane stays occupied until receive
+          // acknowledges completion, so no replacement can race that worker.
+          invalidatePlanning()
           computer.resumeAfterTelemetryGap(at: state)
         }
         lastTime = state.time
         lastFresh = clock.now
-        let acceptedPlanning = try schedulePlanning(from: state)
+        let acceptedPlanning = schedulePlanning(from: state)
         var record = try computer.step(state)
         record.planningProposal = acceptedPlanning
         let computed = clock.now
         try Task.checkCancellation()
-        // On abort keep flying the last good attitude rather than snapping to 0/0.
-        let attitude =
-          record.guidance.phase == .abort && heldAttitude != nil
-          ? heldAttitude : computer.attitudeTarget(state: state, solution: record.guidance)
-        if record.guidance.phase != .abort { heldAttitude = attitude }
+        let attitude = computer.attitudeTarget(state: state, solution: record.guidance)
         try await io.apply(
           .init(
             sequence: record.sequence, stateTime: state.time, command: record.command,
@@ -219,7 +296,6 @@ public actor FlightRuntime {
         outageSince = nil
         faults = 0
         if record.guidance.phase == .complete { return .complete }
-        if record.guidance.phase == .abort { return .aborted }
       } catch let error as FlightError where error.isRecoverable {
         let since = outageSince ?? clock.now
         outageSince = since

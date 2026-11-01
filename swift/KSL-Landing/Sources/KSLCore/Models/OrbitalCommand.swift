@@ -31,3 +31,11 @@ public protocol OrbitalFlightIO: FlightIO {
   func finishDeorbit() async throws
   func beginEntry() async throws
 }
+
+/// Optional rail-warp ownership. Real kRPC flight I/O implements this, while
+/// simulated/external FlightIO implementations keep their existing contract.
+public protocol OrbitalWarpFlightIO: OrbitalFlightIO {
+  /// Warp only during a propulsion-free orbital coast. Return the achieved UT.
+  /// Must always restore 1x before returning, throwing or cancellation.
+  func coastWarp(until stopUT: Double) async throws -> Double
+}

@@ -7,7 +7,7 @@ public final class TouchdownMonitor {
   private let configuration: MissionConfiguration
   private let frame: RunwayFrame
   private var precedingAirborne: VehicleState?
-  private var accepted = false
+  public private(set) var accepted = false
   public init(configuration: MissionConfiguration) {
     self.configuration = configuration
     frame = .init(runway: configuration.runway, planet: configuration.planet)

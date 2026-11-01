@@ -98,7 +98,7 @@ enum ShuttleSimStream {
             }
             for (i, r) in selection.ranked.enumerated() {
               FileHandle.standardError.write(Data(("rank \(i) pass \(r.pass) offset \(r.burnOffset) burn \(Int(r.window.burnStart)) "
-                + "EI range \(Int(r.window.entryRange/1000))km aim \(Int(r.nominal.crossAim/1000))km \(r.nominal.capture.summary) robust \(r.robustPasses)/\(r.dispersed.count) "
+                + "EI range \(Int(r.window.entryRange/1000))km aim \(Int(r.nominal.crossAim/1000))km \(r.nominal.capture.summary) "
                 + "corridor \(r.corridor ?? [])\n").utf8))
             }
             FileHandle.standardError.write(Data("landing-aware selection: \(selection.evaluatedForecasts) forecasts, \(Int(Date().timeIntervalSince(clock)))s\n".utf8))
@@ -110,8 +110,7 @@ enum ShuttleSimStream {
             window = chosen.window
             flight.mission.planEntryAim(chosen.nominal.crossAim, objective: chosen.nominal.objective)
             metadata!["selection"] = ["mode": "landing-aware", "rank": windowIndex,
-              "ranked": try object(selection.ranked.map { r -> LandingAwareCandidate in
-                var v = r; if v.pass != chosen.pass { v.dispersed = [] }; return v }),
+              "ranked": try object(selection.ranked),
               "survey": try object(selection.survey), "evaluatedForecasts": selection.evaluatedForecasts]
           }
           metadata!["window"] = try object(window!)

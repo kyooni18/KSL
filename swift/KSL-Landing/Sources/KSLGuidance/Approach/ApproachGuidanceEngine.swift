@@ -38,11 +38,19 @@ public final class ApproachGuidanceEngine {
     let reference = profile.reference(along: p.along)
     let direction = frame.direction(at: p.horizontal, tangent: .init(1, 0))
     let error = abs(wrapAngle(state.localFrame.heading(of: direction) - state.course))
-    guard p.along < configuration.guidance.touchdownAlong && p.along > -18_000,
+    // NEP is a physical handover station, not an open-ended region after it.
+    // Permit at most one measured guidance step on either side of the station;
+    // the independent Final energy price still decides capture feasibility.
+    let nepAlong = -configuration.guidance.finalDistance
+    let nepSampleDistance = max(1, state.horizontalSpeed * configuration.guidance.controlInterval)
+    guard p.along >= nepAlong - nepSampleDistance
+      && p.along <= nepAlong + nepSampleDistance
+      && p.along < configuration.guidance.touchdownAlong,
       abs(p.cross) < max(50, (-p.along) * 0.03), error < radians(12),
       abs(state.aerodynamics.bank) < radians(25),
       p.height > configuration.vehicle.gearHeight,
       abs(p.height - reference.height) < max(220, reference.height * 0.2),
+      state.aerodynamics.airspeed >= (configuration.vehicle.minimumSafeSpeed ?? configuration.vehicle.landingSpeed),
       state.aerodynamics.airspeed <= (configuration.guidance.finalAlignmentSpeed ?? 260)
     else { return false }
     let candidate = ApproachCapture(
@@ -53,6 +61,7 @@ public final class ApproachGuidanceEngine {
     lastCaptureAssessment = assessment
     if assessment.feasible {
       capture = candidate
+      outer.captureNominalEnergySpeed(state.aerodynamics.airspeed)
       return true
     }
     return false
@@ -68,6 +77,7 @@ public final class ApproachGuidanceEngine {
     if capture == nil {
       capture = .init(
         profile: profile, along: p.along, height: p.height, slope: tan(state.flightPathAngle))
+      outer.captureNominalEnergySpeed(state.aerodynamics.airspeed)
     }
     let ref = capture!.reference(along: p.along)
     let speed = max(1, state.aerodynamics.airspeed)

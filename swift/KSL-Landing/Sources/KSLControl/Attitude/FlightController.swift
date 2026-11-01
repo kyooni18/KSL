@@ -11,6 +11,11 @@ public final class FlightController {
   private var previous = ControlCommand()
   private var previousError: Vector3?
   private var errorRate = Vector3.zero
+  // The entry RCS pitch damper uses measured body rate and a filtered wind-frame
+  // target rate. Differentiating a sub-degree quaternion error at 10 Hz turned
+  // attitude/target noise into large alternating RCS commands in live entry.
+  private var previousDesiredAttitude: Quaternion?
+  private var pitchReferenceRate = 0.0
   private var previousState: VehicleState?
   private var previousPhase: MissionPhase?
   private var mainContactLatched = false
@@ -28,6 +33,8 @@ public final class FlightController {
       pitchAuthority = s.pitchAuthority; rollAuthority = s.rollAuthority; yawAuthority = s.yawAuthority
       betaModel = s.betaModel; pitchTrim = s.pitchTrim; rollTrim = s.rollTrim; pitchScale = s.pitchScale
       previous = s.previous; previousError = s.previousError; errorRate = s.errorRate
+      previousDesiredAttitude = s.previousDesiredAttitude
+      pitchReferenceRate = s.pitchReferenceRate
       previousState = s.previousState; previousPhase = s.previousPhase; trimModel = s.trimModel
       previousFeedforward = s.previousFeedforward; feedforwardWasIdentified = s.feedforwardWasIdentified
       feedforwardWasPrior = s.feedforwardWasPrior
@@ -38,6 +45,7 @@ public final class FlightController {
     .init(pitchAuthority: pitchAuthority, rollAuthority: rollAuthority, yawAuthority: yawAuthority,
       betaModel: betaModel, pitchTrim: pitchTrim, rollTrim: rollTrim, pitchScale: pitchScale,
       previous: previous, previousError: previousError, errorRate: errorRate,
+      previousDesiredAttitude: previousDesiredAttitude, pitchReferenceRate: pitchReferenceRate,
       previousState: previousState, previousPhase: previousPhase, trimModel: trimModel,
       previousFeedforward: previousFeedforward, feedforwardWasIdentified: feedforwardWasIdentified,
       feedforwardWasPrior: feedforwardWasPrior, coupledRollAcceleration: coupledRollAcceleration)
@@ -46,6 +54,7 @@ public final class FlightController {
     pitchAuthority = .init(); rollAuthority = .init(); yawAuthority = .init()
     betaModel = .init(); pitchTrim = 0; rollTrim = 0; pitchScale = 0.70
     previous = .init(); previousError = nil; errorRate = .zero
+    previousDesiredAttitude = nil; pitchReferenceRate = 0
     previousState = nil; previousPhase = nil; mainContactLatched = false
     trimModel = .init(); previousFeedforward = 0; feedforwardWasIdentified = false; feedforwardWasPrior = false
     coupledRollAcceleration = 0
@@ -61,7 +70,23 @@ public final class FlightController {
   /// Preserve the identified plant and trims; discard derivatives across missing samples.
   public func resumeAfterTelemetryGap(at state: VehicleState) {
     previousState = nil; previousError = nil; errorRate = .zero
+    previousDesiredAttitude = nil; pitchReferenceRate = 0
     previous = state.appliedControls ?? previous
+  }
+  /// Continuous propellant depletion may move the CoM by 1 cm over several
+  /// minutes, reaching the cumulative revision threshold without changing the
+  /// control plant abruptly. Keep its live trim and authority fit. Real payload,
+  /// topology, inertia or stepwise CoM changes still invalidate that evidence.
+  public func adaptToDynamicsChange(_ change: VehicleDynamicsChange, at state: VehicleState) {
+    let gradualCoMDrift: Bool
+    if change.reasons == ["center-of-mass-shifted"], let old = previousState,
+       let a = old.vesselConfiguration?.centerOfMassFromAnchor,
+       let b = state.vesselConfiguration?.centerOfMassFromAnchor {
+      gradualCoMDrift = state.time > old.time && state.time-old.time <= 1
+        && state.mass <= old.mass && (b-a).length < 0.001
+    } else { gradualCoMDrift = false }
+    if gradualCoMDrift { resumeAfterTelemetryGap(at: state) }
+    else { invalidateDynamics(at: state) }
   }
   public func command(state: VehicleState, solution: GuidanceSolution, dt: Double) throws
     -> ControlCommand {
@@ -70,7 +95,7 @@ public final class FlightController {
       throw FlightError.invalidTelemetry("Time moved backwards or repeated in FCS")
     }
     if state.wheelContact?.mainGear == true { mainContactLatched = true }
-    if state.contact.isGrounded {
+    if state.contact.isGrounded || state.contact == .crashed {
       pitchTrim = 0; rollTrim = 0
       previous = rollout.command(state: state, dt: dt)
       diagnostics = .init()
@@ -80,7 +105,7 @@ public final class FlightController {
       previousState = state
       return previous
     }
-    if solution.phase == .abort || solution.phase == .complete {
+    if solution.phase == .complete {
       previous = .init(gearDown: state.systems.gearDown)
       return previous
     }
@@ -91,6 +116,20 @@ public final class FlightController {
       throw FlightError.invalidTelemetry("Air-relative attitude is undefined")
     }
     let error = AirRelativeAttitude.error(current: state.attitude, target: desired)
+    // The reference includes motion of the wind frame as well as commanded
+    // incidence. The target quaternion is planet-fixed and the measured gyro
+    // is planet-relative; their rates are therefore in the same frame. Rotate
+    // the finite target increment into the current body frame before damping.
+    if previousPhase == solution.phase, previousState != nil,
+       let prior = previousDesiredAttitude {
+      let increment = AirRelativeAttitude.error(current: prior, target: desired)
+      let inBody = (state.attitude.conjugate * prior).rotate(increment)
+      let limit = configuration.vehicle.controlPlant.maximumPitchRate
+      let sampleRate = clamp(inBody.y / dt, -limit, limit)
+      pitchReferenceRate = ControlLaw.lowpass(pitchReferenceRate, sampleRate,
+        dt: dt, tau: 3 * ControlLaw.pitchLag)
+    } else { pitchReferenceRate = 0 }
+    previousDesiredAttitude = desired
     let aerodynamicError = wrapAngle(solution.target.angleOfAttack - a.angleOfAttack)
     if previousPhase == solution.phase, let previousError {
       errorRate = .init(
@@ -117,13 +156,18 @@ public final class FlightController {
     let measuredPitchAcceleration = previousState.map {
       (state.angularVelocity.y-$0.angularVelocity.y)/dt
     }
-    let previousApplied = previousState?.appliedControls?.pitch
+    let trimCoefficient = configuration.vehicle.bodyFlapTrimInputAtFullDeflection ?? 0
+    let observedTrimInput = observed.pitch + (observed.bodyFlapTrimFraction ?? 0)*trimCoefficient
+    let previousTrimInput = previousState.map {
+      ($0.appliedControls?.pitch ?? 0) + ($0.appliedControls?.bodyFlapTrimFraction ?? 0)*trimCoefficient
+    }
     let momentSettled = solution.phase == .entry && pitchAuthorityReport > 0
       && measuredPitchAcceleration.map { abs($0)/pitchAuthorityReport <= 0.03 } == true
-      && previousApplied.map { abs(observed.pitch-$0) <= 0.03 } == true
+      && previousTrimInput.map { abs(observedTrimInput-$0) <= 0.03 } == true
     trimModel.observe(time: state.time, mach: a.mach, pressure: a.dynamicPressure,
-      alpha: a.angleOfAttack, input: observed.pitch,
-      settled: previousState != nil && abs(aeroRate.y) < radians(0.3)
+      alpha: a.angleOfAttack, input: observedTrimInput,
+      settled: !state.systems.rcs && previousState != nil
+        && abs(aeroRate.y) < radians(0.3)
         && (abs(aerodynamicError) < radians(0.5) || momentSettled) && state.appliedControls != nil)
     pitchAuthority.observe(rate: state.angularVelocity.y, input: observed.pitch,
                            dt: dt, interference: 0, responseTime: 0)
@@ -158,15 +202,24 @@ public final class FlightController {
     let terminal = [.approach, .preflare, .flare].contains(solution.phase)
     let adaptive = !terminal
     let frequencies = ControlLaw.bandwidth(q: a.dynamicPressure, mach: a.mach, terminal: terminal)
+    // MM304 has active RCS and a direct body gyro. Use it for damping rather
+    // than the noisy derivative of a small quaternion residual. Keep the C
+    // relative-error controller for RCS-off TAEM/landing until separately proven.
+    let entryGyro = solution.phase == .entry && state.systems.rcs
+    let measuredPitchRate = entryGyro ? state.angularVelocity.y : -errorRate.y
+    let referencePitchRate = entryGyro ? pitchReferenceRate : 0
+    let relativePitchRate = measuredPitchRate - referencePitchRate
     if adaptive {
-      pitchScale = ControlLaw.responseScale(pitchScale, error: error.y, rate: -errorRate.y,
+      pitchScale = ControlLaw.responseScale(pitchScale, error: error.y, rate: relativePitchRate,
                                            wn: frequencies.pitch, dt: dt)
     } else { pitchScale = 1 }
     let pitchWN = frequencies.pitch * pitchScale, rollWN = frequencies.roll
     let pitchDamping = adaptive ? clamp(ControlLaw.damping / pitchScale, 1.15, 2.4) : 1.15
     // Identified local trim takes precedence. The archive-derived restoring
     // moment remains an explicit provisional prior outside its support.
-    let identifiedTrim = trimModel.input(alpha: a.angleOfAttack)
+    let identifiedTrim = state.systems.rcs ? nil : trimModel.input(
+      time: state.time, mach: a.mach, pressure: a.dynamicPressure,
+      alpha: a.angleOfAttack)
     let stiffness = p.pitchStiffnessPerKPa * kPa
     let momentPrior = stiffness * (a.angleOfAttack - p.trimAngleOfAttack)
       + 2 * p.pitchDampingRatio * sqrt(stiffness) * state.angularVelocity.y
@@ -194,10 +247,20 @@ public final class FlightController {
         targetPitchRate = clamp(error.y / timeToContact, 0, radians(6))
       }
     }
-    var pitchRaw = ControlLaw.demand(error: error.y, rate: -errorRate.y,
-      targetRate: targetPitchRate, authority: usedPitch, wn: pitchWN, damping: pitchDamping,
+    var pitchRaw = ControlLaw.demand(error: error.y, rate: measuredPitchRate,
+      targetRate: targetPitchRate + referencePitchRate,
+      authority: usedPitch, wn: pitchWN, damping: pitchDamping,
       lag: ControlLaw.pitchLag, previous: previous.pitch, balancingInput: feedforward + pitchTrim)
     let pdPitch = clamp(pitchRaw, -1, 1)
+    // Offload measured steady pitch bias to the rear flap without disabling
+    // its ordinary pitch input. With no identified deployment coefficient the
+    // only safe automatic trim command is stowed, not a guessed sign/gain.
+    let flapCoefficient = !state.systems.rcs && !mainContactLatched
+      ? configuration.vehicle.bodyFlapTrimInputAtFullDeflection : nil
+    let flapTrim = flapCoefficient.map {
+      clamp((pitchTrim + feedforward) / $0, -1, 1)
+    } ?? 0
+    let flapPitchInput = flapTrim * (flapCoefficient ?? 0)
     if !mainContactLatched, usedPitch > 1e-12, a.dynamicPressure > 100 {
       let nearGround = terminal && state.radarAltitude < 700
       let taem = [.acquisition, .headingAlignment].contains(solution.phase)
@@ -208,7 +271,7 @@ public final class FlightController {
       let responseTime = 2 * pitchDamping / max(1e-3, pitchWN) + ControlLaw.pitchLag
       let taemGain = pitchWN * pitchWN / (responseTime * usedPitch)
       let gainPerRadian = taem && !nearGround ? taemGain : degrees(nearGround ? 0.025 : 0.008)
-      let total = pdPitch + pitchTrim + feedforward
+      let total = pdPitch + pitchTrim + feedforward - flapPitchInput
       let windup = (total >= 1 && aerodynamicError > 0) || (total <= -1 && aerodynamicError < 0)
       if !windup, abs(aerodynamicError) > radians(0.20) {
         pitchTrim += gainPerRadian * aerodynamicError * dt
@@ -216,7 +279,7 @@ public final class FlightController {
       pitchTrim = clamp(pitchTrim, nearGround ? -1 : taem ? -0.60 : -0.35,
                          nearGround ? 1 : taem ? 0.90 : 0.50)
     } else { pitchTrim *= max(0, 1 - dt) }
-    pitchRaw = pdPitch + pitchTrim + feedforward
+    pitchRaw = pdPitch + pitchTrim + feedforward - flapPitchInput
     var pitchCommand = clamp(pitchRaw, -1, 1)
     if adaptive {
       pitchCommand = ControlLaw.lowpass(previous.pitch, pitchCommand, dt: dt,
@@ -287,12 +350,15 @@ public final class FlightController {
       gearDown: solution.target.gearDown,
       // Configured RCS is authorized for MM304 entry only. MM305 acquisition,
       // HAC, approach and flare must explicitly release it at ownership transfer.
-      rcs: solution.phase == .entry && configuration.vehicle.rcsAttitudeControl)
+      rcs: solution.phase == .entry && configuration.vehicle.rcsAttitudeControl,
+      speedbrakeFraction: solution.target.speedbrakeFraction ?? 0,
+      bodyFlapTrimFraction: flapTrim)
     var d = ControlDiagnostics()
     d.pitchSaturated = abs(pitchRaw) >= 1; d.rollSaturated = abs(rollRaw) >= 1
     d.yawSaturated = abs(yawRaw) >= 1; d.pitchError = aerodynamicError
     d.bankError = wrapAngle(solution.target.bank - a.bank); d.quaternionError = error
-    d.relativeRate = -errorRate; d.bodyRate = state.angularVelocity; d.aerodynamicRate = aeroRate
+    d.relativeRate = .init(-errorRate.x, relativePitchRate, -errorRate.z)
+    d.bodyRate = state.angularVelocity; d.aerodynamicRate = aeroRate
     d.authority = .init(usedRoll, usedPitch, usedYaw); d.reportedAuthority = reported
     d.authorityConfidence = .init(rollAuthority.liveConfidence, pitchAuthority.liveConfidence,
                                   yawAuthority.liveConfidence)
@@ -301,9 +367,14 @@ public final class FlightController {
     d.pitchResponseSeconds = 2 * pitchDamping / max(0.1, pitchWN) + ControlLaw.pitchLag
     d.rollResponseSeconds = 2 * ControlLaw.damping / max(0.1, rollWN) + ControlLaw.rollLag
     d.pitchFeedforward = feedforward
-    d.trimEvidence = identifiedTrim != nil ? .identified : supportedPrior ? .provisional : .unavailable
-    d.trimAlphaCeiling = trimModel.ceiling(initial: configuration.entrySettings.nominalAlpha,
+    // A pointwise trim feedforward is not an identified pitch-trim envelope.
+    // Never promote nominal entry AoA into a hard guidance ceiling merely
+    // because the controller held that AoA steadily.
+    let identifiedCeiling = state.systems.rcs ? nil : trimModel.ceiling(
+      time: state.time, mach: a.mach, pressure: a.dynamicPressure,
       maximum: configuration.vehicle.maximumAngleOfAttack)
+    d.trimEvidence = identifiedCeiling != nil ? .identified : supportedPrior ? .provisional : .unavailable
+    d.trimAlphaCeiling = identifiedCeiling
     d.rawDemand = .init(rollRaw, pitchRaw, yawRaw)
     d.appliedDemand = .init(previous.roll, previous.pitch, previous.yaw)
     d.recoveryRateFirst = rateFirst && dampingExhausted; d.sampleInterval = dt

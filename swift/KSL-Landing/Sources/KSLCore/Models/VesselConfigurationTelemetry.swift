@@ -10,6 +10,9 @@ public struct VesselConfigurationTelemetry: Codable, Sendable, Equatable {
   public let anchorPart: UInt64?
   public let centerOfMassFromAnchor: Vector3?
   public let centerOfMassEvidence: EvidenceKind
+  /// The same measured CoM vector rotated into aircraft FRD axes. This is
+  /// geometry evidence; it is not an assumed aerodynamic center of pressure.
+  public var centerOfMassBodyFRD: Vector3?
   /// Symmetric 3x3, row-major, about current CoM, in body FRD axes.
   /// nil is unavailable; diagonal moments are not a substitute for the tensor.
   public var inertiaTensorFRD: [Double]?
@@ -25,6 +28,7 @@ public struct VesselConfigurationTelemetry: Codable, Sendable, Equatable {
   public var isCoherent: Bool {
     partCount > 0 && measuredAt.isFinite &&
     (centerOfMassFromAnchor == nil || centerOfMassFromAnchor!.isFinite) &&
+    (centerOfMassBodyFRD == nil || centerOfMassBodyFRD!.isFinite) &&
     (centerOfMassEvidence != .measured || centerOfMassFromAnchor != nil) &&
     (inertiaTensorFRD == nil || (inertiaTensorFRD!.count == 9 && inertiaTensorFRD!.allSatisfy(\.isFinite)))
   }

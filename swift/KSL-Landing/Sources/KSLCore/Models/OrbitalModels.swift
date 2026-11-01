@@ -32,15 +32,23 @@ public struct PropulsionTelemetry: Codable, Sendable, Equatable {
   public var dryMass: Double
   public var specificImpulse: Double
   public var evidence: EvidenceKind
+  /// Measured net OMS thrust direction in body FRD, aggregated over the
+  /// active fuelled engines and weighted by their available thrust.
+  /// A missing vector is NOT evidence that thrust follows the vessel nose.
+  public var thrustDirectionBody: Vector3?
   public init(availableThrust: Double, dryMass: Double, specificImpulse: Double,
-              evidence: EvidenceKind = .measured) {
+              evidence: EvidenceKind = .measured, thrustDirectionBody: Vector3? = nil) {
     self.availableThrust = availableThrust; self.dryMass = dryMass
     self.specificImpulse = specificImpulse; self.evidence = evidence
+    self.thrustDirectionBody = thrustDirectionBody
   }
   public func validate(mass: Double) throws {
     guard availableThrust.isFinite, availableThrust > 0, dryMass.isFinite,
       dryMass > 0, dryMass < mass, specificImpulse.isFinite, specificImpulse > 0 else {
       throw FlightError.invalidTelemetry("OMS thrust, dry mass and specific impulse must be measured before planning")
+    }
+    if let axis = thrustDirectionBody, (!axis.isFinite || abs(axis.length-1) > 0.01 || axis.x < 0.5) {
+      throw FlightError.invalidTelemetry("Measured OMS engine thrust direction is invalid")
     }
   }
 }
@@ -64,13 +72,14 @@ public struct DeorbitConfiguration: Codable, Sendable, Equatable {
   public var velocityUncertainty = 0.5
   public var pointingUncertainty = radians(2)
   public var atmosphereUncertainty = 0.12
-  public var minimumRobustPassFraction = 0.75
   public var minimumSearchOrbits = 1.0
   public var coarseWindowStep = 30.0
   public var candidateBudget = 12
   public init() {}
   public func validate(planet: PlanetConfiguration) throws {
-    guard maximumThrottle > 0, maximumThrottle <= 1, throttleRampDuration >= 0,
+    // OMS must never run at full thrust; ensure planning and live execution
+    // agree on the same bounded low-throttle envelope.
+    guard maximumThrottle > 0, maximumThrottle <= 0.25, throttleRampDuration >= 0,
       throttleRampDuration <= 60, minimumPlanningLeadTime >= 5,
       targetPeriapsisAltitude > 0, targetPeriapsisAltitude < planet.atmosphereTop,
       entryAltitudeMargin >= 0, entryAltitudeMargin < planet.atmosphereTop/2,
@@ -81,7 +90,6 @@ public struct DeorbitConfiguration: Codable, Sendable, Equatable {
       positionUncertainty >= 0, velocityUncertainty >= 0,
       pointingUncertainty >= 0, pointingUncertainty <= radians(10),
       (0..<0.8).contains(atmosphereUncertainty),
-      minimumRobustPassFraction > 0, minimumRobustPassFraction <= 1,
       minimumSearchOrbits > 0, minimumSearchOrbits <= 5,
       coarseWindowStep >= 1, coarseWindowStep <= 120,
       (1...100).contains(candidateBudget) else {

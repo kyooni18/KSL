@@ -33,6 +33,7 @@ public struct FlightRecord: Codable, Sendable {
   public var initialPhase: MissionPhase?
   public var initialTerminalPlan: Data?
   public var initialDeorbitPlan: Data?
+  public var recordingGap: RecordingGap?
   public init(
     sequence: UInt64, state: VehicleState, guidance: GuidanceSolution, command: ControlCommand,
     control: ControlDiagnostics? = nil, timing: ControlLoopTiming? = nil

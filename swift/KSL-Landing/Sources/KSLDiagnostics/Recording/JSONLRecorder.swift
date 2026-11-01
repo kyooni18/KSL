@@ -5,6 +5,8 @@ import KSLCore
 public final class JSONLFileWriter {
   private var handle: FileHandle?
   private let encoder: JSONEncoder
+  private var committedOffset: UInt64 = 0
+  private var needsRollback = false
   public init(url: URL) throws {
     try Data().write(to: url, options: .withoutOverwriting)
     handle = try FileHandle(forWritingTo: url)
@@ -15,12 +17,27 @@ public final class JSONLFileWriter {
     guard let handle else { throw FlightError.io("Recorder already closed") }
     var data = try encoder.encode(value)
     data.append(10)
-    try handle.write(contentsOf: data)
+    try repairPartialWrite(handle)
+    do {
+      try handle.write(contentsOf: data)
+      committedOffset += UInt64(data.count)
+    } catch {
+      // ENOSPC can leave half a JSON object. Retry only from the last complete
+      // line so resuming the recorder never joins two different records.
+      needsRollback = true
+      throw error
+    }
+  }
+  private func repairPartialWrite(_ handle: FileHandle) throws {
+    guard needsRollback else { return }
+    try handle.truncate(atOffset: committedOffset)
+    try handle.seek(toOffset: committedOffset)
+    needsRollback = false
   }
   public func close() throws {
     guard let h = handle else { return }
     handle = nil
-    do { try h.synchronize() } catch {
+    do { try repairPartialWrite(h); try h.synchronize() } catch {
       try? h.close()
       throw error
     }

@@ -43,4 +43,17 @@ extension MissionConfiguration {
     min(entrySettings.captureRange, guidance.finalDistance
       + 2*guidance.minimumHACRadius + entrySettings.handoffRadius)
   }
+  /// Runway distance of MM304's NEP-overhead delivery: the NEP station, the
+  /// diameter of a minimum-radius HAC beside it, and the delivery tolerance.
+  /// Derived from HAC geometry; the operator precision aim is not a cap here.
+  public var nepOverheadCaptureRange: Double {
+    guidance.finalDistance + 2*guidance.minimumHACRadius + entrySettings.handoffRadius
+  }
+  /// Runway-frame along coordinate of the NEP-overhead delivery on the
+  /// configured handoff crossrange. Single target for MM304, the deorbit
+  /// window ranking and runway selection (replaces mm304HandoffAlongTrack).
+  public var nepOverheadCaptureAlong: Double {
+    let r = nepOverheadCaptureRange, cross = entrySettings.handoffCross
+    return -sqrt(max(0, r*r - cross*cross))
+  }
 }

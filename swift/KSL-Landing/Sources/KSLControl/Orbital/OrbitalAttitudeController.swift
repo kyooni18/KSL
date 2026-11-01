@@ -11,23 +11,37 @@ public final class OrbitalAttitudeController {
   public init() {}
   public static func boundedDemand(error: Double, relativeRate: Double, authority: Double,
                                     hold: Double) -> Double {
-    guard authority > 0, authority.isFinite else { return 0 }
-    let direction = error >= 0 ? 1.0 : -1.0, distance = abs(error), rate = direction*relativeRate
-    if distance < 1e-12 { return clamp(-relativeRate/(authority*max(hold, 0.01)), -1, 1) }
-    let stopDistance = rate > 0 ? rate*rate/(2*authority) : 0
-    if stopDistance >= distance { return -direction }
-    var acceleration = authority
-    if hold > 0 {
-      let endRate = rate+authority*hold
-      let remaining = distance-rate*hold-0.5*authority*hold*hold
-      if endRate > 0 && remaining <= endRate*endRate/(2*authority) {
-        let qa = hold*hold, qb = authority*hold*hold+2*rate*hold
-        let qc = rate*rate+2*authority*rate*hold-2*authority*distance
-        let discriminant = qb*qb-4*qa*qc
-        if discriminant >= 0 { acceleration = clamp((-qb+sqrt(discriminant))/(2*qa), -authority, authority) }
-      }
-    }
-    return direction*acceleration/authority
+    guard authority > 0, authority.isFinite,
+      error.isFinite, relativeRate.isFinite, hold.isFinite else { return 0 }
+    // Rate-shaped pointing with a measured braking limit. The former
+    // bang-bang switch demanded +/-100% torque when a 0.05-degree error
+    // remained, continually overshooting and firing RCS.
+    //
+    // The settling horizon spans three observed control/actuator delays:
+    // first converge at a bounded angular speed, then damp actual angular
+    // velocity instead of commanding another full acceleration reversal.
+    let horizon = max(3*max(hold, 0.01), 0.03)
+    let stopSpeed = sqrt(max(0, 2*authority*abs(error)))
+    let desiredRate = (error < 0 ? -1.0 : 1.0)
+      * min(stopSpeed, abs(error)/horizon)
+    let acceleration = (desiredRate-relativeRate)/horizon
+    return clamp(acceleration/authority, -1, 1)
+  }
+  /// Compute the nose vector that gives the desired physical thrust vector
+  /// after applying the measured net body-FRD engine cant. The companion
+  /// attitude is constrained to the orbital radial-up reference, not a free
+  /// roll. A symmetric canted OMS pair has almost zero body lateral component.
+  public static func compensatedNoseDirection(desiredThrust: Vector3,
+                                                position: Vector3,
+                                                bodyThrustDirection: Vector3) -> Vector3 {
+    let effective = bodyThrustDirection.normalized
+    let ideal = Quaternion.windAttitude(position: position,
+      airVelocity: desiredThrust.normalized, alpha: 0, bank: 0)
+    let front = Vector3(1, 0, 0)
+    let axis = effective.cross(front)
+    let correction = Quaternion.axisAngle(axis.normalized,
+      angle: acos(clamp(effective.dot(front), -1, 1)))
+    return (ideal * correction).rotate(front).normalized
   }
   public func command(state: VehicleState, direction: Vector3, dt: Double) throws -> ControlCommand {
     guard dt > 0, dt <= 1, direction.isFinite, direction.length > 0.99,
@@ -57,6 +71,13 @@ public final class OrbitalAttitudeController {
     diagnostics = .init(); diagnostics.quaternionError = error; diagnostics.bodyRate = state.angularVelocity
     diagnostics.relativeRate = rate; diagnostics.authority = a; diagnostics.authorityEvidence = authority.evidence
     diagnostics.rawDemand = demand; diagnostics.appliedDemand = demand; diagnostics.sampleInterval = dt
-    return .init(pitch: demand.y, roll: demand.x, yaw: demand.z, gearDown: state.systems.gearDown)
+    // Proven powered reaction wheels supply measured three-axis torque without
+    // consuming monopropellant. Do not keep the RCS jets enabled during hours
+    // of orbital coast just because the vehicle config permits them.
+    // Unknown/wheel-less actuator provenance retains the original RCS option.
+    let wheelAvailable = authority.evidence == .measured
+      && (authority.actuatorSources?.contains("active-powered-reaction-wheels") == true)
+    return .init(pitch: demand.y, roll: demand.x, yaw: demand.z,
+      gearDown: state.systems.gearDown, rcs: !wheelAvailable)
   }
 }

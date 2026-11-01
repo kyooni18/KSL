@@ -37,6 +37,10 @@ final class TerminalEnergyGuide {
   private var lowEnergySince: Double?
   private var recoveredRangeSince: Double?
   private var lowEnergyRecovery = false
+  private var nominalEnergySpeed: Double?
+  func captureNominalEnergySpeed(_ speed: Double) {
+    if speed.isFinite, speed > 0 { nominalEnergySpeed = speed }
+  }
   func invalidatePrediction() {
     latestRequest = nil; latestProposal = nil; lastRequestTime = -.infinity
     lowEnergySince = nil; recoveredRangeSince = nil; lowEnergyRecovery = false
@@ -64,6 +68,7 @@ final class TerminalEnergyGuide {
   func update(_ state: VehicleState, flare: FlareReference, maximumAlpha: Double,
               lift: Double, drag: Double, synchronousPlanning: Bool) -> TerminalEnergyReference {
     let c = configuration, p = frame.coordinates(of: state.position), a = state.aerodynamics
+    let finalEntrySpeed = nominalEnergySpeed ?? c.guidance.finalSpeed
     let dt = clamp(state.time-(previousTime ?? state.time), 0, 1)
     previousTime = state.time
     let g = c.planet.gravitationalParameter/state.position.squaredLength
@@ -122,14 +127,14 @@ final class TerminalEnergyGuide {
       referenceSpeed = max(c.vehicle.landingSpeed, bestSpeed,
         flare.oneGravitySpeed.isFinite ? 1.05*flare.oneGravitySpeed : c.vehicle.landingSpeed)
     } else {
-      referenceSpeed = max(c.guidance.finalSpeed, floor.isFinite ? floor : c.guidance.finalSpeed, energySpeed)
+      referenceSpeed = max(finalEntrySpeed, floor.isFinite ? floor : finalEntrySpeed, energySpeed)
     }
     let geometric = clamp(-atan2(flare.wheelHeight, max(120, aim!-p.along)), radians(-25), radians(-4))
     var flightPath = clamp(geometric+radians(clamp(0.8*(a.airspeed-referenceSpeed), -12, 6)), radians(-35), radians(-3))
     if lowEnergyRecovery || (forecast.map({ $0.range < c.guidance.touchdownAlong-p.along }) ?? false) {
       // C range_short is a reversible advisory, unlike the explicitly
       // admitted degraded delivery's terminal_final_low_energy latch.
-      let floor = lowEnergyRecovery ? c.vehicle.landingSpeed : max(c.vehicle.landingSpeed, c.guidance.finalSpeed)
+      let floor = lowEnergyRecovery ? c.vehicle.landingSpeed : max(c.vehicle.landingSpeed, finalEntrySpeed)
       let stretch = clamp((a.airspeed-floor)/(0.15*c.vehicle.landingSpeed), 0, 1)
       flightPath += stretch*(max(flightPath, -atan(1/ld))-flightPath)
     }

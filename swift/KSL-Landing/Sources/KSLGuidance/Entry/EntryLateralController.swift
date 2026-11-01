@@ -20,10 +20,39 @@ enum EntryLateralController {
     let span = abs(span), triangular = rate * rate / acceleration
     return span <= triangular ? 2 * sqrt(span / acceleration) : span / rate + rate / acceleration
   }
+  static func demand(state s: VehicleState, configuration c: MissionConfiguration,
+                     azimuthError: Double, crossError: Double, crossRate: Double,
+                     alignment: Double, range: Double) -> Double {
+    let timeToGo = max(c.guidance.pathLookaheadTime,
+      range / max(1, s.horizontalSpeed * abs(alignment)))
+    // Bearing pursuit turns with total horizontal speed. Reusing the
+    // along-track closure time made its command vanish at perpendicular
+    // heading, exactly where the cubic projection is intentionally blended out.
+    let pursuitTime = max(c.guidance.pathLookaheadTime,
+      hypot(range, crossError) / max(1, s.horizontalSpeed))
+    // Cubic interception assumes the aim is ahead. Once it is abeam/behind,
+    // that endpoint law can command zero on a reciprocal centerline departure.
+    // A rear-hemisphere bearing must retain a turn command, not sin(pi) == 0.
+    if cos(azimuthError) <= 0 {
+      var error = wrapAngle(azimuthError)
+      if abs(abs(error) - .pi) <= sqrt(Double.ulpOfOne) {
+        error = s.aerodynamics.bank < 0 ? -.pi : .pi
+      }
+      return 2 * s.horizontalSpeed * sin(clamp(error, -.pi / 2, .pi / 2)) / pursuitTime
+    }
+    // Same signed cross-axis intercept law as the orbital window screen.
+    // crossRate is minus the physical runway-chart cross velocity.
+    let crossDemand = EntryLateralCaptureKinematics.endpointAccelerations(
+      crossError: crossError, crossVelocity: -crossRate,
+      timeToCapture: timeToGo).initial
+    let pursuit = 2 * s.horizontalSpeed * sin(azimuthError) / pursuitTime
+    return alignment * crossDemand + (1 - alignment * alignment) * pursuit
+  }
   static func update(memory m: inout EntryLateralMemory, state s: VehicleState,
                      configuration c: MissionConfiguration, verticalLift: Double,
                      azimuthError: Double, crossError: Double, crossRate: Double,
                      alignment: Double, range: Double, dt: Double,
+                     lateralDemand: Double? = nil, allocatedBank: Double? = nil,
                      diagnostics d: inout EntryDiagnostics) -> Double {
     let a = s.aerodynamics, e = c.entrySettings
     let lift = max(0, a.lift / s.mass)
@@ -53,20 +82,26 @@ enum EntryLateralController {
     let energyBank = lift > 0 ? acos(clamp(verticalLift / lift, cos(c.vehicle.maximumBank), 1)) : 0
     let timeToGo = max(c.guidance.pathLookaheadTime,
       range / max(1, s.horizontalSpeed*abs(alignment)))
-    // Cubic endpoint interception: e(T)=0 and eDot(T)=0. crossRate is
-    // eDot=-velocityRight, so positive demand is a right-bank correction.
-    // Direction and magnitude must come from the same signed acceleration.
-    let crossDemand = 6*crossError/(timeToGo*timeToGo)+4*crossRate/timeToGo
-    // Bank-right projects onto runway-right with a signed cosine. A
-    // reciprocal approach reverses that projection, not the desired miss.
-    // Blend to bearing pursuit near perpendicular flight, where inversion
-    // of the runway-axis projection becomes singular.
-    let pursuit = 2*s.horizontalSpeed*sin(azimuthError)/timeToGo
-    let signedLateral = alignment*crossDemand+(1-alignment*alignment)*pursuit
+    // Direction and magnitude share the same interception/recovery law.
+    // crossRate is eDot=-velocityRight; the signed runway projection is
+    // retained while the aim is ahead, with explicit recovery when behind.
+    let signedLateral = lateralDemand ?? demand(state: s, configuration: c,
+      azimuthError: azimuthError, crossError: crossError, crossRate: crossRate,
+      alignment: alignment, range: range)
     let lateral = abs(signedLateral)
     // Turn only to correct an actual miss, and only with lift left after
     // vertical recovery. Infeasibility cannot authorize banking away support.
-    var magnitude = min(energyBank, atan2(lateral, max(Double.leastNormalMagnitude, verticalLift)))
+    let force = NormalForceEnvelope(maximumLift: min(lift, c.vehicle.maximumLoadFactor * 9.80665),
+      maximumBank: c.vehicle.maximumBank)
+    // MM304 has already chosen AoA; its present lift is measured, not another
+    // free allocation variable. Invert L*sin(bank), reserving vertical support.
+    let commandedLateral = min(lateral, force.lateralAuthority(reserving: max(0, verticalLift)))
+    // AoA/bank originate from one modeled force vector. Present measured
+    // lift limits the bank until the pitched attitude actually catches up.
+    let measuredBank = lift > 0 ? asin(clamp(commandedLateral / lift, 0, 1)) : 0
+    var magnitude = allocatedBank.map { min(abs($0), measuredBank) } ?? measuredBank
+    d.lateralDemand = signedLateral
+    d.lateralAuthority = force.lateralAuthority(reserving: max(0, verticalLift))
     let protect = a.dynamicPressure >= 0.9 * c.vehicle.maximumDynamicPressure
       || lift >= 0.9 * c.vehicle.maximumLoadFactor * 9.80665
     if protect { magnitude = 0 }
@@ -90,7 +125,16 @@ enum EntryLateralController {
     // distance a later HAC might turn out. Necessary steering corrections
     // are rate-shaped below instead of waiting for an arbitrary bank leg.
     let demandedSign = signedLateral < 0 ? -1.0 : 1.0
-    let requested = demandedSign != m.sign && lateral > 0
+    // USA005512 section 2.14: entry rolls are reversed to contain DELAZ,
+    // not to create an S-turn for drag. First reversal is at 10.5 degrees;
+    // subsequent reversals use 17.5 degrees, tapered to 10 below Mach 4.
+    // A large measured crossrange miss takes precedence over that nominal
+    // corridor; a reversal to correct it must not wait for the angle gate.
+    let reversalCorridor = m.reversals == 0 ? radians(10.5)
+      : radians(10 + 7.5*clamp(a.mach-3, 0, 1))
+    let outsideCaptureLateral = abs(crossError) > e.handoffRadius
+    let requested = demandedSign != m.sign && lateral > 0 &&
+      (outsideCaptureLateral || abs(azimuthError) >= reversalCorridor)
     if requested {
       m.sign = demandedSign; m.lastReversal = s.time
       m.captured = false; m.reversals += 1
@@ -115,6 +159,8 @@ enum EntryLateralController {
     d.reversalArmed = requested; d.reversalFeasible = feasible; d.reversalCount = m.reversals
     d.projectedCrossrange = projected; d.rollRateLimit = rateLimit
     d.limitingReason = protect ? "q/load protection" : acceleration <= 0 ? "no atmospheric moment authority"
+      : verticalLift > lift ? "vertical force deficit"
+      : lateral > (d.lateralAuthority ?? 0) ? "lateral force deficit"
       : requested && !feasible ? "insufficient coordinated reversal envelope"
       : "tracking"
     return m.bank
