@@ -31,6 +31,7 @@ public actor KRPCFlightIO: OrbitalFlightIO {
   private var supportsInertiaTensor = false
   private var supportsActuatorBreakdown = false
   private var supportsRCSTorque = false
+  private var supportsControlSurfaceAxes = false
   private var expectedVesselName: String? = "STS"
   private var deorbitPlan: DeorbitPlan?
   private var burnEngines: [UInt64] = []
@@ -65,6 +66,8 @@ public actor KRPCFlightIO: OrbitalFlightIO {
       supportsActuatorBreakdown = services.range(of: Data("Vessel_get_AvailableControlSurfaceTorque".utf8)) != nil
         && services.range(of: Data("Vessel_get_AvailableReactionWheelTorque".utf8)) != nil
       supportsRCSTorque = services.range(of: Data("Vessel_get_AvailableRCSTorque".utf8)) != nil
+      supportsControlSurfaceAxes = services.range(of: Data("Parts_get_ControlSurfaces".utf8)) != nil
+        && services.range(of: Data("ControlSurface_set_PitchEnabled".utf8)) != nil
       let first = try await session.call([
         .init(procedure: "get_ActiveVessel"), .init(service: "KRPC", procedure: "GetStatus"),
       ])
@@ -164,6 +167,10 @@ public actor KRPCFlightIO: OrbitalFlightIO {
           procedure: "AutoPilot_set_Engaged",
           arguments: [KRPCValue.uint(autopilot), KRPCValue.bool(false)])
       ] + safetyCalls())
+    // Preflight: do not take ownership of a vehicle whose surfaces refuse to respond.
+    if try await enableControlSurfaceAxes() > 0 {
+      throw FlightError.invalidTelemetry("Control-surface axes refused enabling; aerodynamic control unavailable")
+    }
     guard generation == operationGeneration else {
       throw FlightError.disconnected("Connection shut down while arming")
     }
@@ -172,6 +179,44 @@ public actor KRPCFlightIO: OrbitalFlightIO {
     lastSequence = 0
     latest = nil
     sampledAt = nil
+  }
+  /// The STS pitch/roll/yaw plant was identified with every aerodynamic
+  /// surface responding on every axis. A craft may be saved with surfaces
+  /// disabled (e.g. for a stacked ascent); then only reaction wheels answer
+  /// the FCS and trim saturates as soon as the aerodynamic moment grows.
+  /// The landing owner restores the axes and verifies them by read-back.
+  /// Deployment and authority limits are left as configured. Returns the
+  /// count of axis settings that are still disabled after the attempt.
+  @discardableResult
+  private func enableControlSurfaceAxes() async throws -> Int {
+    guard supportsControlSurfaceAxes else {
+      try? FileHandle.standardError.write(contentsOf: Data(
+        "ksl-control-surfaces: server lacks control-surface axis procedures; axes not verified\n".utf8))
+      return 0
+    }
+    let surfaces = try KRPCValue.decodeTuple(
+      try await session.call([objectCall("Parts_get_ControlSurfaces", parts)])[0])
+      .map(KRPCValue.decodeUInt)
+    let axes = ["PitchEnabled", "RollEnabled", "YawEnabled"]
+    func read() async throws -> [[Bool]] {
+      guard !surfaces.isEmpty else { return [] }
+      let values = try await session.call(surfaces.flatMap { surface in
+        axes.map { objectCall("ControlSurface_get_" + $0, surface) } })
+      return try stride(from: 0, to: values.count, by: axes.count).map {
+        try values[$0..<$0+axes.count].map(KRPCValue.decodeBool) }
+    }
+    let before = try await read()
+    let enable = zip(surfaces, before).flatMap { surface, enabled in
+      zip(axes, enabled).filter { !$0.1 }.map { KRPCCall(procedure: "ControlSurface_set_" + $0.0,
+        arguments: [KRPCValue.uint(surface), KRPCValue.bool(true)]) }
+    }
+    guard !enable.isEmpty else { return 0 }
+    _ = try await session.call(enable)
+    let stillDisabled = try await read().joined().filter { !$0 }.count
+    try? FileHandle.standardError.write(contentsOf: Data(
+      ("ksl-control-surfaces: enabled \(enable.count) disabled axis setting(s) on \(surfaces.count) surface(s)"
+        + (stillDisabled > 0 ? "; \(stillDisabled) remain disabled after read-back" : "") + "\n").utf8))
+    return stillDisabled
   }
   private func safetyCalls(throttle: Double = 0, rcs: Bool = false) -> [KRPCCall] {
     [
@@ -565,6 +610,12 @@ public actor KRPCFlightIO: OrbitalFlightIO {
   }
   public func beginEntry() async throws {
     guard armed, burnFinished, !busy else { throw FlightError.invalidCommand("OMS shutdown must precede entry transfer") }
+    busy = true; defer { busy = false }
+    // Entry is already committed: report a failure, never abandon the handover.
+    do { try await enableControlSurfaceAxes() } catch {
+      try? FileHandle.standardError.write(contentsOf: Data(
+        "ksl-control-surfaces: entry axis check failed: \(error)\n".utf8))
+    }
     deorbitPlan = nil; lastSequence = 0; latest = nil; sampledAt = nil
   }
   /// Rebind a dropped link to the same vessel. Neutralize throttle and axes
