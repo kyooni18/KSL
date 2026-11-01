@@ -415,8 +415,7 @@ public final class LandingMissionController {
           nominalEnergyPoint = (state.time, nepSolver.solve(from: state, trimAlphaCeiling: attainableAlphaCeiling)
             ?? nominalEnergyPoint?.point)
         }
-        let nepAlong = -configuration.guidance.finalDistance
-        if let nep = nominalEnergyPoint?.point, !(taem.status.phase == .headingAlignment && p.along >= nepAlong) {
+        if let nep = nominalEnergyPoint?.point, !approach.recoveryDue(state) {
           let target = taem.update(state, nep: nep, liftGain: authority.liftEffectiveness,
             dragGain: authority.dragEffectiveness, attainableAlphaCeiling: attainableAlphaCeiling,
             pitchResponseSeconds: controlFeedback?.pitchResponseSeconds,
@@ -425,15 +424,19 @@ public final class LandingMissionController {
           var violations: [ConstraintViolation] = []
           if s.insufficientEnergy {
             violations.append(.init(.insufficientEnergy,
-              "TAEM energy below the best-L/D line to the NEP; flying the front-side q bound",
+              "TAEM energy below best-L/D envelope; planned descent remains unqualified",
               value: s.energyHeight, limit: s.minimumEnergy))
+          }
+          if !s.descentPlanFits {
+            violations.append(.init(.invalidGeometry,
+              "No TAEM descent plan fits the configured glide and geometry limits; continuing recovery"))
           }
           raw = .init(phase: s.phase == .headingAlignment ? .headingAlignment : .acquisition,
             target: target, violations: violations, pathRemaining: s.range,
-            diagnostic: "TAEM phase=\(s.phase.rawValue) side=\(s.side) hacTurn=\(degrees(s.remainingTurn)) deg rpred=\(s.range) m E=\(s.energyHeight) m EN=\(s.nominalEnergy) m EMIN=\(s.minimumEnergy) m href=\(s.referenceHeight) m qref=\(s.referenceDynamicPressure) Pa qmin=\(s.minimumDynamicPressure) Pa rf=\(s.finalRadius) m growth=\(s.growth) m/rad2 downmoded=\(s.downmoded)")
-        } else {
-          // Past the NEP on the HAC without a Final capture (or no solved
-          // NEP): only the Final law can finish the landing; it says so.
+            diagnostic: "TAEM phase=\(s.phase.rawValue) side=\(s.side) hacTurn=\(degrees(s.remainingTurn)) deg rpred=\(s.range) m E=\(s.energyHeight) m EN=\(s.nominalEnergy) m EMIN=\(s.minimumEnergy) m href=\(s.referenceHeight) m qref=\(s.referenceDynamicPressure) Pa qmin=\(s.minimumDynamicPressure) Pa rf=\(s.finalRadius) m growth=\(s.growth) m/rad2 downmoded=\(s.downmoded) descentFits=\(s.descentPlanFits)")
+        } else if approach.recoveryDue(state) {
+          // Below the configured Final inlet height, keep a best-effort
+          // landing owner even if normal NEP capture was not achieved.
           hacCompleted = true
           raw = approach.update(
             state, previousPhase: phase, liftEffectiveness: authority.liftEffectiveness, dragEffectiveness: authority.dragEffectiveness,
@@ -441,7 +444,16 @@ public final class LandingMissionController {
             identifiedTrimCeiling: attainableAlphaCeiling)
           raw.violations.append(.init(.invalidGeometry,
             nominalEnergyPoint?.point == nil ? "No solved NEP; Final law flies without TAEM references"
-              : "HAC ended without measured Final capture; Final law continues unqualified"))
+              : "Below Final inlet height without measured capture; Final recovery unqualified"))
+        } else {
+          // A missing NEP at altitude is a planning failure, not permission
+          // to apply the runway flare/final law to a high-energy vehicle.
+          raw = .init(phase: .acquisition,
+            target: .init(angleOfAttack: aerodynamics.bestGlideAlpha(mach: state.aerodynamics.mach,
+              maximumAlpha: attainableAlphaCeiling ?? configuration.vehicle.maximumAngleOfAttack,
+              dynamicPressure: state.aerodynamics.dynamicPressure), bank: 0,
+              desiredHeight: p.height + configuration.runway.elevation),
+            violations: [.init(.invalidGeometry, "No solved NEP; retaining TAEM best-glide recovery")])
         }
       } else {
         let target = entry.update(state, synchronousPlanning: !externalPlanning,

@@ -33,6 +33,12 @@ public final class ApproachGuidanceEngine {
   public func invalidatePrediction() { outer.invalidatePrediction() }
   public func planningRequest() -> ApproachPlanningRequest? { outer.request() }
   public func accept(_ proposal: ApproachPlanningProposal) { outer.accept(proposal) }
+  /// Unqualified last-chance takeover is altitude-based. Merely crossing
+  /// the NEP's horizontal station at high altitude is not Final capture.
+  public func recoveryDue(_ state: VehicleState) -> Bool {
+    let nepHeight = profile.reference(along: -configuration.guidance.finalDistance).height
+    return frame.coordinates(of: state.position).height <= nepHeight && state.verticalSpeed < 0
+  }
   public func canCapture(_ state: VehicleState) -> Bool {
     let p = frame.coordinates(of: state.position)
     let reference = profile.reference(along: p.along)
