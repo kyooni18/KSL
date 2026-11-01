@@ -285,9 +285,9 @@ public final class FlightController {
       roll: moveToward(previous.roll, clamp(rollRaw, -1, 1), maximumDelta: delta),
       yaw: moveToward(previous.yaw, clamp(yawRaw, -1, 1), maximumDelta: delta),
       gearDown: solution.target.gearDown,
-      // The configured RCS attitude actuator remains available throughout flight;
-      // its availability never vetoes a guidance decision.
-      rcs: configuration.vehicle.rcsAttitudeControl)
+      // Configured RCS is authorized for MM304 entry only. MM305 acquisition,
+      // HAC, approach and flare must explicitly release it at ownership transfer.
+      rcs: solution.phase == .entry && configuration.vehicle.rcsAttitudeControl)
     var d = ControlDiagnostics()
     d.pitchSaturated = abs(pitchRaw) >= 1; d.rollSaturated = abs(rollRaw) >= 1
     d.yawSaturated = abs(yawRaw) >= 1; d.pitchError = aerodynamicError

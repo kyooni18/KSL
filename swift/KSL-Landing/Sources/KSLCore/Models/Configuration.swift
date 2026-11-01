@@ -28,7 +28,8 @@ public struct VehicleConfiguration: Codable, Sendable, Equatable {
   public var maximumDynamicPressure = 45_000.0
   public var maximumLoadFactor = 3.5
   public var maximumBank = radians(70)
-  /// FCS may fly RCS during entry; high-alpha entry is allowed only with it.
+  /// Allows orbital pointing and MM304 entry attitude RCS. MM305 acquisition,
+  /// HAC, approach and flare prohibit RCS independently of this setting.
   public var rcsAttitudeControl = true
   public var minimumAngleOfAttack = radians(-5)
   public var maximumAngleOfAttack = radians(40)
