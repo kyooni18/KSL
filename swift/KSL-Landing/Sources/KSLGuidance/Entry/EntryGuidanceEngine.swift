@@ -177,10 +177,11 @@ public final class EntryGuidanceEngine {
     let state = request.state, c = configuration
     let atmosphere = law.atmosphere.corrected(request.environment)
     let forecaster = EntryCaptureForecaster(configuration: c, atmosphere: atmosphere, aerodynamics: law.aero)
-    // Branches span the configured aerodynamic uncertainty. The objective is
-    // the TAEM capture region, judged by the same evaluator as MM305.
+    // The incidence shooting reference already solves physical delivery
+    // range. Old drag-profile multipliers no longer alter its commands;
+    // do not run duplicate trajectories that differ only in diagnostics.
     let u = c.vehicle.aerodynamicUncertainty
-    var factors = Array(Set([max(0.1, 1-u), 1.0, 1+u, request.rangeMultiplier])).sorted()
+    let factors = [1.0]
     var forecasts: [EntryCaptureForecast] = []
     func score(_ f: EntryCaptureForecast) -> Double {
       // Compare heading work with the turn available over the local approach
@@ -242,17 +243,6 @@ public final class EntryGuidanceEngine {
           rangeMultiplier: request.rangeMultiplier,
           controls: request.controls, previousTarget: request.previousTarget))
       }
-    }
-    if !forecasts.contains(where: \.feasible),
-       let energyDeficit = Self.supportedEnergyCorrection(forecasts.map(\.capture)) {
-      // A completed terminal path is necessary evidence for an energy-sign
-      // correction. No completed HAC is a geometry/search/energy ambiguity.
-      switch energyDeficit {
-      case .excessiveEnergy: factors = [max(0.1, factors.first! * (1 - u))]
-      case .insufficientEnergy: factors = [factors.last! * (1 + u)]
-      default: factors = []
-      }
-      fly(factors)
     }
     var chosen = forecasts.min(by: ranksAhead)
     // When no branch reaches MM305, the trajectory-energy *classification*

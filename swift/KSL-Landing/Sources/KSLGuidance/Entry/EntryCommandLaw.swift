@@ -35,6 +35,7 @@ public struct EntryCaptureObjective: Codable, Sendable {
 
 struct EntryLawMemory: Sendable {
   var objective: EntryCaptureObjective?
+  var rangeReference: EntryRangeReference?
   var pitchResponseSeconds: Double?
   var rollResponseSeconds: Double?
   /// Prospective terminal geometry, never an MM305 ownership grant.
@@ -64,8 +65,6 @@ final class EntryCommandLaw {
   let drag: EntryDragReference
   let frame: RunwayFrame
   let rotation: RotationalDynamicsEngine
-  private let terminalTracker: PathTrackingEngine
-  private var trackedTerminalEpoch: Double?
   var memory: EntryLawMemory
   private(set) var diagnostics = EntryDiagnostics()
   init(configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine,
@@ -75,9 +74,6 @@ final class EntryCommandLaw {
     frame = .init(runway: configuration.runway, planet: configuration.planet)
     rotation = .init(configuration: configuration.vehicle, planet: configuration.planet)
     self.memory = memory
-    terminalTracker = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics,
-      initialIndex: memory.terminalProjectionIndex)
-    trackedTerminalEpoch = memory.terminalAdvice?.createdAt
   }
   static func descendingCaptureGamma(proposed: Double, actual: Double,
                                       currentAltitude: Double, targetAltitude: Double,
@@ -122,15 +118,13 @@ final class EntryCommandLaw {
     // climb/shallower flight-path toward that abandoned point. Retain the
     // measured descending slope while terminal planning searches for a
     // supported lower inlet. The entry law still evaluates the true range.
-    var desiredGamma = Self.descendingCaptureGamma(proposed: geometricGamma,
+    let desiredGamma = Self.descendingCaptureGamma(proposed: geometricGamma,
       actual: s.flightPathAngle, currentAltitude: height,
       targetAltitude: targetAltitude, verticalSpeed: s.verticalSpeed)
     let gravity = c.planet.gravitationalParameter/s.position.squaredLength
     let inertial = c.planet.inertialVelocity(position: s.position, fixedVelocity: s.velocity)
     let support = max(0, (gravity-inertial.projected(onPlaneWithNormal: s.position.normalized).squaredLength/s.position.length)*cos(s.flightPathAngle))
-    let response = memory.pitchResponseSeconds ?? (c.vehicle.controlPlant.maximumPitchRate
-      / max(Double.leastNormalMagnitude, c.vehicle.controlPlant.pitchAccelerationMaximum))
-    var captureLift = max(0, support+a.airspeed*(desiredGamma-s.flightPathAngle)/horizon)
+    let captureLift = support
     d.verticalLift = captureLift
     let p = frame.coordinates(of: s.position)
     let forward = frame.direction(at: p.horizontal, tangent: .init(1, 0))
@@ -139,27 +133,15 @@ final class EntryCommandLaw {
     let coordinateRate = frame.coordinateVelocity(at: s.position, velocity: s.velocity)
     let crossRate = -coordinateRate.y
     let azimuth = wrapAngle(frame.bearing(from: s.position, to: target) - s.course)
-    var lateralDemand = EntryLateralController.demand(state: s, configuration: c,
+    let lateralDemand = EntryLateralController.demand(state: s, configuration: c,
       azimuthError: azimuth, crossError: aimCross - p.cross, crossRate: crossRate,
       alignment: alignment, range: abs(objective.along - p.along))
-    if let advice = memory.terminalAdvice,
-      advice.assessment.feasible && advice.assessment.predictionComplete != false,
-      advice.stations.count >= 2,
-      s.time >= advice.createdAt, s.time - advice.createdAt <= 2 * c.guidance.terminalReplanInterval {
-      if trackedTerminalEpoch != advice.createdAt {
-        terminalTracker.reset(); trackedTerminalEpoch = advice.createdAt
-      }
-      let steering = terminalTracker.lateralDemand(s, plan: advice,
-        rollResponseSeconds: memory.rollResponseSeconds)
-      lateralDemand = steering.acceleration
-      memory.terminalProjectionIndex = terminalTracker.index
-      d.terminalAdviceAge = s.time - advice.createdAt
-      d.terminalSteeringActive = true
-      d.terminalLookaheadDistance = terminalTracker.lookaheadDistance
-      d.terminalLookaheadHeadingError = terminalTracker.lookaheadHeadingError
-    } else {
-      d.terminalSteeringActive = false
-    }
+    // Publish TAEM advice separately; the entry range reference must not fly
+    // a different path from the one it priced before ownership transfers.
+    d.terminalSteeringActive = false
+    if let advice=memory.terminalAdvice { d.terminalAdviceAge=s.time-advice.createdAt }
+    let response = memory.pitchResponseSeconds ?? (c.vehicle.controlPlant.maximumPitchRate
+      / max(Double.leastNormalMagnitude, c.vehicle.controlPlant.pitchAccelerationMaximum))
     // The target limiter already reserves plant acceleration. A second
     // division by (1-reserve) hid a ~6.7-response-time lag in the old law.
     let tau = response
@@ -197,30 +179,6 @@ final class EntryCommandLaw {
     let reserve = uncertainty*recovery.drag*pathDistance
       + max(0, d.observedDrag-recovery.drag)*a.airspeed*tau
     let budget = max(0, available-reserve)/max(Double.leastNormalMagnitude, pathDistance)
-    // Altitude targeting alone cannot regulate drag in Kerbin's steep density
-    // gradient. At locally fixed CD, Ddot/D = (V*dln(rho)/dh - 2*gEff/V)
-    // * sin(gamma) - 2*D/V. Invert this for the drag affordable to the SAME
-    // interface state. Use the identified pitch response, not a tuned gain.
-    let affordableDrag = min(d.referenceDrag, budget)
-    var verticalHorizon = horizon
-    var densityRecovery = false
-    if d.observedDrag > affordableDrag, affordableDrag > 0, a.airspeed > 0,
-      s.atmosphere.wind.squaredLength == 0 {
-      let gradient = atmosphere.logDensityAltitudeGradient(position: s.position, time: s.time)
-      let effectiveGravity = gravity-c.planet.angularVelocity.cross(s.position).squaredLength/s.position.length
-      let coefficient = a.airspeed*gradient-2*effectiveGravity/a.airspeed
-      if coefficient < 0 {
-        let fractionalRate = log(affordableDrag/d.observedDrag)/response
-        let dragGamma = asin(clamp((fractionalRate+2*d.observedDrag/a.airspeed)/coefficient, -1, 1))
-        if dragGamma > desiredGamma {
-          desiredGamma = dragGamma
-          verticalHorizon = response
-          densityRecovery = true
-        }
-      }
-    }
-    captureLift = max(0, support+a.airspeed*(desiredGamma-s.flightPathAngle)/verticalHorizon)
-    d.verticalLift = captureLift
     let joint = EntryForceAllocator.assessJointForces(points: choices,
       verticalDemand: captureLift, lateralDemand: lateralDemand,
       maximumBank: c.vehicle.maximumBank, loadLimit: loadLimit,
@@ -234,13 +192,33 @@ final class EntryCommandLaw {
     d.referenceDrag = min(d.referenceDrag, budget)
     // The same force allocation is flown live and evaluated by the deorbit
     // predictor (EntryCaptureForecaster -> EntryCommandLaw).
-    let decision = EntryForceAllocator.decide(points: choices,
-      verticalDemand: captureLift, lateralDemand: lateralDemand,
-      referenceDrag: d.referenceDrag, dragBudget: budget,
-      maximumBank: c.vehicle.maximumBank, loadLimit: loadLimit,
-      uncertainty: uncertainty, previousAlpha: memory.previousAlpha ?? a.angleOfAttack,
-      heightAboveCapture: height-targetAltitude,
-      timeToCapture: range / max(1, s.horizontalSpeed), densityRecovery: densityRecovery)
+    // Forward-price the interface position before selecting incidence. The
+    // previous instantaneous drag residual drove alpha to 40 degrees in thin
+    // air even though the fitted drag profile had no attainable altitude path.
+    if memory.rangeReference == nil || s.time-(memory.rangeReference?.createdAt ?? s.time)
+      >= c.guidance.entryReplanInterval {
+      memory.rangeReference = EntryRangeReference.solve(from:s,objective:objective,
+        configuration:c,atmosphere:atmosphere,aero:aero,ceiling:ceilingAlpha,
+        pitchResponse:tau,rollResponse:memory.rollResponseSeconds ?? tau)
+    }
+    let reference=memory.rangeReference!
+    let rangeAlpha=EntryRangeReference.alpha(blend:reference.blend,mach:a.mach,
+      q:a.dynamicPressure,ceiling:ceilingAlpha,aero:aero)
+    let safe=choices.filter { $0.lift<=loadLimit*(1-uncertainty) }
+    let point=(safe.isEmpty ? choices:safe).min { abs($0.alpha-rangeAlpha)<abs($1.alpha-rangeAlpha) }!
+    let rangeBank=EntryRangeReference.bank(state:s,objective:objective,configuration:c,
+      frame:frame,lift:point.lift)
+    let decision=EntryForceAllocation(alpha:point.alpha,bank:rangeBank,drag:point.drag,
+      vertical:point.lift*cos(rangeBank),lateral:point.lift*sin(rangeBank),
+      affordable:point.drag*(1+uncertainty)<=budget,
+      verticallySupported:point.lift*cos(rangeBank)>=support)
+    d.verticalLift=support
+    d.rangeReferenceBlend=reference.blend
+    d.rangeReferenceAlong=reference.along
+    d.rangeReferenceAltitude=reference.altitude
+    d.rangeReferenceSpeed=reference.speed
+    d.rangeReferenceBracketed=reference.bracketed
+    d.rangeReferenceReachedEnergy=reference.reachedEnergy
     d.lateralAllocationTarget = decision.lateral
     d.selectedDragAcceleration = decision.drag
     d.dragTrackingResidual = decision.drag - d.referenceDrag
@@ -258,10 +236,7 @@ final class EntryCommandLaw {
     d.energyReserve = reserve
     d.recoveryAlpha = recovery.alpha
     d.bestRangeRecovery = !decision.affordable
-    d.energyAllocationMode = densityRecovery ? "density-drag-recovery" : !decision.verticallySupported
-      ? (abs(decision.bank) > 1e-9 ? "altitude-budgeted-turn-recovery" : "vertical-support-recovery")
-      : !decision.affordable ? (abs(lateralDemand) > 0 ? "turn-energy-recovery" : "minimum-drag-recovery")
-      : "energy-budgeted-steering"
+    d.energyAllocationMode = reference.bracketed ? "range-energy-shooting" : "range-energy-unbracketed"
     // There is one AoA decision. No modulation, stored drag boost, q bump or
     // post-filter trim adjustment can spend the capture reserve behind it.
     let previous = memory.previousAlpha ?? a.angleOfAttack
@@ -276,15 +251,13 @@ final class EntryCommandLaw {
     alpha = clamp(alpha, c.vehicle.minimumAngleOfAttack, ceilingAlpha)
     memory.previousAlpha = alpha
     let bank = EntryLateralController.update(memory: &memory.lateral, state: s, configuration: c,
-      // In the altitude-budgeted branch, the plan explicitly permits a
-      // bounded reduction in vertical support to buy steering. Do not have
-      // the measured-lift bank limiter silently undo that allocation using
-      // the original, infeasible vertical request.
+      // Keep lateral correction within modeled and presently measured
+      // surplus lift while the incidence response catches up.
       verticalLift: decision.verticallySupported ? d.verticalLift
         : min(d.verticalLift, max(0, a.lift / s.mass) * cos(abs(decision.bank))),
       azimuthError: azimuth, crossError: aimCross - p.cross,
       crossRate: crossRate, alignment: alignment, range: abs(objective.along-p.along), dt: dt,
-      lateralDemand: lateralDemand, allocatedBank: decision.bank, diagnostics: &d)
+      lateralDemand: decision.lateral, allocatedBank: decision.bank, diagnostics: &d)
     if alpha >= ceilingAlpha - 1e-9 && ceilingAlpha < e.nominalAlpha {
       d.limitingReason += "; identified local pitch-trim envelope limits alpha"
     }

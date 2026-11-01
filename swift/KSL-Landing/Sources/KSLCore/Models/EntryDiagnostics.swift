@@ -45,5 +45,9 @@ public struct EntryDiagnostics: Codable, Sendable {
   public var energyBudgetEndpoint: String?
   public var energyAllocationMode: String?
   public var terminalDeficit: String?
+  /// Point-mass range reference; never a certified closed-loop trajectory.
+  public var rangeReferenceBlend: Double?, rangeReferenceAlong: Double?
+  public var rangeReferenceAltitude: Double?, rangeReferenceSpeed: Double?
+  public var rangeReferenceBracketed: Bool?, rangeReferenceReachedEnergy: Bool?
   public init() {}
 }

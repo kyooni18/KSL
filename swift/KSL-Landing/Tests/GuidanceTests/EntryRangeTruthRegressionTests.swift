@@ -5,6 +5,35 @@ import KSLPhysics
 
 /// Range scales a reference profile only; it never changes runway geometry.
 final class EntryRangeTruthRegressionTests: XCTestCase {
+  func testRecordedEntryReferenceSolvesInterfaceLocationBeforeSpendingEnergy() throws {
+    // Complete measured 72-km startup state, run 20261102T033630, UT below.
+    // This tests the shooting reference, not a closed-loop landing claim.
+    var c = MissionConfiguration()
+    c.entry = c.entrySettings
+    c.entry?.terminalTargetRange = 35_023
+    let atmosphere = try AtmosphericModelEngine(planet: c.planet)
+    let aero = try AerodynamicsEngine(referenceArea: c.vehicle.referenceArea)
+    let frame = RunwayFrame(runway: c.runway, planet: c.planet)
+    let state = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere,
+      aerodynamics: aero).observe(.init(time: 209616.45256629333,
+        position: .init(-671881.654067371, -8939.54209326892, 460.4171746418236),
+        velocity: .init(88.94322800010173, -2088.9149504614493, 0.2862671659794841),
+        attitude: .init(w: 0.4265163099433731, x: -0.4269701125677876,
+          y: 0.5639157959048201, z: -0.5637191991188278), mass: 25183.7109375))
+    let objective = EntryCaptureObjective.seed(configuration: c, atmosphere: atmosphere,
+      frame: frame, crossAim: 0, time: state.time)
+    let result = EntryRangeReference.solve(from: state, objective: objective,
+      configuration: c, atmosphere: atmosphere, aero: aero,
+      ceiling: c.vehicle.maximumAngleOfAttack,
+      pitchResponse: c.guidance.pathLookaheadTime, rollResponse: c.guidance.pathLookaheadTime)
+    XCTAssertTrue(result.reachedEnergy)
+    XCTAssertTrue(result.bracketed)
+    XCTAssertEqual(result.along, objective.along, accuracy: c.entrySettings.handoffRadius)
+    XCTAssertGreaterThan(result.blend, 0)
+    XCTAssertLessThan(result.blend, 1,
+      "Thin-air drag demand must not automatically select maximum incidence")
+  }
+
   func testDragReferenceScaleCannotShortenPhysicalRange() throws {
     let c = MissionConfiguration()
     let atmosphere = try AtmosphericModelEngine(), aero = try AerodynamicsEngine()

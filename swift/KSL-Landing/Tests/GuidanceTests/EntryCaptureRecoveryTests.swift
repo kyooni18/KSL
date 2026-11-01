@@ -64,7 +64,7 @@ final class EntryCaptureRecoveryTests: XCTestCase {
     XCTAssertEqual(alreadySteep, radians(-12), accuracy: 1e-12)
   }
 
-  func testInfeasibleHACAdvisoryCannotTakeOverMM304Steering() throws {
+  func testHACAdvisoryCannotTakeOverMM304RangeReference() throws {
     let c = MissionConfiguration()
     let frame = RunwayFrame(runway: c.runway, planet: c.planet)
     let atmosphere = try AtmosphericModelEngine()
@@ -104,11 +104,20 @@ final class EntryCaptureRecoveryTests: XCTestCase {
     acceptable.predictionComplete = true
     let candidate = TerminalPlan(identifier: 11, createdAt: 100,
       spiral: nil, stations: stations, assessment: acceptable)
+    let baseline = EntryGuidanceEngine(configuration: c, atmosphere: atmosphere,
+      aerodynamics: aerodynamics, permitsReplanning: false)
+    let advised = EntryGuidanceEngine(configuration: c, atmosphere: atmosphere,
+      aerodynamics: aerodynamics, permitsReplanning: false)
+    advised.considerTerminal(candidate, deficit: .none)
+    let plainTarget = baseline.update(state, synchronousPlanning: false)
+    let advisoryTarget = advised.update(state, synchronousPlanning: false)
+    XCTAssertEqual(advisoryTarget.angleOfAttack, plainTarget.angleOfAttack, accuracy: 1e-12)
+    XCTAssertEqual(advisoryTarget.bank, plainTarget.bank, accuracy: 1e-12)
     engine.considerTerminal(candidate, deficit: .none)
     _ = engine.update(state, synchronousPlanning: false)
-    XCTAssertEqual(engine.diagnostics.terminalSteeringActive, true)
+    XCTAssertEqual(engine.diagnostics.terminalSteeringActive, false)
     XCTAssertEqual(engine.diagnostics.energyBudgetEndpoint, "entry-objective",
-      "Terminal steering advice must not spend the interface energy reserved for TAEM")
+      "Terminal advice must not spend the interface energy reserved for TAEM")
     let objective = EntryCaptureObjective.seed(configuration: c, atmosphere: atmosphere,
       frame: frame, crossAim: engine.crossAim, time: state.time)
     XCTAssertEqual(try XCTUnwrap(engine.diagnostics.captureSpecificEnergy),
