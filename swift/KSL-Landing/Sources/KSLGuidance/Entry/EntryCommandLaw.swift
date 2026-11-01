@@ -122,13 +122,15 @@ final class EntryCommandLaw {
     // climb/shallower flight-path toward that abandoned point. Retain the
     // measured descending slope while terminal planning searches for a
     // supported lower inlet. The entry law still evaluates the true range.
-    let desiredGamma = Self.descendingCaptureGamma(proposed: geometricGamma,
+    var desiredGamma = Self.descendingCaptureGamma(proposed: geometricGamma,
       actual: s.flightPathAngle, currentAltitude: height,
       targetAltitude: targetAltitude, verticalSpeed: s.verticalSpeed)
     let gravity = c.planet.gravitationalParameter/s.position.squaredLength
     let inertial = c.planet.inertialVelocity(position: s.position, fixedVelocity: s.velocity)
     let support = max(0, (gravity-inertial.projected(onPlaneWithNormal: s.position.normalized).squaredLength/s.position.length)*cos(s.flightPathAngle))
-    let captureLift = max(0, support+a.airspeed*(desiredGamma-s.flightPathAngle)/horizon)
+    let response = memory.pitchResponseSeconds ?? (c.vehicle.controlPlant.maximumPitchRate
+      / max(Double.leastNormalMagnitude, c.vehicle.controlPlant.pitchAccelerationMaximum))
+    var captureLift = max(0, support+a.airspeed*(desiredGamma-s.flightPathAngle)/horizon)
     d.verticalLift = captureLift
     let p = frame.coordinates(of: s.position)
     let forward = frame.direction(at: p.horizontal, tangent: .init(1, 0))
@@ -158,8 +160,6 @@ final class EntryCommandLaw {
     } else {
       d.terminalSteeringActive = false
     }
-    let response = memory.pitchResponseSeconds ?? (c.vehicle.controlPlant.maximumPitchRate
-      / max(Double.leastNormalMagnitude, c.vehicle.controlPlant.pitchAccelerationMaximum))
     // The target limiter already reserves plant acceleration. A second
     // division by (1-reserve) hid a ~6.7-response-time lag in the old law.
     let tau = response
@@ -197,6 +197,30 @@ final class EntryCommandLaw {
     let reserve = uncertainty*recovery.drag*pathDistance
       + max(0, d.observedDrag-recovery.drag)*a.airspeed*tau
     let budget = max(0, available-reserve)/max(Double.leastNormalMagnitude, pathDistance)
+    // Altitude targeting alone cannot regulate drag in Kerbin's steep density
+    // gradient. At locally fixed CD, Ddot/D = (V*dln(rho)/dh - 2*gEff/V)
+    // * sin(gamma) - 2*D/V. Invert this for the drag affordable to the SAME
+    // interface state. Use the identified pitch response, not a tuned gain.
+    let affordableDrag = min(d.referenceDrag, budget)
+    var verticalHorizon = horizon
+    var densityRecovery = false
+    if d.observedDrag > affordableDrag, affordableDrag > 0, a.airspeed > 0,
+      s.atmosphere.wind.squaredLength == 0 {
+      let gradient = atmosphere.logDensityAltitudeGradient(position: s.position, time: s.time)
+      let effectiveGravity = gravity-c.planet.angularVelocity.cross(s.position).squaredLength/s.position.length
+      let coefficient = a.airspeed*gradient-2*effectiveGravity/a.airspeed
+      if coefficient < 0 {
+        let fractionalRate = log(affordableDrag/d.observedDrag)/response
+        let dragGamma = asin(clamp((fractionalRate+2*d.observedDrag/a.airspeed)/coefficient, -1, 1))
+        if dragGamma > desiredGamma {
+          desiredGamma = dragGamma
+          verticalHorizon = response
+          densityRecovery = true
+        }
+      }
+    }
+    captureLift = max(0, support+a.airspeed*(desiredGamma-s.flightPathAngle)/verticalHorizon)
+    d.verticalLift = captureLift
     let joint = EntryForceAllocator.assessJointForces(points: choices,
       verticalDemand: captureLift, lateralDemand: lateralDemand,
       maximumBank: c.vehicle.maximumBank, loadLimit: loadLimit,
@@ -216,7 +240,7 @@ final class EntryCommandLaw {
       maximumBank: c.vehicle.maximumBank, loadLimit: loadLimit,
       uncertainty: uncertainty, previousAlpha: memory.previousAlpha ?? a.angleOfAttack,
       heightAboveCapture: height-targetAltitude,
-      timeToCapture: range / max(1, s.horizontalSpeed))
+      timeToCapture: range / max(1, s.horizontalSpeed), densityRecovery: densityRecovery)
     d.lateralAllocationTarget = decision.lateral
     d.selectedDragAcceleration = decision.drag
     d.dragTrackingResidual = decision.drag - d.referenceDrag
@@ -234,7 +258,7 @@ final class EntryCommandLaw {
     d.energyReserve = reserve
     d.recoveryAlpha = recovery.alpha
     d.bestRangeRecovery = !decision.affordable
-    d.energyAllocationMode = !decision.verticallySupported
+    d.energyAllocationMode = densityRecovery ? "density-drag-recovery" : !decision.verticallySupported
       ? (abs(decision.bank) > 1e-9 ? "altitude-budgeted-turn-recovery" : "vertical-support-recovery")
       : !decision.affordable ? (abs(lateralDemand) > 0 ? "turn-energy-recovery" : "minimum-drag-recovery")
       : "energy-budgeted-steering"

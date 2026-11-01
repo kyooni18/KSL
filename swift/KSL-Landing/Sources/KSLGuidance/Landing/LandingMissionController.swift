@@ -121,7 +121,13 @@ public final class LandingMissionController {
     }) else { return false }
     let energy = state.velocity.squaredLength / 2 - c.planet.gravitationalParameter / state.position.length
       - c.planet.angularVelocity.cross(state.position).squaredLength / 2
-    return energy <= target.specificEnergy(configuration: c)
+    let frame = RunwayFrame(runway: c.runway, planet: c.planet)
+    let targetPosition = frame.position(along: target.along, cross: target.cross, height: 0)
+    // Reaching interface energy up-range is a delivery deficit, not arrival.
+    // Keep the existing altitude/Mach deadlines above as recovery downmodes.
+    let reachedInterface = frame.distance(from: state.position, to: frame.origin)
+      <= frame.distance(from: targetPosition, to: frame.origin) + c.entrySettings.handoffRadius
+    return reachedInterface && energy <= target.specificEnergy(configuration: c)
   }
   private func inTerminalSearchEnvelope(_ state: VehicleState) -> Bool {
     let cadence = configuration.guidance.terminalReplanInterval

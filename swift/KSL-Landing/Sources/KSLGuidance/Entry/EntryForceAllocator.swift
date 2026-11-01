@@ -70,7 +70,8 @@ enum EntryForceAllocator {
                      dragBudget: Double, maximumBank: Double,
                      loadLimit: Double, uncertainty: Double,
                      previousAlpha: Double, heightAboveCapture: Double = 0,
-                     timeToCapture: Double = .infinity) -> EntryForceAllocation {
+                     timeToCapture: Double = .infinity,
+                     densityRecovery: Bool = false) -> EntryForceAllocation {
     precondition(!points.isEmpty)
     let safe = points.filter { $0.lift <= loadLimit * (1-uncertainty) }
     let permitted = safe.isEmpty ? points : safe
@@ -91,6 +92,17 @@ enum EntryForceAllocator {
       return .init(alpha: p.alpha, bank: bank, drag: p.drag,
         vertical: p.lift*cos(bank), lateral: p.lift*sin(bank),
         affordable: !affordable.isEmpty, verticallySupported: !supporting.isEmpty)
+    }
+    // Excess drag caused by density requires changing flight-path angle.
+    // A best-L/D fallback that cannot provide normal support keeps descending
+    // into denser air. Resolve the requested vertical acceleration first,
+    // within the same structural/polar limits, and use drag to break ties.
+    if densityRecovery {
+      return project(permitted.min { a, b in
+        let left = abs(project(a).vertical-verticalDemand)
+        let right = abs(project(b).vertical-verticalDemand)
+        return left == right ? a.drag < b.drag : left < right
+      }!)
     }
     if !affordable.isEmpty {
       func residual(_ p: EntryForcePoint) -> Double {

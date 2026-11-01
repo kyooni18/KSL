@@ -34,7 +34,7 @@ final class TerminalRecoveryOwnershipTests: XCTestCase {
     XCTAssertLessThan(closing, opening)
   }
 
-  func testTAEMHandoffUsesInterfaceEnergyWithMachAndAltitudeDeadlines() throws {
+  func testTAEMHandoffRequiresInterfaceRangeAndEnergyWithRecoveryDeadlines() throws {
     let c = MissionConfiguration()
     let atmosphere = try AtmosphericModelEngine()
     let physics = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere, aerodynamics: try AerodynamicsEngine())
@@ -50,16 +50,20 @@ final class TerminalRecoveryOwnershipTests: XCTestCase {
     XCTAssertFalse(LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,
       state: fast, configuration: c), "Crossing 30 km far up-range is not the TAEM interface")
     func atMach(_ mach: Double, altitude: Double) -> VehicleState {
-      let position = frame.position(along: -96_000, cross: 0, height: altitude-c.runway.elevation)
+      let position = frame.position(along: -2*c.taemInterfaceRange, cross: 0, height: altitude-c.runway.elevation)
       let airspeed = mach * atmosphere.sample(position: position, time: 100).speedOfSound
-      return state(along: -96_000, altitude: altitude, speed: sqrt(airspeed * airspeed - 90 * 90))
+      return state(along: -2*c.taemInterfaceRange, altitude: altitude, speed: sqrt(airspeed * airspeed - 90 * 90))
     }
     let high = atMach(c.mm304DeliveryMach, altitude: c.mm304DeliveryAltitude + 5_000)
     XCTAssertFalse(LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,
       state: high, configuration: c), "Interface Mach alone must not hand off with excess energy")
     let interface = atMach(c.mm304DeliveryMach, altitude: c.mm304DeliveryAltitude - 1)
+    XCTAssertFalse(LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,
+      state: interface, configuration: c), "Interface energy far up-range is a delivery deficit")
+    let arrived = state(along: -c.taemInterfaceRange, altitude: c.mm304DeliveryAltitude-1,
+      speed: sqrt(interface.velocity.squaredLength-90*90))
     XCTAssertTrue(LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,
-      state: interface, configuration: c), "TAEM starts when interface energy is reached")
+      state: arrived, configuration: c), "Normal handoff requires both range and energy")
     let slow = atMach(c.mm304DeliveryMach - c.entrySettings.terminalMachHalfWidth - 0.01,
       altitude: c.mm304DeliveryAltitude + 5_000)
     XCTAssertTrue(LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,
