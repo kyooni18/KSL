@@ -213,6 +213,18 @@ final class TAEMPredictionEvidenceTests: XCTestCase {
       searched.trials[1].outcome?.evaluation?.comparisonContext)
     XCTAssertEqual(searched.trials[1].relation, .unassessed)
     XCTAssertEqual(searched.incumbentTrial, 0)
+    var continuationCalls = 0
+    let adaptive = try TAEMCommandSearch(configuration: zeroCoverage, atmosphere: atmosphere,
+      aerodynamics: aero).refine(.init(id: "empty-wiring-only", topology: .incumbent, segments: []),
+        from: seed, initialSteps: .init(alphaRadians: c.guidance.alphaSlewRate*c.guidance.controlInterval,
+          bankRadians: c.guidance.bankSlewRate*c.guidance.controlInterval, durationSeconds: c.guidance.controlInterval),
+        resolution: .init(alphaRadians: c.guidance.alphaSlewRate*c.guidance.controlInterval/2,
+          bankRadians: c.guidance.bankSlewRate*c.guidance.controlInterval/2, durationSeconds: c.guidance.controlInterval/2),
+        maximumEvaluations: 2) { _, _ in continuationCalls += 1; return plan }
+    XCTAssertEqual(adaptive.end, .unassessed, "Missing terminal suffix cannot establish convergence")
+    XCTAssertEqual(adaptive.trials.count, 1)
+    XCTAssertEqual(continuationCalls, 1, "Repeated unchanged schedules must reuse evidence")
+    XCTAssertEqual(adaptive.incumbentTrial, 0)
     XCTAssertTrue(searched.trials.allSatisfy { $0.outcome?.evaluation?.end == .horizon && $0.outcome?.qualified == false })
 
   }
@@ -285,6 +297,18 @@ final class TAEMPredictionEvidenceTests: XCTestCase {
     let limited = try search.refineOnce(center, from: seed, steps: steps, maximumEvaluations: 1) { _, _ in nil }
     XCTAssertEqual(limited.end, .candidateBudget)
     XCTAssertEqual(limited.trials.count, 1)
+    let resolution = TAEMCommandRefinementSteps(alphaRadians: steps.alphaRadians/2,
+      bankRadians: steps.bankRadians/2, durationSeconds: steps.durationSeconds/2)
+    let adaptive = try search.refine(center, from: seed, initialSteps: steps,
+      resolution: resolution, maximumEvaluations: 10) { _, _ in nil }
+    XCTAssertEqual(adaptive.end, .modelUnavailable)
+    XCTAssertEqual(adaptive.trials.count, 1, "All branches lack the same original pitch evidence")
+    let noBudget = try search.refine(center, from: seed, initialSteps: steps,
+      resolution: resolution, maximumEvaluations: 0) { _, _ in
+        XCTFail("A zero budget cannot start a continuation"); return nil
+      }
+    XCTAssertEqual(noBudget.end, .candidateBudget)
+    XCTAssertTrue(noBudget.trials.isEmpty)
   }
 
 }

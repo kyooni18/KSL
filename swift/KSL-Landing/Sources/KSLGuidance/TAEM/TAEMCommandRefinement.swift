@@ -10,6 +10,17 @@ public struct TAEMCommandRefinementSteps: Sendable {
   }
 }
 
+public enum TAEMCommandRefinementEnd: String, Codable, Sendable {
+  case resolutionReached, candidateBudget, cancelled, modelUnavailable, unassessed
+}
+public struct TAEMCommandRefinementResult: Sendable {
+  public let end: TAEMCommandRefinementEnd
+  public let trials: [TAEMCommandTrial]
+  public let incumbentTrial: Int?
+  public let finalSteps: TAEMCommandRefinementSteps
+  public let polls: Int
+}
+
 extension TAEMCommandSearch {
   /// One deterministic coordinate poll around a supplied command schedule.
   /// All segment +/- alpha, bank and duration neighbors use the same original
@@ -19,10 +30,78 @@ extension TAEMCommandSearch {
                          steps: TAEMCommandRefinementSteps, maximumEvaluations: Int,
                          cancelled: () -> Bool = { false },
                          continuation: (TAEMCommandCandidate, TAEMSchedulePrefix) -> TerminalPlan?) throws -> TAEMCommandSearchResult {
+    guard maximumEvaluations >= 0 else { throw FlightError.invalidConfiguration("Negative refinement budget") }
+    return try search(refinementCandidates(center, steps: steps), from: seed,
+      maximumEvaluations: maximumEvaluations, cancelled: cancelled, continuation: continuation)
+  }
+
+  /// Adaptive coordinate polling with a single total propagation budget.
+  /// Resolution describes parameter-space coverage, never flight readiness.
+  public func refine(_ initial: TAEMCommandCandidate, from seed: NativeCommandSeed,
+                     initialSteps: TAEMCommandRefinementSteps,
+                     resolution: TAEMCommandRefinementSteps, maximumEvaluations: Int,
+                     cancelled: () -> Bool = { false },
+                     continuation: (TAEMCommandCandidate, TAEMSchedulePrefix) -> TerminalPlan?) throws -> TAEMCommandRefinementResult {
+    let start = [initialSteps.alphaRadians, initialSteps.bankRadians, initialSteps.durationSeconds]
+    let minimum = [resolution.alphaRadians, resolution.bankRadians, resolution.durationSeconds]
+    guard maximumEvaluations >= 0, zip(start, minimum).allSatisfy({
+      $0.isFinite && $1.isFinite && $0 >= $1 && $1 > 0
+    }) else { throw FlightError.invalidConfiguration("Invalid refinement resolution or budget") }
+    var center = initial, spacing = initialSteps, trials: [TAEMCommandTrial] = []
+    var incumbent: Int?, visited = Set<[UInt64]>(), poll = 0, allComparable = true
+    func result(_ end: TAEMCommandRefinementEnd) -> TAEMCommandRefinementResult {
+      .init(end: end, trials: trials, incumbentTrial: incumbent, finalSteps: spacing, polls: poll)
+    }
+    while true {
+      if cancelled() || Task.isCancelled { return result(.cancelled) }
+      let candidates = try refinementCandidates(center, steps: spacing)
+      let previousIncumbent = incumbent
+      poll += 1
+      for candidate in candidates {
+        // In this fixed topology/segment family only these three coordinates
+        // change; phase and device requests remain inherited from the center.
+        let key = candidate.segments.flatMap {
+          [$0.duration.bitPattern, $0.command.target.angleOfAttack.bitPattern, $0.command.target.bank.bitPattern]
+        }
+        if visited.contains(key) { continue }
+        if cancelled() || Task.isCancelled { return result(.cancelled) }
+        if trials.count >= maximumEvaluations { return result(.candidateBudget) }
+        visited.insert(key)
+        let named = TAEMCommandCandidate(id: "\(initial.id)/refine/\(trials.count)",
+          topology: candidate.topology, segments: candidate.segments)
+        let trial = try evaluate(named, from: seed, incumbent: incumbent.flatMap { trials[$0].outcome },
+          incumbentTrial: incumbent, cancelled: cancelled, continuation: continuation)
+        trials.append(trial)
+        if trial.outcome.map({ TerminalRecoveryOrder.compare($0, to: $0) != .equivalent }) ?? true
+          || trial.relation.map({ [.unassessed, .contextMismatch, .incomparableOutcomes].contains($0) }) == true {
+          allComparable = false
+        }
+        if trial.outcome != nil && (incumbent == nil || trial.relation == .challengerPreferred) {
+          incumbent = trials.count-1
+        }
+        if trial.prefix.end == .cancelled || trial.outcome?.evaluation?.end == .cancelled
+          || cancelled() || Task.isCancelled { return result(.cancelled) }
+        // No candidate can advance from this shared seed without the missing
+        // originating model evidence. Stop, retaining the diagnostic trial.
+        if trials.count == 1 && trial.prefix.end == .unsupportedDynamics && trial.prefix.steps.isEmpty {
+          return result(.modelUnavailable)
+        }
+      }
+      if let incumbent { center = trials[incumbent].candidate }
+      if incumbent != previousIncumbent { continue }
+      let current = [spacing.alphaRadians, spacing.bankRadians, spacing.durationSeconds]
+      if current == minimum { return result(allComparable ? .resolutionReached : .unassessed) }
+      // Binary numerical mesh refinement, not a vehicle capability factor.
+      spacing = .init(alphaRadians: max(minimum[0], current[0]/2),
+        bankRadians: max(minimum[1], current[1]/2), durationSeconds: max(minimum[2], current[2]/2))
+    }
+  }
+
+  private func refinementCandidates(_ center: TAEMCommandCandidate,
+                                    steps: TAEMCommandRefinementSteps) throws -> [TAEMCommandCandidate] {
     let values = [steps.alphaRadians, steps.bankRadians, steps.durationSeconds]
-    guard values.allSatisfy({ $0.isFinite && $0 > 0 }), maximumEvaluations >= 0,
-      !center.id.isEmpty else {
-      throw FlightError.invalidConfiguration("Command refinement requires explicit finite positive search steps and nonnegative evaluation budget")
+    guard values.allSatisfy({ $0.isFinite && $0 > 0 }), !center.id.isEmpty else {
+      throw FlightError.invalidConfiguration("Command refinement requires explicit finite positive search steps")
     }
     let c = configuration
     // Only search inside real configured attitude bounds and declared time
@@ -63,8 +142,7 @@ extension TAEMCommandSearch {
         }
       }
     }
-    return try search(candidates, from: seed, maximumEvaluations: maximumEvaluations,
-      cancelled: cancelled, continuation: continuation)
+    return candidates
   }
 
   private func replacing(_ solution: GuidanceSolution, alpha: Double? = nil, bank: Double? = nil) -> GuidanceSolution {

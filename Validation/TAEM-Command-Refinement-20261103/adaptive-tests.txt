@@ -1,0 +1,38 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 17] KSLCore-product
+[2 / 8] GuidanceTests-product
+[4 / 10] GuidanceTests-product
+[7 / 11] GuidanceTests-product
+[9 / 11] GuidanceTests-product
+Build complete! (1.71초)
+Test Suite 'Selected tests' started at 2026-11-03 03:47:53.859.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-03 03:47:53.860.
+Test Suite 'TAEMPredictionEvidenceTests' started at 2026-11-03 03:47:53.860.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandRefinementPollChangesRequestsWithinRealBoundsWithoutResettingOrigin]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandRefinementPollChangesRequestsWithinRealBoundsWithoutResettingOrigin]' passed (0.008 seconds).
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandSchedulePreservesHistoryAcrossSegmentsAndReturnsOnlyAPrefix]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandSchedulePreservesHistoryAcrossSegmentsAndReturnsOnlyAPrefix]' passed (0.005 seconds).
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandSearchRetainsUnsupportedCandidatesWithoutInventingContinuations]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandSearchRetainsUnsupportedCandidatesWithoutInventingContinuations]' passed (0.003 seconds).
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testMeasuredMomentEvidenceExpiresWithoutRefreshFromModeledObservations]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testMeasuredMomentEvidenceExpiresWithoutRefreshFromModeledObservations]' passed (0.006 seconds).
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testRecordedRCSHandoffUsesExcludedTorqueAndRejectsMissingDecomposition]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testRecordedRCSHandoffUsesExcludedTorqueAndRejectsMissingDecomposition]' passed (0.003 seconds).
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testUnidentifiedPlantAndMissingSuffixNeverQualifyAsTerminalOutcomes]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testUnidentifiedPlantAndMissingSuffixNeverQualifyAsTerminalOutcomes]' passed (0.004 seconds).
+Test Suite 'TAEMPredictionEvidenceTests' passed at 2026-11-03 03:47:53.890.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.029 (0.030) seconds
+Test Suite 'TerminalRecoveryOrderTests' started at 2026-11-03 03:47:53.890.
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testComparisonRejectsMixedOriginsModelsAndPoliciesAndDoesNotRewardStopPrecision]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testComparisonRejectsMixedOriginsModelsAndPoliciesAndDoesNotRewardStopPrecision]' passed (0.005 seconds).
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testMissingSuffixCannotBeatCompleteFailedRecoveryAndBetterFailureNeedsNoQualification]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testMissingSuffixCannotBeatCompleteFailedRecoveryAndBetterFailureNeedsNoQualification]' passed (0.003 seconds).
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testPlanningRecordRetainsIncomparableTrialsAndDecodesLegacyAbsence]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testPlanningRecordRetainsIncomparableTrialsAndDecodesLegacyAbsence]' passed (0.005 seconds).
+Test Suite 'TerminalRecoveryOrderTests' passed at 2026-11-03 03:47:53.904.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.013 (0.014) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-03 03:47:53.904.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.042 (0.043) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 03:47:53.904.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.042 (0.044) seconds
