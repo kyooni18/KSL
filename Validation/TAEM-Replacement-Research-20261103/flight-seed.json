@@ -1,0 +1,2159 @@
+{
+  "description": "Recorded rows, not a complete private controller snapshot.",
+  "previous_record": {
+    "calibration": {
+      "acceptedPassiveSamples": 305,
+      "acceptedTrajectorySamples": 305,
+      "altitudeResidual": 0,
+      "autoApplyRequested": true,
+      "bankEffectiveness": 0.9998752612729421,
+      "certifiedProfileChanged": false,
+      "currentRegime": 2,
+      "environment": {
+        "densityScale": 0.9998355856366642,
+        "evidence": "measured",
+        "observedAt": 216405.91235290028,
+        "soundSpeedScale": 0.999875158451033
+      },
+      "observation": {
+        "forceEvidence": "measured",
+        "informationBlend": 0.0015854854346579322,
+        "informationIncrement": 0.0015867436467835502,
+        "passiveEligible": true,
+        "rejectionReasons": [],
+        "stallEvidence": "provisional",
+        "stallFraction": 0,
+        "trajectoryEligible": true
+      },
+      "rangeResidual": 0,
+      "regimes": [
+        {
+          "ballisticCoefficient": 700,
+          "confidence": 0,
+          "liftToDrag": 0.4,
+          "machAnchor": 0.35
+        },
+        {
+          "ballisticCoefficient": 700,
+          "confidence": 0,
+          "liftToDrag": 0.4,
+          "machAnchor": 1.05
+        },
+        {
+          "ballisticCoefficient": 899.04438272585,
+          "confidence": 0.32494706721515776,
+          "liftToDrag": 0.6163588932400583,
+          "machAnchor": 2.6
+        },
+        {
+          "ballisticCoefficient": 700,
+          "confidence": 0,
+          "liftToDrag": 0.4,
+          "machAnchor": 6
+        }
+      ],
+      "rejectedPassiveSamples": 0,
+      "speedResidual": 0,
+      "trajectoryConfidence": 0.32494706721515776
+    },
+    "command": {
+      "gearDown": false,
+      "pitch": 0.7423059377800033,
+      "rcsEnabled": true,
+      "roll": 0.00038527930593803845,
+      "wheelBrake": 0,
+      "wheelSteering": 0,
+      "yaw": -0.2077146743865867
+    },
+    "control": {
+      "aerodynamicRate": {
+        "x": -0.0031613858261257963,
+        "y": -0.005709823516425719,
+        "z": -0.001477937967652988
+      },
+      "appliedDemand": {
+        "x": 0.00038527930593803845,
+        "y": 0.7423059377800033,
+        "z": -0.2077146743865867
+      },
+      "authority": {
+        "x": 0.37435353170405083,
+        "y": 0.1822591802527605,
+        "z": 0.06620439589945937
+      },
+      "authorityConfidence": {
+        "x": 0.9624584099036436,
+        "y": 1,
+        "z": 0.9999999999852995
+      },
+      "authorityEvidence": "measured",
+      "bankError": -0.01032581651839419,
+      "betaConfidence": 0.042600154649141665,
+      "betaRollGain": 0.08221000409754813,
+      "betaYawGain": -0.11750123615465168,
+      "bodyRate": {
+        "x": -0.003263963391522384,
+        "y": -0.00717875088801743,
+        "z": 0.0001448104352031708
+      },
+      "pitchBandwidthScale": 0.9999999999999993,
+      "pitchError": 0.04575967449876395,
+      "pitchFeedforward": 0,
+      "pitchResponseSeconds": 2.3176554226414536,
+      "pitchSaturated": false,
+      "pitchTrim": 0.5,
+      "quaternionError": {
+        "x": -0.008864346020398694,
+        "y": 0.04575940444513339,
+        "z": -0.005327036828572129
+      },
+      "rawDemand": {
+        "x": 0.0003852793059380386,
+        "y": 0.7407952462811846,
+        "z": -0.2077146743865867
+      },
+      "recoveryRateFirst": false,
+      "relativeRate": {
+        "x": -0.0016975254046404135,
+        "y": -0.0027486286670470256,
+        "z": -0.00046015731104194073
+      },
+      "reportedAuthority": {
+        "x": 1.700078867664393,
+        "y": 0.1822591802527605,
+        "z": 0.039131785737152015
+      },
+      "rollResponseSeconds": 5.131847660684576,
+      "rollSaturated": false,
+      "rollTrim": 0,
+      "sampleInterval": 0.0999999999476131,
+      "touchdownPitchGuardActive": false,
+      "trimEvidence": "unavailable",
+      "yawSaturated": false
+    },
+    "guidance": {
+      "admission": {
+        "accepted": false,
+        "altitudeMargin": 1887.3358363618609,
+        "controlOwnershipTransferred": false,
+        "headingMargin": 0.5230845239893455,
+        "machMargin": -0.13321708008657263,
+        "physicallyFeasible": false,
+        "planAge": 0.07999999995809048,
+        "positionMargin": 996.7612058018473,
+        "violations": [
+          {
+            "kind": "excessiveEnergy",
+            "limit": 0,
+            "message": "MM305 Mach admission margin",
+            "value": -0.13321708008657263
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 0,
+            "message": "Path requires negative upward normal force outside the positive-lift bank envelope",
+            "value": -8.348214400221377
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 7.755429481264917,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 13.327502070576964
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 2.2477097932323615
+          },
+          {
+            "kind": "actuatorAuthority",
+            "limit": 0,
+            "message": "Path bank-rate demand exceeds available response",
+            "value": 0
+          },
+          {
+            "kind": "actuatorAuthority",
+            "limit": 0,
+            "message": "Path angle-of-attack rate exceeds the guidance slew envelope",
+            "value": 0
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 0,
+            "message": "Path requires negative upward normal force outside the positive-lift bank envelope",
+            "value": -17.04338832007372
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 7.88217658142032,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 22.505685478511378
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 2.429953752086771
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 0,
+            "message": "Path requires negative upward normal force outside the positive-lift bank envelope",
+            "value": -19.151766599518318
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 8.30743760758593,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 24.936322720039996
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 2.446550799756802
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 0,
+            "message": "Path requires negative upward normal force outside the positive-lift bank envelope",
+            "value": -15.98465828474515
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 9.188134799258355,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 23.18321635461813
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 2.3315847291292804
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 0,
+            "message": "Path requires negative upward normal force outside the positive-lift bank envelope",
+            "value": -10.273840799990973
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 10.748815558222072,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 21.1495389598985
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 2.0780417813118572
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.511226322326658
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 0,
+            "message": "Path requires negative upward normal force outside the positive-lift bank envelope",
+            "value": -4.540584993371452
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 13.2513145965364,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 22.23638309278412
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 1.7764388659750616
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.5914937957073433
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 15.913597366609588,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 26.233867025276552
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 1.5682685413945026
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.6490058989235968
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 17.527761584880988,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 28.308634353656203
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 1.4540232175525019
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.6869987617330996
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 15.50806071165034,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 20.898595093599184
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 1.3119194125870017
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.711135149434718
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 7.667901586273461,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 8.752517318921717
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.7256615812416781
+          },
+          {
+            "kind": "actuatorAuthority",
+            "limit": 0,
+            "message": "Path bank-rate demand exceeds available response",
+            "value": 0
+          },
+          {
+            "kind": "actuatorAuthority",
+            "limit": 0,
+            "message": "Path angle-of-attack rate exceeds the guidance slew envelope",
+            "value": 0
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.7310960926376192
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.7255411969711824
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.7105719011070466
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.6874126172548831
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.6572903627965726
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.621595278289374
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.5820368511309686
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.5407752382167693
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.5005077796476042
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.46449443311088856
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.4365176589489431
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.42078217328629247
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.4193637725960777
+          },
+          {
+            "kind": "insufficientEnergy",
+            "limit": 69.7,
+            "message": "Touchdown speed below design envelope",
+            "value": 66.67350932435299
+          },
+          {
+            "kind": "modelUncertainty",
+            "limit": 0,
+            "message": "MM305 candidate remains advisory; the current guidance owner retains control",
+            "value": 0
+          },
+          {
+            "kind": "modelUncertainty",
+            "limit": 0,
+            "message": "MM305 nominal closed-loop touchdown and rollout unconfirmed (advisory)",
+            "value": 0
+          }
+        ]
+      },
+      "capture": {
+        "actualAlong": -30061.073652837393,
+        "actualCross": 14313.10291506749,
+        "actualRunwayRange": 33294.6401725357,
+        "advisoryPlanFeasible": false,
+        "advisoryPlanID": 2164018,
+        "advisoryReference": [
+          [
+            216401.81235290243,
+            -3.562291770735996,
+            -145.6931795276211,
+            28122.135784921702,
+            922.1265869140625
+          ],
+          [
+            216404.1271772942,
+            -3.5492703123857194,
+            -145.49115383561522,
+            27830.910396052757,
+            893.6484750659489
+          ],
+          [
+            216406.6649582405,
+            -3.5414380062613877,
+            -145.27689917317355,
+            27422.350027460256,
+            858.6168529259357
+          ],
+          [
+            216409.52152490435,
+            -3.5440073330875697,
+            -145.04769954755736,
+            26787.622491645627,
+            821.539381599965
+          ],
+          [
+            216412.7174723193,
+            -3.5619399135611403,
+            -144.80895205605583,
+            25847.230334078893,
+            781.5131305764176
+          ],
+          [
+            216416.22514424412,
+            -3.5996677381297335,
+            -144.57167236325037,
+            24593.347547220765,
+            736.3257798527375
+          ],
+          [
+            216419.96913117042,
+            -3.660808641607385,
+            -144.35000309905453,
+            23108.901710549137,
+            681.8982749462003
+          ],
+          [
+            216423.8515377133,
+            -3.7478736950562195,
+            -144.15872462856228,
+            21534.163332679193,
+            611.776635397067
+          ],
+          [
+            216427.86120096495,
+            -3.8619660465433445,
+            -144.0107665567127,
+            19988.672493875725,
+            523.8799461273677
+          ],
+          [
+            216432.25875458666,
+            -4.002473427244039,
+            -143.91471740427224,
+            18488.634297452983,
+            417.76829079213076
+          ],
+          [
+            216437.87153768234,
+            -4.1667590483273,
+            -143.8723292485508,
+            16933.061195725575,
+            261.9547514362194
+          ],
+          [
+            216447.65824583327,
+            -4.3498569173529384,
+            -143.87601403925183,
+            15219.390985687496,
+            256.20451869330043
+          ],
+          [
+            216458.45561324115,
+            -4.5441763556979256,
+            -143.90632930906,
+            13379.061275620596,
+            252.94450897972848
+          ],
+          [
+            216468.36612172457,
+            -4.721087878844664,
+            -143.9342791521463,
+            11737.994204422925,
+            246.60616322263468
+          ],
+          [
+            216478.08749368563,
+            -4.893104415528936,
+            -143.95720061781574,
+            10208.28167030157,
+            238.4050176281472
+          ],
+          [
+            216487.6626792957,
+            -5.060559000673954,
+            -143.97584268180017,
+            8801.819683645735,
+            231.95587713988172
+          ],
+          [
+            216497.01439909794,
+            -5.223857360711101,
+            -143.99088420601137,
+            7523.267269740929,
+            218.223436056906
+          ],
+          [
+            216506.4626896529,
+            -5.383470173197402,
+            -144.00292788328287,
+            6371.064346523373,
+            199.94464995918426
+          ],
+          [
+            216516.29023093227,
+            -5.539924879733073,
+            -144.01249486827294,
+            5338.313678660896,
+            180.79624999086778
+          ],
+          [
+            216526.6984261259,
+            -5.693797109355632,
+            -144.0200201289776,
+            4413.424727963982,
+            163.17903640711614
+          ],
+          [
+            216537.81789744183,
+            -5.845701771778328,
+            -144.02584854799935,
+            3580.436605123221,
+            147.4387569364802
+          ],
+          [
+            216549.78561635502,
+            -5.99628388155868,
+            -144.03023179717866,
+            2818.947291085962,
+            133.57559581118534
+          ],
+          [
+            216562.75829553002,
+            -6.146209175526431,
+            -144.03332600354943,
+            2103.578211000422,
+            121.95007145760584
+          ],
+          [
+            216565.99243853491,
+            -6.180582063274355,
+            -144.0338904165024,
+            1942.8131700882223,
+            119.75875454317995
+          ],
+          [
+            216569.28367331173,
+            -6.214954818848638,
+            -144.03446295199737,
+            1782.4608126230305,
+            117.5912476236163
+          ],
+          [
+            216570.37078211244,
+            -6.226105229125495,
+            -144.03464739075656,
+            1730.4658452866133,
+            116.90993792461575
+          ],
+          [
+            216571.4642261981,
+            -6.237255639338335,
+            -144.03483183734767,
+            1678.4708779501962,
+            116.23122633282286
+          ],
+          [
+            216572.56405525617,
+            -6.248406049487046,
+            -144.03501629178513,
+            1626.4759106136626,
+            115.55536023810893
+          ],
+          [
+            216573.67031705062,
+            -6.259556459571509,
+            -144.0352007540835,
+            1574.480943277129,
+            114.88258291236104
+          ],
+          [
+            216574.78305735413,
+            -6.2707068695916,
+            -144.03538522425717,
+            1522.4859759407118,
+            114.21313301494523
+          ],
+          [
+            216575.90231988375,
+            -6.281857279547206,
+            -144.03556970232063,
+            1470.4910086042946,
+            113.54724410802915
+          ],
+          [
+            216577.02814624071,
+            -6.293007689438207,
+            -144.03575418828837,
+            1418.496041267761,
+            112.8851441837343
+          ],
+          [
+            216578.16057585404,
+            -6.304158099264485,
+            -144.0359386821749,
+            1366.5010739313439,
+            112.2270552053631
+          ],
+          [
+            216579.29964592893,
+            -6.315308509025922,
+            -144.03612318399468,
+            1314.5061065949267,
+            111.57319266477843
+          ],
+          [
+            216580.44539139987,
+            -6.326458918722397,
+            -144.03630769376224,
+            1262.5111392585095,
+            110.92376515780043
+          ],
+          [
+            216581.59784488895,
+            -6.337609328353796,
+            -144.03649221149198,
+            1210.516171921976,
+            110.27897397973501
+          ],
+          [
+            216582.75703666927,
+            -6.3487597379199965,
+            -144.0366767371985,
+            1158.5212045856752,
+            109.63901259255394
+          ],
+          [
+            216583.9229946358,
+            -6.359910147420881,
+            -144.03686127089622,
+            1106.5262372490251,
+            109.00406644856577
+          ],
+          [
+            216585.0957442803,
+            -6.371060556856335,
+            -144.03704581259962,
+            1054.531269912608,
+            108.37431269186658
+          ],
+          [
+            216586.27530867155,
+            -6.382210966226234,
+            -144.0372303623233,
+            1003.1768824422034,
+            107.69177747635372
+          ],
+          [
+            216587.4551844312,
+            -6.393361375530462,
+            -144.0374149200817,
+            955.5087139062816,
+            105.83937298674476
+          ],
+          [
+            216588.63698941327,
+            -6.404511784768902,
+            -144.0375994858893,
+            914.3256618921878,
+            102.82917660334569
+          ],
+          [
+            216589.82914268484,
+            -6.415662193941432,
+            -144.03778405976067,
+            881.3433952083578,
+            98.3680285375487
+          ],
+          [
+            216591.05138038003,
+            -6.426812603047936,
+            -144.03796864171025,
+            857.1943437916925,
+            92.74871813912539
+          ],
+          [
+            216592.32846495177,
+            -6.4379630120882965,
+            -144.0381532317526,
+            841.4276987067424,
+            86.38262112591498
+          ],
+          [
+            216593.68750179163,
+            -6.449113421062391,
+            -144.03833782990228,
+            832.5094121462898,
+            79.63260986449788
+          ],
+          [
+            216595.1561355646,
+            -6.460263829970102,
+            -144.0385224361737,
+            827.8221974320477,
+            72.9109859300967
+          ],
+          [
+            216596.7586606028,
+            -6.471414238811313,
+            -144.03870705058142,
+            824.1499999999069,
+            66.67350932435299
+          ]
+        ],
+        "availableTurnRate": 0.0029754857028472122,
+        "mm305Advisory": "MM305 Mach admission margin; Path requires negative upward normal force outside the positive-lift bank envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Path bank-rate demand exceeds available response; Path angle-of-attack rate exceeds the guidance slew envelope; Path requires negative upward normal force outside the positive-lift bank envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Path requires negative upward normal force outside the positive-lift bank envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Path requires negative upward normal force outside the positive-lift bank envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Path requires negative upward normal force outside the positive-lift bank envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Terminal path exceeds configured glide-slope envelope; Path requires negative upward normal force outside the positive-lift bank envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Terminal path exceeds configured glide-slope envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Terminal path exceeds configured glide-slope envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Terminal path exceeds configured glide-slope envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Terminal path exceeds configured glide-slope envelope; Path demands unavailable lift/trim authority; Terminal path exceeds configured glide-slope envelope; Path bank-rate demand exceeds available response; Path angle-of-attack rate exceeds the guidance slew envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Touchdown speed below design envelope; MM305 candidate remains advisory; the current guidance owner retains control; MM305 nominal closed-loop touchdown and rollout unconfirmed (advisory)",
+        "mm305Deficit": "inadequateControlAuthority",
+        "mm305MaximumSearchedLength": 220000,
+        "mm305MinimumRequiredLength": 35012.658000808275,
+        "mm305PlanAccepted": false,
+        "mm305SearchHorizonExceeded": false,
+        "mm305Searched": true,
+        "mm305TurnAuthorityAssessed": true,
+        "mm305Violations": [
+          {
+            "kind": "insufficientLift",
+            "limit": 0,
+            "message": "Path requires negative upward normal force outside the positive-lift bank envelope",
+            "value": -8.348214400221377
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 7.755429481264917,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 13.327502070576964
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 2.2477097932323615
+          },
+          {
+            "kind": "actuatorAuthority",
+            "limit": 0,
+            "message": "Path bank-rate demand exceeds available response",
+            "value": 0
+          },
+          {
+            "kind": "actuatorAuthority",
+            "limit": 0,
+            "message": "Path angle-of-attack rate exceeds the guidance slew envelope",
+            "value": 0
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 0,
+            "message": "Path requires negative upward normal force outside the positive-lift bank envelope",
+            "value": -17.04338832007372
+          }
+        ],
+        "nominalEnergyAirspeed": 143.3764910697937,
+        "nominalEnergyAlong": -2286,
+        "nominalEnergyFlightPath": -0.41887902047863906,
+        "nominalEnergyHeight": 961.5108126231888,
+        "nominalEnergyPredictedTouchdownSpeed": 85.00000534996624,
+        "plannedCrossAim": 0,
+        "predictedAlong": -30076.201166340765,
+        "predictedAltitude": 26806.99817175227,
+        "predictedAt": 216401.81235290243,
+        "predictedCaptureTime": 216406.11235290018,
+        "predictedCross": 14141.433326010734,
+        "predictedDeficit": "inadequateControlAuthority",
+        "predictedFeasible": false,
+        "predictedHACRadius": 32980.246987569604,
+        "predictedHACSide": -1,
+        "predictedHACTurnAngle": 0.521439221915434,
+        "predictedMach": 2.848379234413851,
+        "predictedPathLength": 42996.06318845354,
+        "predictedTrack": [],
+        "rangeMultiplier": 1,
+        "requiredHeadingChange": 1.6586937541644984
+      },
+      "diagnostic": "Entry receding-horizon candidates=2, reversals=0; handoffTiming=before-terminal-window energyMargin=123168.06925094407",
+      "entry": {
+        "bestRangeRecovery": true,
+        "captureEnergyMargin": 30220.745459389786,
+        "captureSpecificEnergy": -5381495.944525653,
+        "commandedBank": 0,
+        "confidence": 1,
+        "degraded": false,
+        "dragFloorActive": true,
+        "dragScale": 0.7576884818611389,
+        "dragTrackingResidual": 11.910307067352914,
+        "energyAllocationMode": "range-energy-unbracketed",
+        "energyBank": 0,
+        "energyBudgetEndpoint": "entry-objective",
+        "energyDragBudget": 1.038253616967101,
+        "energyReserve": 92947.32379155428,
+        "jointForceAttainable": false,
+        "jointMaximumLateral": 0,
+        "jointMaximumLift": 6.287767842564476,
+        "jointRequiredLift": 47.03687830674308,
+        "lateralAllocationTarget": 0,
+        "lateralAuthority": 0,
+        "lateralDemand": 0,
+        "limitingReason": "tracking",
+        "observedDrag": 12.12719416210331,
+        "phase": 4,
+        "predictedRange": 15708.863718826624,
+        "projectedCrossrange": -13369.312866490058,
+        "rangeError": -13151.4478695688,
+        "rangeReferenceAlong": -31072.810826316014,
+        "rangeReferenceAltitude": 26128.965587147977,
+        "rangeReferenceBlend": 0.6180339887498949,
+        "rangeReferenceBracketed": false,
+        "rangeReferenceCaptureResidual": 26.420648666902114,
+        "rangeReferenceCross": 2861.3559955825294,
+        "rangeReferenceHeadingError": 1.6587457449499754,
+        "rangeReferenceReachedEnergy": true,
+        "rangeReferenceSpeed": 742.2131249739825,
+        "recoveryAlpha": 0.6981317007977318,
+        "referenceBallisticCoefficient": 470.68180731381125,
+        "referenceDrag": 1.038253616967101,
+        "referenceLiftToDrag": 0.6390295641343804,
+        "referencePolarEvidence": "measured",
+        "referenceTargetRange": 28860.311588395423,
+        "requiredRange": 28860.311588395423,
+        "reversalArmed": false,
+        "reversalAvailableTime": 224.6116293328355,
+        "reversalCount": 0,
+        "reversalFeasible": true,
+        "reversalTime": 1.146614055508611,
+        "rollRateLimit": 0.07853981633974483,
+        "selectedDragAcceleration": 12.948560684320015,
+        "terminalDeficit": "inadequateControlAuthority",
+        "terminalSteeringActive": false,
+        "verticalLift": 7.138984447672079
+      },
+      "pathRemaining": 0,
+      "phase": "entry",
+      "target": {
+        "angleOfAttack": 0.5614218836183246,
+        "bank": 0,
+        "desiredFlightPath": -0.154379107551084,
+        "desiredHeight": 25000,
+        "desiredSpeed": 755.6315289257952,
+        "gearDown": false
+      },
+      "violations": []
+    },
+    "planningMode": "external-proposals-v1",
+    "sequence": 4781,
+    "state": {
+      "aerodynamics": {
+        "airspeed": 877.6099243164062,
+        "angleOfAttack": 0.5156622091195606,
+        "bank": 0.01032581651839419,
+        "drag": 307562.48464439553,
+        "dynamicPressure": 3482.960693359375,
+        "force": {
+          "x": -333125.2376864304,
+          "y": 112090.99982514439,
+          "z": -34508.076285528194
+        },
+        "lift": 173588.42586340551,
+        "mach": 2.8523266120009585,
+        "measuredForces": true,
+        "sideslip": -2.66422321378178e-05
+      },
+      "angularVelocity": {
+        "x": -0.003263963391522384,
+        "y": -0.00717875088801743,
+        "z": 0.0001448104352031708
+      },
+      "appliedControls": {
+        "gearDown": false,
+        "pitch": 0.7442713379859924,
+        "roll": -0.0036769614089280367,
+        "wheelBrake": 0,
+        "wheelSteering": 0,
+        "yaw": -0.09336823970079422
+      },
+      "atmosphere": {
+        "density": 0.009044311620045825,
+        "evidence": "measured",
+        "pressure": 611.5783081054688,
+        "speedOfSound": 307.68212890625,
+        "temperature": 235.56268310546875,
+        "wind": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      },
+      "attitude": {
+        "w": 0.5681047223988271,
+        "x": -0.5331821807378457,
+        "y": 0.4118033441348386,
+        "z": -0.4726434092327433
+      },
+      "contact": "airborne",
+      "controlAuthority": {
+        "actuatorSources": "aerodynamic-surfaces+active-powered-reaction-wheels+rcs",
+        "evidence": "measured",
+        "inertia": {
+          "x": 84474.84375,
+          "y": 911016.375,
+          "z": 946181.9375
+        },
+        "negativeTorque": {
+          "x": -143613.89670862653,
+          "y": -166041.09770434146,
+          "z": -37027.18970961453
+        },
+        "positiveTorque": {
+          "x": 191960.22797084166,
+          "y": 246817.57391134024,
+          "z": 37025.78884661336
+        },
+        "rcsExcludedNegativeTorque": {
+          "x": -143613.76190185547,
+          "y": -165549.01401745155,
+          "z": -33215.145111083984
+        },
+        "rcsExcludedPositiveTorque": {
+          "x": 191960.2279663086,
+          "y": 241563.2734047249,
+          "z": 33214.4079208374
+        }
+      },
+      "mass": 25361.388671875,
+      "position": {
+        "x": -515400.3156549527,
+        "y": -356089.6948725258,
+        "z": -38743.87340836689
+      },
+      "propulsion": {
+        "availableThrust": 120000,
+        "dryMass": 21556.167705409178,
+        "evidence": "measured",
+        "specificImpulse": 345,
+        "thrustDirectionBody": {
+          "x": 0.9379881374288224,
+          "y": 1.5844977638571077e-07,
+          "z": 0.3466673535866676
+        }
+      },
+      "radarAltitude": 27021.386808424373,
+      "snapshotSpan": 0,
+      "systems": {
+        "airbrakes": false,
+        "brakes": false,
+        "gearDown": false,
+        "rcs": true,
+        "sas": false,
+        "speedbrakeFraction": 0,
+        "throttle": 0,
+        "thrust": 0
+      },
+      "time": 216405.91235290028,
+      "velocity": {
+        "x": 584.0255847250489,
+        "y": -651.5775511305079,
+        "z": 67.52741500252334
+      },
+      "vesselConfiguration": {
+        "anchorPart": 16962,
+        "centerOfMassBodyFRD": {
+          "x": -0.331678223330524,
+          "y": -1.8387203750153729,
+          "z": 9.789532655030648
+        },
+        "centerOfMassEvidence": "measured",
+        "centerOfMassFromAnchor": {
+          "x": -0.0002153479232478439,
+          "y": -9.961655750024091,
+          "z": 0.3021048441799339
+        },
+        "inertiaTensorFRD": [
+          84474.828125,
+          -39.12044143676758,
+          -819.1825561523438,
+          -39.12091827392578,
+          911016.5625,
+          49.248023986816406,
+          -819.1845703125,
+          49.24742889404297,
+          946181.9375
+        ],
+        "measuredAt": 216405.91235290028,
+        "partCount": 26,
+        "revision": 1
+      },
+      "wheelContact": {
+        "evidence": "measured",
+        "mainGear": false,
+        "noseGear": false,
+        "wheelCount": 3
+      }
+    },
+    "timing": {
+      "acquisitionSeconds": 0.010448291,
+      "commandSeconds": 0.00034475,
+      "computationSeconds": 0.000293667,
+      "missedDeadlines": 37,
+      "simulationInterval": 0.0999999999476131,
+      "wallInterval": 0.10364725
+    }
+  },
+  "first_taem_record": {
+    "calibration": {
+      "acceptedPassiveSamples": 306,
+      "acceptedTrajectorySamples": 306,
+      "altitudeResidual": 0,
+      "autoApplyRequested": true,
+      "bankEffectiveness": 0.9998752612729421,
+      "certifiedProfileChanged": false,
+      "currentRegime": 2,
+      "environment": {
+        "densityScale": 0.9998323326053954,
+        "evidence": "measured",
+        "observedAt": 216406.03235290022,
+        "soundSpeedScale": 0.9998770228768877
+      },
+      "observation": {
+        "forceEvidence": "measured",
+        "informationBlend": 0.0019027907010522895,
+        "informationIncrement": 0.001904603306983069,
+        "passiveEligible": true,
+        "rejectionReasons": [],
+        "stallEvidence": "provisional",
+        "stallFraction": 0,
+        "trajectoryEligible": true
+      },
+      "rangeResidual": 0,
+      "regimes": [
+        {
+          "ballisticCoefficient": 700,
+          "confidence": 0,
+          "liftToDrag": 0.4,
+          "machAnchor": 0.35
+        },
+        {
+          "ballisticCoefficient": 700,
+          "confidence": 0,
+          "liftToDrag": 0.4,
+          "machAnchor": 1.05
+        },
+        {
+          "ballisticCoefficient": 899.6931145138979,
+          "confidence": 0.3262315516583788,
+          "liftToDrag": 0.6172502121735194,
+          "machAnchor": 2.6
+        },
+        {
+          "ballisticCoefficient": 700,
+          "confidence": 0,
+          "liftToDrag": 0.4,
+          "machAnchor": 6
+        }
+      ],
+      "rejectedPassiveSamples": 0,
+      "speedResidual": 0,
+      "trajectoryConfidence": 0.3262315516583788
+    },
+    "command": {
+      "gearDown": false,
+      "pitch": 0.7270442334158421,
+      "roll": -0.004827374940136498,
+      "wheelBrake": 0,
+      "wheelSteering": 0,
+      "yaw": 0.0674102521826333
+    },
+    "control": {
+      "aerodynamicRate": {
+        "x": -0.003594662816946001,
+        "y": -0.00533000861865179,
+        "z": -0.0009487510380621985
+      },
+      "appliedDemand": {
+        "x": -0.004827374940136498,
+        "y": 0.7270442334158421,
+        "z": 0.0674102521826333
+      },
+      "authority": {
+        "x": 0.3743629300237531,
+        "y": 0.18196907469398746,
+        "z": 0.06635729047503493
+      },
+      "authorityConfidence": {
+        "x": 0.9624584268311095,
+        "y": 1,
+        "z": 0.9999999999866747
+      },
+      "authorityEvidence": "measured",
+      "bankError": -0.009894456980586646,
+      "betaConfidence": 0.04260259696936401,
+      "betaRollGain": 0.08214480180484979,
+      "betaYawGain": -0.11739748049353936,
+      "bodyRate": {
+        "x": -0.0018786235169342682,
+        "y": -0.006785661434186437,
+        "z": -0.001546124454171502
+      },
+      "pitchBandwidthScale": 0.9999999999999993,
+      "pitchError": 0.04582090764121982,
+      "pitchFeedforward": 0,
+      "pitchResponseSeconds": 2.3177543792591537,
+      "pitchSaturated": false,
+      "pitchTrim": 0.5142783262229561,
+      "quaternionError": {
+        "x": -0.008494103699935354,
+        "y": 0.04582122831627655,
+        "z": -0.005231391891983994
+      },
+      "rawDemand": {
+        "x": -0.004827374940136498,
+        "y": 0.7181622769614134,
+        "z": 0.06741025218263329
+      },
+      "recoveryRateFirst": false,
+      "relativeRate": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "reportedAuthority": {
+        "x": 1.6977552206768354,
+        "y": 0.18196907469398746,
+        "z": 0.039138086553498555
+      },
+      "rollResponseSeconds": 5.132073335505032,
+      "rollSaturated": false,
+      "rollTrim": 0,
+      "sampleInterval": 0.11999999993713573,
+      "touchdownPitchGuardActive": false,
+      "trimEvidence": "unavailable",
+      "yawSaturated": false
+    },
+    "guidance": {
+      "admission": {
+        "accepted": false,
+        "altitudeMargin": 1887.3358363618609,
+        "controlOwnershipTransferred": false,
+        "headingMargin": 0.5230845239893455,
+        "machMargin": -0.13321708008657263,
+        "physicallyFeasible": false,
+        "planAge": 0.07999999995809048,
+        "positionMargin": 996.7612058018473,
+        "violations": [
+          {
+            "kind": "excessiveEnergy",
+            "limit": 0,
+            "message": "MM305 Mach admission margin",
+            "value": -0.13321708008657263
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 0,
+            "message": "Path requires negative upward normal force outside the positive-lift bank envelope",
+            "value": -8.348214400221377
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 7.755429481264917,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 13.327502070576964
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 2.2477097932323615
+          },
+          {
+            "kind": "actuatorAuthority",
+            "limit": 0,
+            "message": "Path bank-rate demand exceeds available response",
+            "value": 0
+          },
+          {
+            "kind": "actuatorAuthority",
+            "limit": 0,
+            "message": "Path angle-of-attack rate exceeds the guidance slew envelope",
+            "value": 0
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 0,
+            "message": "Path requires negative upward normal force outside the positive-lift bank envelope",
+            "value": -17.04338832007372
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 7.88217658142032,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 22.505685478511378
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 2.429953752086771
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 0,
+            "message": "Path requires negative upward normal force outside the positive-lift bank envelope",
+            "value": -19.151766599518318
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 8.30743760758593,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 24.936322720039996
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 2.446550799756802
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 0,
+            "message": "Path requires negative upward normal force outside the positive-lift bank envelope",
+            "value": -15.98465828474515
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 9.188134799258355,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 23.18321635461813
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 2.3315847291292804
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 0,
+            "message": "Path requires negative upward normal force outside the positive-lift bank envelope",
+            "value": -10.273840799990973
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 10.748815558222072,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 21.1495389598985
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 2.0780417813118572
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.511226322326658
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 0,
+            "message": "Path requires negative upward normal force outside the positive-lift bank envelope",
+            "value": -4.540584993371452
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 13.2513145965364,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 22.23638309278412
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 1.7764388659750616
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.5914937957073433
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 15.913597366609588,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 26.233867025276552
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 1.5682685413945026
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.6490058989235968
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 17.527761584880988,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 28.308634353656203
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 1.4540232175525019
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.6869987617330996
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 15.50806071165034,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 20.898595093599184
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 1.3119194125870017
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.711135149434718
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 7.667901586273461,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 8.752517318921717
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.7256615812416781
+          },
+          {
+            "kind": "actuatorAuthority",
+            "limit": 0,
+            "message": "Path bank-rate demand exceeds available response",
+            "value": 0
+          },
+          {
+            "kind": "actuatorAuthority",
+            "limit": 0,
+            "message": "Path angle-of-attack rate exceeds the guidance slew envelope",
+            "value": 0
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.7310960926376192
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.7255411969711824
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.7105719011070466
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.6874126172548831
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.6572903627965726
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.621595278289374
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.5820368511309686
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.5407752382167693
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.5005077796476042
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.46449443311088856
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.4365176589489431
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.42078217328629247
+          },
+          {
+            "kind": "invalidGeometry",
+            "limit": 0.41887902047863906,
+            "message": "Terminal path exceeds configured glide-slope envelope",
+            "value": 0.4193637725960777
+          },
+          {
+            "kind": "insufficientEnergy",
+            "limit": 69.7,
+            "message": "Touchdown speed below design envelope",
+            "value": 66.67350932435299
+          },
+          {
+            "kind": "modelUncertainty",
+            "limit": 0,
+            "message": "MM305 candidate remains advisory; the current guidance owner retains control",
+            "value": 0
+          },
+          {
+            "kind": "modelUncertainty",
+            "limit": 0,
+            "message": "MM305 nominal closed-loop touchdown and rollout unconfirmed (advisory)",
+            "value": 0
+          }
+        ]
+      },
+      "capture": {
+        "actualAlong": -30069.87429445273,
+        "actualCross": 14213.712856740072,
+        "actualRunwayRange": 33259.99057814128,
+        "advisoryPlanFeasible": false,
+        "advisoryPlanID": 2164018,
+        "advisoryReference": [
+          [
+            216401.81235290243,
+            -3.562291770735996,
+            -145.6931795276211,
+            28122.135784921702,
+            922.1265869140625
+          ],
+          [
+            216404.1271772942,
+            -3.5492703123857194,
+            -145.49115383561522,
+            27830.910396052757,
+            893.6484750659489
+          ],
+          [
+            216406.6649582405,
+            -3.5414380062613877,
+            -145.27689917317355,
+            27422.350027460256,
+            858.6168529259357
+          ],
+          [
+            216409.52152490435,
+            -3.5440073330875697,
+            -145.04769954755736,
+            26787.622491645627,
+            821.539381599965
+          ],
+          [
+            216412.7174723193,
+            -3.5619399135611403,
+            -144.80895205605583,
+            25847.230334078893,
+            781.5131305764176
+          ],
+          [
+            216416.22514424412,
+            -3.5996677381297335,
+            -144.57167236325037,
+            24593.347547220765,
+            736.3257798527375
+          ],
+          [
+            216419.96913117042,
+            -3.660808641607385,
+            -144.35000309905453,
+            23108.901710549137,
+            681.8982749462003
+          ],
+          [
+            216423.8515377133,
+            -3.7478736950562195,
+            -144.15872462856228,
+            21534.163332679193,
+            611.776635397067
+          ],
+          [
+            216427.86120096495,
+            -3.8619660465433445,
+            -144.0107665567127,
+            19988.672493875725,
+            523.8799461273677
+          ],
+          [
+            216432.25875458666,
+            -4.002473427244039,
+            -143.91471740427224,
+            18488.634297452983,
+            417.76829079213076
+          ],
+          [
+            216437.87153768234,
+            -4.1667590483273,
+            -143.8723292485508,
+            16933.061195725575,
+            261.9547514362194
+          ],
+          [
+            216447.65824583327,
+            -4.3498569173529384,
+            -143.87601403925183,
+            15219.390985687496,
+            256.20451869330043
+          ],
+          [
+            216458.45561324115,
+            -4.5441763556979256,
+            -143.90632930906,
+            13379.061275620596,
+            252.94450897972848
+          ],
+          [
+            216468.36612172457,
+            -4.721087878844664,
+            -143.9342791521463,
+            11737.994204422925,
+            246.60616322263468
+          ],
+          [
+            216478.08749368563,
+            -4.893104415528936,
+            -143.95720061781574,
+            10208.28167030157,
+            238.4050176281472
+          ],
+          [
+            216487.6626792957,
+            -5.060559000673954,
+            -143.97584268180017,
+            8801.819683645735,
+            231.95587713988172
+          ],
+          [
+            216497.01439909794,
+            -5.223857360711101,
+            -143.99088420601137,
+            7523.267269740929,
+            218.223436056906
+          ],
+          [
+            216506.4626896529,
+            -5.383470173197402,
+            -144.00292788328287,
+            6371.064346523373,
+            199.94464995918426
+          ],
+          [
+            216516.29023093227,
+            -5.539924879733073,
+            -144.01249486827294,
+            5338.313678660896,
+            180.79624999086778
+          ],
+          [
+            216526.6984261259,
+            -5.693797109355632,
+            -144.0200201289776,
+            4413.424727963982,
+            163.17903640711614
+          ],
+          [
+            216537.81789744183,
+            -5.845701771778328,
+            -144.02584854799935,
+            3580.436605123221,
+            147.4387569364802
+          ],
+          [
+            216549.78561635502,
+            -5.99628388155868,
+            -144.03023179717866,
+            2818.947291085962,
+            133.57559581118534
+          ],
+          [
+            216562.75829553002,
+            -6.146209175526431,
+            -144.03332600354943,
+            2103.578211000422,
+            121.95007145760584
+          ],
+          [
+            216565.99243853491,
+            -6.180582063274355,
+            -144.0338904165024,
+            1942.8131700882223,
+            119.75875454317995
+          ],
+          [
+            216569.28367331173,
+            -6.214954818848638,
+            -144.03446295199737,
+            1782.4608126230305,
+            117.5912476236163
+          ],
+          [
+            216570.37078211244,
+            -6.226105229125495,
+            -144.03464739075656,
+            1730.4658452866133,
+            116.90993792461575
+          ],
+          [
+            216571.4642261981,
+            -6.237255639338335,
+            -144.03483183734767,
+            1678.4708779501962,
+            116.23122633282286
+          ],
+          [
+            216572.56405525617,
+            -6.248406049487046,
+            -144.03501629178513,
+            1626.4759106136626,
+            115.55536023810893
+          ],
+          [
+            216573.67031705062,
+            -6.259556459571509,
+            -144.0352007540835,
+            1574.480943277129,
+            114.88258291236104
+          ],
+          [
+            216574.78305735413,
+            -6.2707068695916,
+            -144.03538522425717,
+            1522.4859759407118,
+            114.21313301494523
+          ],
+          [
+            216575.90231988375,
+            -6.281857279547206,
+            -144.03556970232063,
+            1470.4910086042946,
+            113.54724410802915
+          ],
+          [
+            216577.02814624071,
+            -6.293007689438207,
+            -144.03575418828837,
+            1418.496041267761,
+            112.8851441837343
+          ],
+          [
+            216578.16057585404,
+            -6.304158099264485,
+            -144.0359386821749,
+            1366.5010739313439,
+            112.2270552053631
+          ],
+          [
+            216579.29964592893,
+            -6.315308509025922,
+            -144.03612318399468,
+            1314.5061065949267,
+            111.57319266477843
+          ],
+          [
+            216580.44539139987,
+            -6.326458918722397,
+            -144.03630769376224,
+            1262.5111392585095,
+            110.92376515780043
+          ],
+          [
+            216581.59784488895,
+            -6.337609328353796,
+            -144.03649221149198,
+            1210.516171921976,
+            110.27897397973501
+          ],
+          [
+            216582.75703666927,
+            -6.3487597379199965,
+            -144.0366767371985,
+            1158.5212045856752,
+            109.63901259255394
+          ],
+          [
+            216583.9229946358,
+            -6.359910147420881,
+            -144.03686127089622,
+            1106.5262372490251,
+            109.00406644856577
+          ],
+          [
+            216585.0957442803,
+            -6.371060556856335,
+            -144.03704581259962,
+            1054.531269912608,
+            108.37431269186658
+          ],
+          [
+            216586.27530867155,
+            -6.382210966226234,
+            -144.0372303623233,
+            1003.1768824422034,
+            107.69177747635372
+          ],
+          [
+            216587.4551844312,
+            -6.393361375530462,
+            -144.0374149200817,
+            955.5087139062816,
+            105.83937298674476
+          ],
+          [
+            216588.63698941327,
+            -6.404511784768902,
+            -144.0375994858893,
+            914.3256618921878,
+            102.82917660334569
+          ],
+          [
+            216589.82914268484,
+            -6.415662193941432,
+            -144.03778405976067,
+            881.3433952083578,
+            98.3680285375487
+          ],
+          [
+            216591.05138038003,
+            -6.426812603047936,
+            -144.03796864171025,
+            857.1943437916925,
+            92.74871813912539
+          ],
+          [
+            216592.32846495177,
+            -6.4379630120882965,
+            -144.0381532317526,
+            841.4276987067424,
+            86.38262112591498
+          ],
+          [
+            216593.68750179163,
+            -6.449113421062391,
+            -144.03833782990228,
+            832.5094121462898,
+            79.63260986449788
+          ],
+          [
+            216595.1561355646,
+            -6.460263829970102,
+            -144.0385224361737,
+            827.8221974320477,
+            72.9109859300967
+          ],
+          [
+            216596.7586606028,
+            -6.471414238811313,
+            -144.03870705058142,
+            824.1499999999069,
+            66.67350932435299
+          ]
+        ],
+        "availableTurnRate": 0.0029754857028472122,
+        "mm305Advisory": "MM305 Mach admission margin; Path requires negative upward normal force outside the positive-lift bank envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Path bank-rate demand exceeds available response; Path angle-of-attack rate exceeds the guidance slew envelope; Path requires negative upward normal force outside the positive-lift bank envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Path requires negative upward normal force outside the positive-lift bank envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Path requires negative upward normal force outside the positive-lift bank envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Path requires negative upward normal force outside the positive-lift bank envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Terminal path exceeds configured glide-slope envelope; Path requires negative upward normal force outside the positive-lift bank envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Terminal path exceeds configured glide-slope envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Terminal path exceeds configured glide-slope envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Terminal path exceeds configured glide-slope envelope; Path demands unavailable lift/trim authority; Path curvature exceeds bank envelope; Terminal path exceeds configured glide-slope envelope; Path demands unavailable lift/trim authority; Terminal path exceeds configured glide-slope envelope; Path bank-rate demand exceeds available response; Path angle-of-attack rate exceeds the guidance slew envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Terminal path exceeds configured glide-slope envelope; Touchdown speed below design envelope; MM305 candidate remains advisory; the current guidance owner retains control; MM305 nominal closed-loop touchdown and rollout unconfirmed (advisory)",
+        "mm305Deficit": "inadequateControlAuthority",
+        "mm305MaximumSearchedLength": 220000,
+        "mm305MinimumRequiredLength": 35012.658000808275,
+        "mm305PlanAccepted": false,
+        "mm305SearchHorizonExceeded": false,
+        "mm305Searched": true,
+        "mm305TurnAuthorityAssessed": true,
+        "mm305Violations": [
+          {
+            "kind": "insufficientLift",
+            "limit": 0,
+            "message": "Path requires negative upward normal force outside the positive-lift bank envelope",
+            "value": -8.348214400221377
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 7.755429481264917,
+            "message": "Path demands unavailable lift/trim authority",
+            "value": 13.327502070576964
+          },
+          {
+            "kind": "excessiveBank",
+            "limit": 1.2217304763960306,
+            "message": "Path curvature exceeds bank envelope",
+            "value": 2.2477097932323615
+          },
+          {
+            "kind": "actuatorAuthority",
+            "limit": 0,
+            "message": "Path bank-rate demand exceeds available response",
+            "value": 0
+          },
+          {
+            "kind": "actuatorAuthority",
+            "limit": 0,
+            "message": "Path angle-of-attack rate exceeds the guidance slew envelope",
+            "value": 0
+          },
+          {
+            "kind": "insufficientLift",
+            "limit": 0,
+            "message": "Path requires negative upward normal force outside the positive-lift bank envelope",
+            "value": -17.04338832007372
+          }
+        ],
+        "nominalEnergyAirspeed": 120.42336225509644,
+        "nominalEnergyAlong": -2286,
+        "nominalEnergyFlightPath": -0.41887902047863906,
+        "nominalEnergyHeight": 961.5108126231888,
+        "nominalEnergyPredictedTouchdownSpeed": 85.00000860688323,
+        "plannedCrossAim": 0,
+        "predictedAlong": -30076.201166340765,
+        "predictedAltitude": 26806.99817175227,
+        "predictedAt": 216401.81235290243,
+        "predictedCaptureTime": 216406.11235290018,
+        "predictedCross": 14141.433326010734,
+        "predictedDeficit": "inadequateControlAuthority",
+        "predictedFeasible": false,
+        "predictedHACRadius": 32980.246987569604,
+        "predictedHACSide": -1,
+        "predictedHACTurnAngle": 0.521439221915434,
+        "predictedMach": 2.848379234413851,
+        "predictedPathLength": 42996.06318845354,
+        "predictedTrack": [],
+        "rangeMultiplier": 1,
+        "requiredHeadingChange": 1.6586937541644984
+      },
+      "diagnostic": "TAEM phase=acquisition side=1 hacTurn=28.692859594993013 deg rpred=31342.970245296106 m E=64754.93210346262 m EN=44623.99308925881 m EMIN=30797.430098536737 m href=26810.525086426478 m qref=3482.5471590847005 Pa qmin=0.0 Pa rf=7091.229753432923 m growth=0.07599088773175333 m/rad2 downmoded=false descentFits=false descentCheck=acquisitionTurnUnavailable referenceTracking=false; handoffTiming=heading-turn-response-lead energyMargin=121897.83911738824 responseEnergy=63652.340512055256 closestApproach=14.377253315850835 headingTurnTime=233.41752296000078",
+      "pathRemaining": 31342.970245296106,
+      "phase": "acquisition",
+      "target": {
+        "angleOfAttack": 0.5608435157268773,
+        "bank": 0,
+        "desiredFlightPath": -0.1304124444689945,
+        "desiredHeight": 27631.47508642648,
+        "desiredSpeed": 876.3739935745856,
+        "gearDown": false,
+        "speedbrakeFraction": 0
+      },
+      "violations": [
+        {
+          "kind": "invalidGeometry",
+          "limit": 0,
+          "message": "No TAEM descent plan fits the configured glide and geometry limits; continuing recovery",
+          "value": 0
+        },
+        {
+          "kind": "invalidGeometry",
+          "limit": 0,
+          "message": "TAEM committed-profile force check failed: acquisitionTurnUnavailable; recovery remains unqualified",
+          "value": 0
+        },
+        {
+          "kind": "excessiveEnergy",
+          "limit": 1250,
+          "message": "Insufficient runway braking distance",
+          "value": 1315.616273354273
+        }
+      ]
+    },
+    "planningMode": "external-proposals-v1",
+    "sequence": 4782,
+    "state": {
+      "aerodynamics": {
+        "airspeed": 876.300537109375,
+        "angleOfAttack": 0.5150226080856575,
+        "bank": 0.009894456980586646,
+        "drag": 307027.4406909385,
+        "dynamicPressure": 3481.96337890625,
+        "force": {
+          "x": -332843.1373783768,
+          "y": 111582.79408115642,
+          "z": -34406.61965095958
+        },
+        "lift": 173646.88356954942,
+        "mach": 2.84837918956155,
+        "measuredForces": true,
+        "sideslip": -0.00014049235664563908
+      },
+      "angularVelocity": {
+        "x": -0.0018786235169342682,
+        "y": -0.006785661434186437,
+        "z": -0.001546124454171502
+      },
+      "appliedControls": {
+        "gearDown": false,
+        "pitch": 0.7423059344291687,
+        "roll": 0.0003852793015539646,
+        "wheelBrake": 0,
+        "wheelSteering": 0,
+        "yaw": -0.20771467685699463
+      },
+      "atmosphere": {
+        "density": 0.009068762722790611,
+        "evidence": "measured",
+        "pressure": 613.0989990234375,
+        "speedOfSound": 307.6488342285156,
+        "temperature": 235.51171875,
+        "wind": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      },
+      "attitude": {
+        "w": 0.5681624011562625,
+        "x": -0.5335077629034783,
+        "y": 0.4116288259599637,
+        "z": -0.47235861638473176
+      },
+      "contact": "airborne",
+      "controlAuthority": {
+        "actuatorSources": "aerodynamic-surfaces+active-powered-reaction-wheels+rcs",
+        "evidence": "measured",
+        "inertia": {
+          "x": 84474.2421875,
+          "y": 910994.9375,
+          "z": 946160.5625
+        },
+        "negativeTorque": {
+          "x": -143416.5856865475,
+          "y": -165772.90582778194,
+          "z": -37040.4128605936
+        },
+        "positiveTorque": {
+          "x": 192226.59304729148,
+          "y": 247093.1284808851,
+          "z": 37030.91398863188
+        },
+        "rcsExcludedNegativeTorque": {
+          "x": -143416.44287109375,
+          "y": -165280.80375073478,
+          "z": -33228.38115692139
+        },
+        "rcsExcludedPositiveTorque": {
+          "x": 192226.59301757812,
+          "y": 241838.8698529452,
+          "z": 33219.57778930664
+        }
+      },
+      "mass": 25361.044921875,
+      "position": {
+        "x": -515330.28367923375,
+        "y": -356167.807143817,
+        "z": -38735.7767007305
+      },
+      "propulsion": {
+        "availableThrust": 120000,
+        "dryMass": 21556.167705409178,
+        "evidence": "measured",
+        "specificImpulse": 345,
+        "thrustDirectionBody": {
+          "x": 0.9379881374288224,
+          "y": 1.5844977638571077e-07,
+          "z": 0.3466673535866676
+        }
+      },
+      "radarAltitude": 27005.733173709363,
+      "snapshotSpan": 0,
+      "systems": {
+        "airbrakes": false,
+        "brakes": false,
+        "gearDown": false,
+        "rcs": true,
+        "sas": false,
+        "speedbrakeFraction": 0,
+        "throttle": 0,
+        "thrust": 0
+      },
+      "time": 216406.03235290022,
+      "velocity": {
+        "x": 583.2959022321422,
+        "y": -650.477719929794,
+        "z": 67.433145470934
+      },
+      "vesselConfiguration": {
+        "anchorPart": 16962,
+        "centerOfMassBodyFRD": {
+          "x": -0.3333299811929482,
+          "y": -1.846989986994883,
+          "z": 9.787949796133612
+        },
+        "centerOfMassEvidence": "measured",
+        "centerOfMassFromAnchor": {
+          "x": -0.00022781387424597455,
+          "y": -9.961685103775093,
+          "z": 0.302112464787073
+        },
+        "inertiaTensorFRD": [
+          84474.2109375,
+          -40.147972106933594,
+          -818.6425170898438,
+          -40.14892578125,
+          910995.25,
+          49.268653869628906,
+          -818.642578125,
+          49.26859664916992,
+          946160.5
+        ],
+        "measuredAt": 216406.03235290022,
+        "partCount": 26,
+        "revision": 1
+      },
+      "wheelContact": {
+        "evidence": "measured",
+        "mainGear": false,
+        "noseGear": false,
+        "wheelCount": 3
+      }
+    },
+    "timing": {
+      "acquisitionSeconds": 0.028174958,
+      "commandSeconds": 0.00778025,
+      "computationSeconds": 0.022730083,
+      "missedDeadlines": 37,
+      "simulationInterval": 0.11999999993713573,
+      "wallInterval": 0.1031365
+    }
+  }
+}

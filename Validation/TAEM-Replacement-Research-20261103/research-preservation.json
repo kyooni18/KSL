@@ -1,0 +1,99 @@
+{
+  "baseline_revision": "63b0eb3de34d48bfdc08df7c4e0c77abacf12c49",
+  "baseline_index_tree": "5c33bd05b7477cd11b3e9fe1567b317d235fdb81",
+  "tracked_dirty_files": [
+    {
+      "path": "AGENTS.md",
+      "before_sha256": "c02f9ae9f29690e8510493d17f889ca92924ca6ee88b137172f33aa37c5cb756",
+      "after_sha256": "c02f9ae9f29690e8510493d17f889ca92924ca6ee88b137172f33aa37c5cb756",
+      "unchanged": true
+    },
+    {
+      "path": "Docs/Engineering/MM304-MM305-v21-Investigation.md",
+      "before_sha256": "6031a2ed28eac3197785efa37a52060eb1d64603cea4cab33171b4037315987d",
+      "after_sha256": "6031a2ed28eac3197785efa37a52060eb1d64603cea4cab33171b4037315987d",
+      "unchanged": true
+    },
+    {
+      "path": "Docs/Engineering/MM305-NEP-Work-20261101.md",
+      "before_sha256": "c15ab813996c009e09df9f6272bbcaa5e3969ce59bdeb975f4c466ea31a9f2fe",
+      "after_sha256": "c15ab813996c009e09df9f6272bbcaa5e3969ce59bdeb975f4c466ea31a9f2fe",
+      "unchanged": true
+    },
+    {
+      "path": "ShuttleSim/scripts/run_campaign.py",
+      "before_sha256": "f7a09a7ff6b0796799598bea740ec7bac249d03a33580617aef94d0590a4ae71",
+      "after_sha256": "f7a09a7ff6b0796799598bea740ec7bac249d03a33580617aef94d0590a4ae71",
+      "unchanged": true
+    },
+    {
+      "path": "ShuttleSim/scripts/run_final_campaign.py",
+      "before_sha256": "d1bf8476742350b63fd0ecece776a337eeb8ae8c1abd734ca8430698ad7b73f8",
+      "after_sha256": "d1bf8476742350b63fd0ecece776a337eeb8ae8c1abd734ca8430698ad7b73f8",
+      "unchanged": true
+    },
+    {
+      "path": "ShuttleSim/scripts/run_guidance.py",
+      "before_sha256": "170127af6b97b5cbe2c023cef96c13cfc435f4917866e677e50d22405b0d4fe7",
+      "after_sha256": "170127af6b97b5cbe2c023cef96c13cfc435f4917866e677e50d22405b0d4fe7",
+      "unchanged": true
+    },
+    {
+      "path": "ShuttleSim/src/main.c",
+      "before_sha256": "146999d04e583523d8a337d084265fa5246fa52b77542590bc0eb6578eaae975",
+      "after_sha256": "146999d04e583523d8a337d084265fa5246fa52b77542590bc0eb6578eaae975",
+      "unchanged": true
+    },
+    {
+      "path": "Tools/build_stsn_web_model.py",
+      "before_sha256": "0d3f7fd8f4ddac7a3e7cae8508a60bac8cb20d0e4a622a9dfd15921ec1608072",
+      "after_sha256": "0d3f7fd8f4ddac7a3e7cae8508a60bac8cb20d0e4a622a9dfd15921ec1608072",
+      "unchanged": true
+    },
+    {
+      "path": "Tools/telemetry_web.py",
+      "before_sha256": "6c4015f0c2c07753345b4bb7fa539db8986b5514b0a952f24fb40c058800d640",
+      "after_sha256": "6c4015f0c2c07753345b4bb7fa539db8986b5514b0a952f24fb40c058800d640",
+      "unchanged": true
+    },
+    {
+      "path": "Tools/telemetry_web_service.sh",
+      "before_sha256": "4f6ad3eebfd6a57fe7a10bb87233a4b55753f2193c6562b88634c16a350cef44",
+      "after_sha256": "4f6ad3eebfd6a57fe7a10bb87233a4b55753f2193c6562b88634c16a350cef44",
+      "unchanged": true
+    },
+    {
+      "path": "WebTelemetry/app.js",
+      "before_sha256": "4e5b4484cdff40f22ae5c999d78815dc4c1f3765598ddf55a10ec6f580a32d0b",
+      "after_sha256": "4e5b4484cdff40f22ae5c999d78815dc4c1f3765598ddf55a10ec6f580a32d0b",
+      "unchanged": true
+    },
+    {
+      "path": "WebTelemetry/index.html",
+      "before_sha256": "eba16bcc5126fef893ca28e464dcdf574d970ee457a4c65e70ae76643adf9b76",
+      "after_sha256": "eba16bcc5126fef893ca28e464dcdf574d970ee457a4c65e70ae76643adf9b76",
+      "unchanged": true
+    },
+    {
+      "path": "WebTelemetry/scene3d.js",
+      "before_sha256": "e70efff64731ab613a1e2900f7a97ca9f171d003942d231fa457c8b8889f7223",
+      "after_sha256": "e70efff64731ab613a1e2900f7a97ca9f171d003942d231fa457c8b8889f7223",
+      "unchanged": true
+    },
+    {
+      "path": "WebTelemetry/styles.css",
+      "before_sha256": "03ee773926a5dc7235e850ba005a2c62cd607d974fa5d86eda886ef522d577df",
+      "after_sha256": "03ee773926a5dc7235e850ba005a2c62cd607d974fa5d86eda886ef522d577df",
+      "unchanged": true
+    },
+    {
+      "path": "ksl/ascent/orbit_trim.py",
+      "before_sha256": "6ca35c6ce5a65c57f103ba43151e6016c12c0583784cf228b5c7514920d468a4",
+      "after_sha256": "6ca35c6ce5a65c57f103ba43151e6016c12c0583784cf228b5c7514920d468a4",
+      "unchanged": true
+    }
+  ],
+  "all_preexisting_tracked_dirty_files_unchanged": true,
+  "backend_diff": [],
+  "scope": "Research artifacts and deterministic recorded-log extraction only; no live actions, builds, model trajectories or test suites."
+}

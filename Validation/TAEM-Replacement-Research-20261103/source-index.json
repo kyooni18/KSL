@@ -1,0 +1,329 @@
+{
+  "revision": "63b0eb3de34d48bfdc08df7c4e0c77abacf12c49",
+  "files": [
+    {
+      "path": "swift/KSL-Landing/Sources/KSLGuidance/TAEM/TAEMGuidanceEngine.swift",
+      "worktree_sha256": "dc8aab025b9be04ecdd9e936d349f431b19fc41de0e84856767ed2f68ba97b7e",
+      "baseline_sha256": "dc8aab025b9be04ecdd9e936d349f431b19fc41de0e84856767ed2f68ba97b7e",
+      "matches_baseline": true,
+      "bytes": 58539,
+      "lines": 999,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLGuidance/TAEM/TAEMDescentReference.swift",
+      "worktree_sha256": "2826e819779f9af0c8a2fd66b8c2241ee7e93e43d0daff4e77aa11bf8b3b6b71",
+      "baseline_sha256": "2826e819779f9af0c8a2fd66b8c2241ee7e93e43d0daff4e77aa11bf8b3b6b71",
+      "matches_baseline": true,
+      "bytes": 2374,
+      "lines": 50,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLGuidance/Energy/NormalForceEnvelope.swift",
+      "worktree_sha256": "611bfa33945c93dd3280ff297c89c039f1c5fdb6cb2275dce7735daa779ec25d",
+      "baseline_sha256": "611bfa33945c93dd3280ff297c89c039f1c5fdb6cb2275dce7735daa779ec25d",
+      "matches_baseline": true,
+      "bytes": 1636,
+      "lines": 40,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLGuidance/HAC/SpiralHAC.swift",
+      "worktree_sha256": "64d75dfb103c89cd499c62a4607131186167b6b1d5329592502b1a7973b5c656",
+      "baseline_sha256": "64d75dfb103c89cd499c62a4607131186167b6b1d5329592502b1a7973b5c656",
+      "matches_baseline": true,
+      "bytes": 3173,
+      "lines": 76,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLGuidance/HAC/TerminalTrajectoryEvaluator.swift",
+      "worktree_sha256": "67c4e5083ccd1162e5f528a9011ed53c1685ce1b9b4b9cc2cf042bdbb7aff9dc",
+      "baseline_sha256": "67c4e5083ccd1162e5f528a9011ed53c1685ce1b9b4b9cc2cf042bdbb7aff9dc",
+      "matches_baseline": true,
+      "bytes": 6564,
+      "lines": 105,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLGuidance/HAC/PathTrackingEngine.swift",
+      "worktree_sha256": "79ff5cda99b97494852e23e20f3a3e77964a180621672630645bb7b40f340b9f",
+      "baseline_sha256": "79ff5cda99b97494852e23e20f3a3e77964a180621672630645bb7b40f340b9f",
+      "matches_baseline": true,
+      "bytes": 12738,
+      "lines": 210,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLGuidance/HAC/MM305Admission.swift",
+      "worktree_sha256": "75966ade62e55e53a68d492ee64777f6c0863b18ce8c220ac059d7288cc4f314",
+      "baseline_sha256": "75966ade62e55e53a68d492ee64777f6c0863b18ce8c220ac059d7288cc4f314",
+      "matches_baseline": true,
+      "bytes": 8241,
+      "lines": 146,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLGuidance/Landing/LandingMissionController.swift",
+      "worktree_sha256": "18c66c600b8aa05b97fa520436f2e1da1f0949d2c64cd85785a8516a6bb771a6",
+      "baseline_sha256": "18c66c600b8aa05b97fa520436f2e1da1f0949d2c64cd85785a8516a6bb771a6",
+      "matches_baseline": true,
+      "bytes": 39399,
+      "lines": 677,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLGuidance/Landing/MissionPlanning.swift",
+      "worktree_sha256": "7eb6b63bce0d7d440e5e2c4010abbd215ec42ea8c9486ba01c5a2b60ff9fa4cf",
+      "baseline_sha256": "7eb6b63bce0d7d440e5e2c4010abbd215ec42ea8c9486ba01c5a2b60ff9fa4cf",
+      "matches_baseline": true,
+      "bytes": 4997,
+      "lines": 100,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLGuidance/Landing/MissionPlanningService.swift",
+      "worktree_sha256": "bc8425d7bc9d42608fb59fc070248c90bfc7b41d1ff276fb4f36b542fff8a221",
+      "baseline_sha256": "bc8425d7bc9d42608fb59fc070248c90bfc7b41d1ff276fb4f36b542fff8a221",
+      "matches_baseline": true,
+      "bytes": 382,
+      "lines": 9,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLGuidance/Landing/AttainableIncidenceMonitor.swift",
+      "worktree_sha256": "5296793bbefb62036f898416ec20a63fa5ff1caff08b4f7693135e7edbf7f3b0",
+      "baseline_sha256": "5296793bbefb62036f898416ec20a63fa5ff1caff08b4f7693135e7edbf7f3b0",
+      "matches_baseline": true,
+      "bytes": 2664,
+      "lines": 55,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLGuidance/Energy/RunwayEnergy.swift",
+      "worktree_sha256": "a359b9bad051d1c2c333d49c86fefae49537727ea351a7133e6faa1871485dba",
+      "baseline_sha256": "a359b9bad051d1c2c333d49c86fefae49537727ea351a7133e6faa1871485dba",
+      "matches_baseline": true,
+      "bytes": 1257,
+      "lines": 29,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLPhysics/Aerodynamics/AerodynamicsEngine.swift",
+      "worktree_sha256": "1b9128fa5d1f7954835b13b57de4c2a27cb9881b4f662f7cb8ac751403e7d824",
+      "baseline_sha256": "1b9128fa5d1f7954835b13b57de4c2a27cb9881b4f662f7cb8ac751403e7d824",
+      "matches_baseline": true,
+      "bytes": 11413,
+      "lines": 241,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLPhysics/Aerodynamics/HistoricalAerodynamics.swift",
+      "worktree_sha256": "d95c8351eb4add628654c95d08b3f2df933d229a65e80f12f748f2cfcc8b894e",
+      "baseline_sha256": "d95c8351eb4add628654c95d08b3f2df933d229a65e80f12f748f2cfcc8b894e",
+      "matches_baseline": true,
+      "bytes": 7607,
+      "lines": 133,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLPhysics/Dynamics/RotationalDynamicsEngine.swift",
+      "worktree_sha256": "7bdd1755b7444f14603e32ec3b130eadb71f61656264188b72fb5598dc6453e2",
+      "baseline_sha256": "7bdd1755b7444f14603e32ec3b130eadb71f61656264188b72fb5598dc6453e2",
+      "matches_baseline": true,
+      "bytes": 5139,
+      "lines": 92,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLPhysics/Dynamics/TranslationalDynamicsEngine.swift",
+      "worktree_sha256": "6b7e481c8492a9bf3bb54b0823cf79f7ef46663b29b07b967ed7be9a76b386c4",
+      "baseline_sha256": "6b7e481c8492a9bf3bb54b0823cf79f7ef46663b29b07b967ed7be9a76b386c4",
+      "matches_baseline": true,
+      "bytes": 2275,
+      "lines": 55,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLPhysics/Resources/STSAerodynamics.csv",
+      "worktree_sha256": "6853ae2cfa0a0da9b9daf329238550c68f3e9e335f8ed47175be4fd4dcac9f71",
+      "baseline_sha256": "6853ae2cfa0a0da9b9daf329238550c68f3e9e335f8ed47175be4fd4dcac9f71",
+      "matches_baseline": true,
+      "bytes": 11082,
+      "lines": 296,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLControl/Attitude/FlightControlSnapshot.swift",
+      "worktree_sha256": "ec2ae9f5ebf13b476293389d7dd975d49d9d0af8bbccc6058544e2af07f36891",
+      "baseline_sha256": "ec2ae9f5ebf13b476293389d7dd975d49d9d0af8bbccc6058544e2af07f36891",
+      "matches_baseline": true,
+      "bytes": 1427,
+      "lines": 26,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLControl/Attitude/FlightController.swift",
+      "worktree_sha256": "febc07b9e32400b60c60c07a9f1d8ec146d9a79bb03870c07633520bb12c4984",
+      "baseline_sha256": "febc07b9e32400b60c60c07a9f1d8ec146d9a79bb03870c07633520bb12c4984",
+      "matches_baseline": true,
+      "bytes": 23554,
+      "lines": 388,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLGuidance/Approach/TerminalFlareController.swift",
+      "worktree_sha256": "3aea25860745d9a21cf9a36b7b933b315db8c1831f2d6ce902191d8cc6f6106b",
+      "baseline_sha256": "3aea25860745d9a21cf9a36b7b933b315db8c1831f2d6ce902191d8cc6f6106b",
+      "matches_baseline": true,
+      "bytes": 7104,
+      "lines": 120,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLControl/Rollout/RolloutController.swift",
+      "worktree_sha256": "ae247750e2e0340ccc7bc724b2cb57a58052fc5f422167388b43c764c082cb62",
+      "baseline_sha256": "ae247750e2e0340ccc7bc724b2cb57a58052fc5f422167388b43c764c082cb62",
+      "matches_baseline": true,
+      "bytes": 4103,
+      "lines": 74,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLCore/Models/Configuration.swift",
+      "worktree_sha256": "f2f5310701706c4699eb877e6c23282b94d50a0bd818ec4949ae7c8bdcff2605",
+      "baseline_sha256": "f2f5310701706c4699eb877e6c23282b94d50a0bd818ec4949ae7c8bdcff2605",
+      "matches_baseline": true,
+      "bytes": 9979,
+      "lines": 190,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLCore/Models/GuidanceTargetLimiter.swift",
+      "worktree_sha256": "e41b8e54a94c855a99434bffa494d7e204a6f2692bbf0b6cdc8f8ab6c615e5b3",
+      "baseline_sha256": "e41b8e54a94c855a99434bffa494d7e204a6f2692bbf0b6cdc8f8ab6c615e5b3",
+      "matches_baseline": true,
+      "bytes": 5421,
+      "lines": 87,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLCore/Geometry/PlanetGeometry.swift",
+      "worktree_sha256": "cbc0b50e908cc8258180b2bad01b6e3b8811436d80d87d8018ce0dc2565a90f3",
+      "baseline_sha256": "cbc0b50e908cc8258180b2bad01b6e3b8811436d80d87d8018ce0dc2565a90f3",
+      "matches_baseline": true,
+      "bytes": 2198,
+      "lines": 63,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLCore/Geometry/RunwayGeometry.swift",
+      "worktree_sha256": "883396c0c062dd9c825ad8e730088ff7c26b95e8652cae543a5c2533d3c715c7",
+      "baseline_sha256": "883396c0c062dd9c825ad8e730088ff7c26b95e8652cae543a5c2533d3c715c7",
+      "matches_baseline": true,
+      "bytes": 5863,
+      "lines": 122,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLCore/Models/VehicleDynamicsChange.swift",
+      "worktree_sha256": "f62adf74628ce0700af11f62d6fb24a75c2bed6094caa3aca4d85fea4b421a71",
+      "baseline_sha256": "f62adf74628ce0700af11f62d6fb24a75c2bed6094caa3aca4d85fea4b421a71",
+      "matches_baseline": true,
+      "bytes": 3026,
+      "lines": 58,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLRuntime/Configuration/OperatorConfigurationMapper.swift",
+      "worktree_sha256": "05f14b071deb92a47eb69ce6ae5ed9354e52a15b623b7b287025bfd60779cf35",
+      "baseline_sha256": "05f14b071deb92a47eb69ce6ae5ed9354e52a15b623b7b287025bfd60779cf35",
+      "matches_baseline": true,
+      "bytes": 17296,
+      "lines": 246,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLKRPC/Transport/TCPTransport.swift",
+      "worktree_sha256": "1bb8138c9c9987bda8d175ce8252293fe0c15923b9939ba1aa2f50d6bac7f72f",
+      "baseline_sha256": "1bb8138c9c9987bda8d175ce8252293fe0c15923b9939ba1aa2f50d6bac7f72f",
+      "matches_baseline": true,
+      "bytes": 6215,
+      "lines": 165,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLKRPC/Transport/KRPCSession.swift",
+      "worktree_sha256": "dd0dd04ad3546d99e3ffbb7f4b659111f60de7baceaf7fbc5530c2fa3cfb18f2",
+      "baseline_sha256": "dd0dd04ad3546d99e3ffbb7f4b659111f60de7baceaf7fbc5530c2fa3cfb18f2",
+      "matches_baseline": true,
+      "bytes": 2932,
+      "lines": 84,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "swift/KSL-Landing/Sources/KSLKRPC/Telemetry/KRPCFlightIO.swift",
+      "worktree_sha256": "f9636b3da1dbc8a9f87358acc55d1d30f1f3563d16ecc51b4f0405a0a6206654",
+      "baseline_sha256": "f9636b3da1dbc8a9f87358acc55d1d30f1f3563d16ecc51b4f0405a0a6206654",
+      "matches_baseline": true,
+      "bytes": 59711,
+      "lines": 1128,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "WebTelemetry/app.js",
+      "worktree_sha256": "4e5b4484cdff40f22ae5c999d78815dc4c1f3765598ddf55a10ec6f580a32d0b",
+      "baseline_sha256": "bdbb1c62c60f1b4d92f94d171f5960c791a503706845573f20a641697d101a3f",
+      "matches_baseline": false,
+      "bytes": 160849,
+      "lines": 3002,
+      "evidence_role": "current instructions/UI only; not frozen frontend identity"
+    },
+    {
+      "path": "Tools/telemetry_web.py",
+      "worktree_sha256": "6c4015f0c2c07753345b4bb7fa539db8986b5514b0a952f24fb40c058800d640",
+      "baseline_sha256": "ef90ec454ecbc3c88060772468fb8bca8b5b58da78e25efee9832dbc405cf2f8",
+      "matches_baseline": false,
+      "bytes": 222412,
+      "lines": 4790,
+      "evidence_role": "current instructions/UI only; not frozen frontend identity"
+    },
+    {
+      "path": "AGENTS.md",
+      "worktree_sha256": "c02f9ae9f29690e8510493d17f889ca92924ca6ee88b137172f33aa37c5cb756",
+      "baseline_sha256": "6760babcc670b3f5e8acd374ddc737bb15ba9e76d0779c6ad41c604ab7baa223",
+      "matches_baseline": false,
+      "bytes": 8039,
+      "lines": 119,
+      "evidence_role": "current instructions/UI only; not frozen frontend identity"
+    },
+    {
+      "path": "Docs/Engineering/Runway36-Restart-Investigation-20261102.md",
+      "worktree_sha256": "4ba3e21a03babcf6338c4e213ba579b2fe4a79b06b4ac425b5234af08f9cc89e",
+      "baseline_sha256": "4ba3e21a03babcf6338c4e213ba579b2fe4a79b06b4ac425b5234af08f9cc89e",
+      "matches_baseline": true,
+      "bytes": 10351,
+      "lines": 74,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "Docs/Engineering/Runway36-Recovery-Fix-20261102.md",
+      "worktree_sha256": "127c25acb8256065c48fe4d739d1a10ed1df4490f1918ceaf15826e1ea74a384",
+      "baseline_sha256": "127c25acb8256065c48fe4d739d1a10ed1df4490f1918ceaf15826e1ea74a384",
+      "matches_baseline": true,
+      "bytes": 5449,
+      "lines": 30,
+      "evidence_role": "baseline source/document"
+    },
+    {
+      "path": "Docs/Engineering/MM304-Handoff-Opportunity-20261102.md",
+      "worktree_sha256": "d65dd338667262a2be580f2a4499b9531636b94228131723a9d069bf6575676e",
+      "baseline_sha256": "d65dd338667262a2be580f2a4499b9531636b94228131723a9d069bf6575676e",
+      "matches_baseline": true,
+      "bytes": 8149,
+      "lines": 52,
+      "evidence_role": "baseline source/document"
+    }
+  ]
+}
