@@ -18,6 +18,11 @@ public struct GuidanceTargetLimiter: Codable, Sendable, Equatable {
                               pitchResponseSeconds: Double? = nil,
                               controlAuthority: ControlAuthorityTelemetry? = nil) -> GuidanceTarget {
     var target = requested
+    // Limit the goal before pricing/slewing it. A command schedule cannot
+    // purchase force by aiming beyond the configured incidence/bank envelope.
+    target.bank = clamp(target.bank, -c.vehicle.maximumBank, c.vehicle.maximumBank)
+    target.angleOfAttack = clamp(target.angleOfAttack,
+      c.vehicle.minimumAngleOfAttack, c.vehicle.maximumAngleOfAttack)
     if let old = previous {
       let plant = c.vehicle.controlPlant
       var rollRateLimit = [.approach, .preflare, .flare].contains(phase)
@@ -58,6 +63,8 @@ public struct GuidanceTargetLimiter: Codable, Sendable, Equatable {
     }
     // Never hand the FCS an attitude outside the vehicle envelope.
     target.bank = clamp(target.bank, -c.vehicle.maximumBank, c.vehicle.maximumBank)
+    target.angleOfAttack = clamp(target.angleOfAttack,
+      c.vehicle.minimumAngleOfAttack, c.vehicle.maximumAngleOfAttack)
     previous = target
     return target
   }

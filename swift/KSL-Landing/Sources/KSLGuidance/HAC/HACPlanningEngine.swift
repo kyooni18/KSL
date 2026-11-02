@@ -493,18 +493,23 @@ public final class HACPlanningEngine {
       // pass the same nominal rollout; cancellation keeps stale work bounded
       // by the planning owner, not by relaxing any physical admission gate.
       var selected = first
+      // All candidates in this comparison start from the same actual history.
+      let comparisonSeed = nativeSeed ?? NativeCommandSeed(state: state, controls: controlSnapshot,
+        limiter: targetLimiter ?? GuidanceTargetLimiter(previous: previousTarget))
       var nominal: TerminalClosedLoopCase?
       for candidate in candidates where candidate.assessment.feasible && !Task.isCancelled {
         let result = trajectory.evaluate(plan: candidate, from: state,
-          controlSnapshot: controlSnapshot, previousTarget: previousTarget, targetLimiter: targetLimiter, nativeSeed: nativeSeed, lift: 1, drag: 1)
-        if nominal == nil || result.feasible { selected = candidate; nominal = result }
+          controlSnapshot: controlSnapshot, previousTarget: previousTarget, targetLimiter: targetLimiter, nativeSeed: comparisonSeed, lift: 1, drag: 1)
+        if nominal == nil || TerminalRecoveryOrder.compare(result, to: nominal!) == .challengerPreferred {
+          selected = candidate; nominal = result
+        }
         if result.qualified { break }
         // A different drawing cannot supply the missing plant evidence.
         if result.evaluation?.end == .unsupportedDynamics { break }
       }
       if let nominal, !Task.isCancelled {
         let cases = [nominal]
-        closedLoopAdvisories = cases.filter { !$0.feasible }
+        closedLoopAdvisories = cases.filter { !$0.qualified }
         chosen = .init(identifier: selected.identifier, createdAt: selected.createdAt,
           spiral: selected.spiral, stations: selected.stations, assessment: selected.assessment,
           stressCases: selected.stressCases, closedLoopCases: cases,

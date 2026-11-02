@@ -61,6 +61,7 @@ final class NativeCommandRolloutTests: XCTestCase {
       }
       resumed = NativeCommandRollout(seed: branch.seed, configuration: c,
         atmosphere: atmosphere, aerodynamics: aero)
+      XCTAssertEqual(branch.seed.originID, seed.originID)
       XCTAssertEqual(step.limited, target)
       XCTAssertEqual(step.issued.pitch, command.pitch, accuracy: 1e-12)
       XCTAssertEqual(step.issued.roll, command.roll, accuracy: 1e-12)

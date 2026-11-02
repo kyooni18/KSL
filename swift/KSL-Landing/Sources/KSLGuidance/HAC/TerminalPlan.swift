@@ -82,7 +82,12 @@ public struct TerminalClosedLoopCase: Codable, Sendable {
   /// Nil in legacy records; new forecasts expose unpriced and invalid tails.
   public var evaluation: TerminalEvaluation? = nil
   public var qualified: Bool {
-    feasible && (evaluation.map { $0.status == .complete && $0.end == .sustainedStop } ?? true)
+    feasible && violations.isEmpty && (evaluation.map {
+      $0.status == .complete && $0.end == .sustainedStop
+        && $0.maximumPressureExcess == 0 && $0.pressureExcessIntegral == 0
+        && $0.maximumLoadExcess == 0 && $0.loadExcessIntegral == 0
+        && ($0.comparisonContext == nil || $0.touchdown?.acceptable == true)
+    } ?? true)
   }
 }
 

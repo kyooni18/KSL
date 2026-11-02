@@ -1,0 +1,18 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 46] CoreTests-product
+[2 / 8] CoreTests-product
+[4 / 10] CoreTests-product
+[9 / 11] CoreTests-product
+Build complete! (1.25초)
+Test Suite 'Selected tests' started at 2026-11-03 03:34:39.313.
+Test Suite 'CoreTests.xctest' started at 2026-11-03 03:34:39.314.
+Test Suite 'GuidanceAuthorityRegressionTests' started at 2026-11-03 03:34:39.314.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testRequestedTargetsStayWithinTheConfiguredAttitudeEnvelope]' started.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testRequestedTargetsStayWithinTheConfiguredAttitudeEnvelope]' passed (0.001 seconds).
+Test Suite 'GuidanceAuthorityRegressionTests' passed at 2026-11-03 03:34:39.315.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'CoreTests.xctest' passed at 2026-11-03 03:34:39.315.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 03:34:39.315.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.002) seconds

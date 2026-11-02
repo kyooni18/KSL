@@ -1,0 +1,60 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 32] KSLDiagnostics
+[2 / 55] KSLCore
+[4 / 57] KSLCore
+[21 / 33] CoreTests-product
+[23 / 35] CoreTests-product
+[39 / 41] CoreTests-product
+Build complete! (2.00초)
+Test Suite 'Selected tests' started at 2026-11-03 03:30:27.325.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-03 03:30:27.326.
+Test Suite 'MM305AdmissionQualificationTests' started at 2026-11-03 03:30:27.326.
+Test Case '-[GuidanceTests.MM305AdmissionQualificationTests testPreviewPhysicalPassCannotTransferUnqualifiedNominalPlan]' started.
+Test Case '-[GuidanceTests.MM305AdmissionQualificationTests testPreviewPhysicalPassCannotTransferUnqualifiedNominalPlan]' passed (0.003 seconds).
+Test Suite 'MM305AdmissionQualificationTests' passed at 2026-11-03 03:30:27.330.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.003 (0.004) seconds
+Test Suite 'NativeCommandRolloutTests' started at 2026-11-03 03:30:27.330.
+Test Case '-[GuidanceTests.NativeCommandRolloutTests testSharedRolloutMatchesNativePipelineWithWarmControllerAndLimiter]' started.
+Test Case '-[GuidanceTests.NativeCommandRolloutTests testSharedRolloutMatchesNativePipelineWithWarmControllerAndLimiter]' passed (0.007 seconds).
+Test Suite 'NativeCommandRolloutTests' passed at 2026-11-03 03:30:27.337.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.007 (0.007) seconds
+Test Suite 'TAEMPredictionEvidenceTests' started at 2026-11-03 03:30:27.337.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testMeasuredMomentEvidenceExpiresWithoutRefreshFromModeledObservations]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testMeasuredMomentEvidenceExpiresWithoutRefreshFromModeledObservations]' passed (0.006 seconds).
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testRecordedRCSHandoffUsesExcludedTorqueAndRejectsMissingDecomposition]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testRecordedRCSHandoffUsesExcludedTorqueAndRejectsMissingDecomposition]' passed (0.003 seconds).
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testUnidentifiedPlantAndMissingSuffixNeverQualifyAsTerminalOutcomes]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testUnidentifiedPlantAndMissingSuffixNeverQualifyAsTerminalOutcomes]' passed (0.004 seconds).
+Test Suite 'TAEMPredictionEvidenceTests' passed at 2026-11-03 03:30:27.351.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.014 (0.014) seconds
+Test Suite 'TerminalRecoveryOrderTests' started at 2026-11-03 03:30:27.351.
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testComparisonRejectsMixedOriginsModelsAndPoliciesAndDoesNotRewardStopPrecision]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testComparisonRejectsMixedOriginsModelsAndPoliciesAndDoesNotRewardStopPrecision]' passed (0.005 seconds).
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testMissingSuffixCannotBeatCompleteFailedRecoveryAndBetterFailureNeedsNoQualification]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testMissingSuffixCannotBeatCompleteFailedRecoveryAndBetterFailureNeedsNoQualification]' passed (0.003 seconds).
+Test Suite 'TerminalRecoveryOrderTests' passed at 2026-11-03 03:30:27.359.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.008 (0.008) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-03 03:30:27.359.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.032 (0.033) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 03:30:27.359.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.032 (0.034) seconds
+Test Suite 'Selected tests' started at 2026-11-03 03:30:27.459.
+Test Suite 'CoreTests.xctest' started at 2026-11-03 03:30:27.460.
+Test Suite 'GuidanceAuthorityRegressionTests' started at 2026-11-03 03:30:27.460.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testActiveAttitudeAuthorityRemainsContinuousAtAtmosphereBoundary]' started.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testActiveAttitudeAuthorityRemainsContinuousAtAtmosphereBoundary]' passed (0.001 seconds).
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testBrakingAReferenceCannotOvershootOrMoveAwayFromItsGoal]' started.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testBrakingAReferenceCannotOvershootOrMoveAwayFromItsGoal]' passed (0.000 seconds).
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testMeasuredZeroAuthorityDoesNotBecomeAnUnlimitedSlew]' started.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testMeasuredZeroAuthorityDoesNotBecomeAnUnlimitedSlew]' passed (0.000 seconds).
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testPredictionCopyPreservesSlewMomentumWithoutOvershoot]' started.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testPredictionCopyPreservesSlewMomentumWithoutOvershoot]' passed (0.000 seconds).
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testRequestedTargetsStayWithinTheConfiguredAttitudeEnvelope]' started.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testRequestedTargetsStayWithinTheConfiguredAttitudeEnvelope]' passed (0.000 seconds).
+Test Suite 'GuidanceAuthorityRegressionTests' passed at 2026-11-03 03:30:27.462.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'CoreTests.xctest' passed at 2026-11-03 03:30:27.462.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 03:30:27.462.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.003) seconds

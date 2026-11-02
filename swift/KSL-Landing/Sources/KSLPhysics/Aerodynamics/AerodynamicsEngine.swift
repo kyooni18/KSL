@@ -13,6 +13,8 @@ public struct LiftSolution: Sendable {
 
 /// Immutable measured-table model. No online mutation of an already committed plan's model.
 public final class AerodynamicsEngine: Sendable {
+  /// Runtime identity of this immutable calibrated model, not a resource hash.
+  public let instanceID = UUID()
   public let referenceArea: Double
   public let liftScale: Double
   public let dragScale: Double

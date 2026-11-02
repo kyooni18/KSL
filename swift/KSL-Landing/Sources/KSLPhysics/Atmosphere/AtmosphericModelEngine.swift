@@ -48,6 +48,8 @@ public struct HermiteCurve: Sendable {
 }
 
 public final class AtmosphericModelEngine: Sendable {
+  /// Runtime identity of this immutable calibrated model, not a resource hash.
+  public let instanceID = UUID()
   public let planet: PlanetConfiguration
   public let densityScale: Double
   public let soundSpeedScale: Double

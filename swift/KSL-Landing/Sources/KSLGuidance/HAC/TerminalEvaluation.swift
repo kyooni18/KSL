@@ -1,4 +1,5 @@
 import KSLCore
+import KSLPhysics
 
 /// Completion of physical accounting is independent of runway qualification.
 public enum TerminalEvaluationStatus: String, Codable, Sendable {
@@ -21,4 +22,8 @@ public struct TerminalEvaluation: Codable, Sendable {
   public let heightChange: Double
   public let maximumPressureExcess: Double, pressureExcessIntegral: Double
   public let maximumLoadExcess: Double, loadExcessIntegral: Double
+  /// Nil in historical records; origin/model/policy identity is required for
+  /// new cross-candidate recovery comparisons.
+  public var comparisonContext: TerminalComparisonContext? = nil
+  public var touchdown: TouchdownEvent? = nil
 }

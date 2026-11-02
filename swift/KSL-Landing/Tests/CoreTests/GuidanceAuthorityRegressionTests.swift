@@ -67,4 +67,24 @@ final class GuidanceAuthorityRegressionTests: XCTestCase {
     XCTAssertLessThanOrEqual(copied.angleOfAttack, request.angleOfAttack)
   }
 
+  func testRequestedTargetsStayWithinTheConfiguredAttitudeEnvelope() {
+    let c = MissionConfiguration()
+    let request = GuidanceTarget(angleOfAttack: c.vehicle.maximumAngleOfAttack+radians(1),
+      bank: c.vehicle.maximumBank+radians(1))
+    var fresh = GuidanceTargetLimiter()
+    let bounded = fresh.update(request, phase: .acquisition, configuration: c, dt: c.guidance.controlInterval)
+    XCTAssertEqual(bounded.angleOfAttack, c.vehicle.maximumAngleOfAttack)
+    XCTAssertEqual(bounded.bank, c.vehicle.maximumBank)
+    var moving = GuidanceTargetLimiter(previous: .init())
+    let slewed = moving.update(request, phase: .acquisition, configuration: c, dt: c.guidance.controlInterval,
+      dynamicPressure: 3000, controlAuthority: authority)
+    XCTAssertGreaterThan(slewed.angleOfAttack, 0)
+    XCTAssertLessThanOrEqual(slewed.angleOfAttack, c.vehicle.maximumAngleOfAttack)
+    XCTAssertLessThanOrEqual(abs(slewed.bank), c.vehicle.maximumBank)
+    var freshLower = GuidanceTargetLimiter()
+    let lower = freshLower.update(.init(angleOfAttack: c.vehicle.minimumAngleOfAttack-radians(1)),
+      phase: .acquisition, configuration: c, dt: c.guidance.controlInterval)
+    XCTAssertEqual(lower.angleOfAttack, c.vehicle.minimumAngleOfAttack)
+  }
+
 }

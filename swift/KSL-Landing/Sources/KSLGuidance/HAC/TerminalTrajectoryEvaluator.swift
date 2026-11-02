@@ -21,10 +21,12 @@ public final class TerminalTrajectoryEvaluator {
                        lift: Double, drag: Double,
                        trace: ((VehicleState, PathStation, GuidanceTarget) -> Void)? = nil) -> TerminalClosedLoopCase {
     let c = configuration, dt = c.guidance.controlInterval
-    let rollout = NativeCommandRollout(seed: nativeSeed ?? .init(state: initial, controls: controlSnapshot,
-      limiter: targetLimiter ?? GuidanceTargetLimiter(previous: previousTarget)),
-      configuration: c, atmosphere: atmosphere,
-      aerodynamics: lift == 1 && drag == 1 ? aerodynamics : aerodynamics.scaled(lift: lift, drag: drag))
+    let seed = nativeSeed ?? NativeCommandSeed(state: initial, controls: controlSnapshot,
+      limiter: targetLimiter ?? GuidanceTargetLimiter(previous: previousTarget))
+    let model = lift == 1 && drag == 1 ? aerodynamics : aerodynamics.scaled(lift: lift, drag: drag)
+    let comparisonContext = TerminalComparisonContext(seed: seed, configuration: c,
+      atmosphere: atmosphere, aerodynamics: model)
+    let rollout = NativeCommandRollout(seed: seed, configuration: c, atmosphere: atmosphere, aerodynamics: model)
     let tracker = PathTrackingEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
     let approach = ApproachGuidanceEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
     let authority = AerodynamicAuthorityEstimator(model: aerodynamics)
@@ -143,6 +145,7 @@ public final class TerminalTrajectoryEvaluator {
         aerodynamicWork: work, energyChange: energy(state)-energy(initial),
         heightChange: state.position.length-initial.position.length,
         maximumPressureExcess: maximumPressureExcess, pressureExcessIntegral: pressureIntegral,
-        maximumLoadExcess: maximumLoadExcess, loadExcessIntegral: loadIntegral))
+        maximumLoadExcess: maximumLoadExcess, loadExcessIntegral: loadIntegral,
+        comparisonContext: comparisonContext, touchdown: event))
   }
 }

@@ -1,3 +1,4 @@
+import Foundation
 import KSLCore
 import KSLControl
 
@@ -15,6 +16,8 @@ public enum NativeMomentSupport: String, Codable, Sendable {
 /// supplied by the caller. This is a native-model seed, not an exact live-plant
 /// reconstruction: measured surface/authority anchors retain their uncertainty.
 public struct NativeCommandSeed: Sendable {
+  /// Identity of one immutable originating history, preserved by continuations.
+  public let originID: UUID
   public let state: VehicleState
   public let controls: FlightControlSnapshot?
   public let limiter: GuidanceTargetLimiter
@@ -23,6 +26,7 @@ public struct NativeCommandSeed: Sendable {
   fileprivate let measuredVehicle: Bool
   public init(state: VehicleState, controls: FlightControlSnapshot?, limiter: GuidanceTargetLimiter,
               plant: ShuttlePhysicsSnapshot? = nil) {
+    originID = UUID()
     self.state = state; self.controls = controls; self.limiter = limiter; self.plant = plant
     momentEvidence = controls
     measuredVehicle = state.aerodynamics.measuredForces || (state.controlAuthority.map {
@@ -31,6 +35,7 @@ public struct NativeCommandSeed: Sendable {
   }
   fileprivate init(state: VehicleState, controls: FlightControlSnapshot?, limiter: GuidanceTargetLimiter,
                    plant: ShuttlePhysicsSnapshot, inherited: Self) {
+    originID = inherited.originID
     self.state = state; self.controls = controls; self.limiter = limiter; self.plant = plant
     momentEvidence = inherited.momentEvidence; measuredVehicle = inherited.measuredVehicle
   }
