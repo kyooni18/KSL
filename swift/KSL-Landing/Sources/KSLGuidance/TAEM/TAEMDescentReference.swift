@@ -17,6 +17,16 @@ struct TAEMDescentReference {
       (3*a*x*x+2*b*x+distance*endSlope)/distance,
       (6*a*x+2*b)/(distance*distance))
   }
+  /// Track height against horizontal ground distance. At a measured-state
+  /// rejoin this preserves the endpoint flight-path angle even on steep
+  /// descents; treating vertical rate as a fraction of fixed total airspeed
+  /// would amplify the angle or saturate it at a vertical dive.
+  func flightPath(at remaining: Double, height: Double,
+                  horizontalSpeed: Double, responseSeconds: Double) -> Double {
+    let r = sample(remaining)
+    return atan(-r.slope + (r.height-height)/(2*responseSeconds*horizontalSpeed))
+  }
+
   /// Required upward normal acceleration along this profile. A negative
   /// value is an impossible push-over for the positive-lift TAEM bank law;
   /// it must not be clipped to zero when assessing a candidate.

@@ -36,6 +36,19 @@ final class TAEMTransitionTests: XCTestCase {
       gravity: c.planet.gravitationalParameter / (radius * radius), radius: radius), 0)
   }
 
+  func testSteepDescentRejoinPreservesMeasuredFlightPath() {
+    // Recorded steep-descent attitude, UT 210339.99, in the 37f2fd8 flight.
+    // This checks the reference boundary, without modifying the vehicle.
+    let gamma = radians(-52.54757420349752)
+    let path = TAEMDescentReference(distance: 14240.671816620295,
+      startHeight: 10959.151276364108, endHeight: 961.5108126231888,
+      startSlope: -tan(gamma), endSlope: tan(radians(24)))
+    XCTAssertEqual(path.flightPath(at: path.distance, height: path.startHeight,
+      horizontalSpeed: 155.15578434197883, responseSeconds: 6), gamma, accuracy: 1e-12)
+    XCTAssertEqual(path.flightPath(at: 0, height: path.endHeight,
+      horizontalSpeed: 120, responseSeconds: 6), -radians(24), accuracy: 1e-12)
+  }
+
   func testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary() {
     let remaining=2 * Double.pi+0.03
     let next=TAEMGuidanceEngine.advanceTurn(remaining,from:0.03,to:-0.01)

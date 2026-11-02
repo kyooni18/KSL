@@ -540,8 +540,8 @@ public final class LandingMissionController {
     d.actualCross = measured.cross
     d.actualRunwayRange = frame.distance(from: state.position, to: frame.origin)
     d.plannedCrossAim = entry.crossAim
-    if let nep = (plan ?? advisoryPlan)?.nominalEnergyPoint ?? lastPlanningResult?.nominalEnergyPoint
-      ?? nominalEnergyPoint?.point {
+    if let nep = nominalEnergyPoint?.point ?? (plan ?? advisoryPlan)?.nominalEnergyPoint
+      ?? lastPlanningResult?.nominalEnergyPoint {
       d.nominalEnergyAlong = nep.along; d.nominalEnergyHeight = nep.height
       d.nominalEnergyAirspeed = nep.airspeed; d.nominalEnergyFlightPath = nep.flightPathAngle
       d.nominalEnergyPredictedTouchdownSpeed = nep.predictedTouchdownSpeed
