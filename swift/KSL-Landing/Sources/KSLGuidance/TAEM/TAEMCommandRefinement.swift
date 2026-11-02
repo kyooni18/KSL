@@ -135,7 +135,7 @@ extension TAEMCommandSearch {
           }
           guard duration.isFinite, duration > 0,
             command.target != old.command.target || duration != old.duration else { continue }
-          segments[index] = .init(duration: duration, command: command)
+          segments[index] = .init(duration: duration, command: command, untilCourseChange: old.untilCourseChange)
           guard segments.reduce(0, { $0+$1.duration }) <= c.guidance.maximumPredictionDuration else { continue }
           let id = "\(center.id)/poll/\(index)/\(coordinate)/\(sign < 0 ? "minus" : "plus")"
           candidates.append(.init(id: id, topology: center.topology, segments: segments))

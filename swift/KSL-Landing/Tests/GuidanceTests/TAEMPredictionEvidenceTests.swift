@@ -151,6 +151,25 @@ final class TAEMPredictionEvidenceTests: XCTestCase {
     let tail = try evaluator.evaluate([.init(duration: dt/2, command: command)], from: first.seed)
     XCTAssertEqual(together.end, .scheduleExhausted)
     XCTAssertEqual(together.steps.count, 2)
+    XCTAssertEqual(together.completedSegments, 2)
+    // Numerical event-bracketing check on this same one-tick native path;
+    // no vehicle capability or actual flight state is perturbed.
+    let firstTurn = first.courseProgress.signedChange
+    XCTAssertNotEqual(firstTurn, 0)
+    let event = try evaluator.evaluate([.init(duration: 2*dt, command: command,
+      untilCourseChange: firstTurn/2)], from: seed)
+    XCTAssertEqual(event.end, .scheduleExhausted)
+    XCTAssertEqual(event.completedSegments, 1)
+    XCTAssertEqual(event.steps.count, 1)
+    XCTAssertEqual(event.seed.state, first.seed.state)
+    let direction = firstTurn > 0 ? 1.0 : -1.0
+    let unachieved = try evaluator.evaluate([.init(duration: dt, command: command,
+      untilCourseChange: firstTurn+direction*2 * .pi)], from: seed)
+    XCTAssertEqual(unachieved.end, .courseNotReached)
+    XCTAssertEqual(unachieved.completedSegments, 0)
+    XCTAssertEqual(unachieved.seed.state, first.seed.state)
+    XCTAssertThrowsError(try evaluator.evaluate([.init(duration: dt, command: command,
+      untilCourseChange: 0)], from: seed))
     XCTAssertEqual(together.seed.originID, seed.originID)
     XCTAssertEqual(together.seed.state, tail.seed.state)
     XCTAssertEqual(together.seed.limiter, tail.seed.limiter)
@@ -277,7 +296,8 @@ final class TAEMPredictionEvidenceTests: XCTestCase {
     target.bank = c.vehicle.maximumBank
     target.speedbrakeFraction = 0.4
     let center = TAEMCommandCandidate(id: "bounded-center", topology: .right, segments: [
-      .init(duration: c.guidance.controlInterval, command: .init(phase: .acquisition, target: target))])
+      .init(duration: c.guidance.controlInterval, command: .init(phase: .acquisition, target: target),
+        untilCourseChange: 2 * .pi)])
     let steps = TAEMCommandRefinementSteps(alphaRadians: c.guidance.alphaSlewRate*c.guidance.controlInterval,
       bankRadians: c.guidance.bankSlewRate*c.guidance.controlInterval,
       durationSeconds: c.guidance.controlInterval/2)
@@ -295,6 +315,7 @@ final class TAEMPredictionEvidenceTests: XCTestCase {
       XCTAssertLessThanOrEqual(abs(segment.command.target.bank), c.vehicle.maximumBank)
       XCTAssertGreaterThan(segment.duration, 0)
       XCTAssertEqual(segment.command.target.speedbrakeFraction, target.speedbrakeFraction)
+      XCTAssertEqual(segment.untilCourseChange, 2 * .pi)
       XCTAssertEqual(trial.prefix.comparisonContext.originID, seed.originID)
       XCTAssertEqual(trial.prefix.end, .unsupportedDynamics)
       XCTAssertTrue(trial.prefix.steps.isEmpty)
