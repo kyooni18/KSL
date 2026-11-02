@@ -459,7 +459,10 @@ def main():
     duration=min(meta['duration']-args.seek,args.duration or meta['duration'])
     if out.exists():raise SystemExit(f'Refusing to overwrite {out}')
     white=meta['max_cll'] or 203.0
-    graph=(f'[0:v]fps={args.fps},crop={cw}:{ch}:{cx}:{cy},'
+    # A VFR recording can begin just after an input seek. Explicit zero origin
+    # duplicates that first decoded frame rather than dropping the first HUD
+    # tick and shortening a section when separately encoded sections are joined.
+    graph=(f'[0:v]fps=fps={args.fps}:start_time=0,crop={cw}:{ch}:{cx}:{cy},'
            f'scale={W}:{H}:flags=lanczos:in_color_matrix=bt2020:out_color_matrix=bt2020,'
            'format=yuv444p10le[v];'
            '[1:v]scale=in_range=full:out_color_matrix=bt2020:out_range=tv,format=yuva444p10le[h];'
