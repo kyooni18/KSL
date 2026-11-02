@@ -35,3 +35,7 @@ Five focused methods pass: three new checks cover the genuine OMS inventory, rej
 The ranking tests change candidate metadata only; no vehicle, atmosphere, propulsion or actuator capability is scaled. The actual inventory is retained in `Fixtures/oms-propellant-inventory-20261102.json`. The over-budget plan is retained as a genuine rejection fixture. Logs and the raw read-only inventory are in `Validation/OMS-Waiting-20261102/`.
 
 No new live test has validated this repair. The next plan must be generated from the then-current measured orbit or an explicitly reloaded checkpoint; the interrupted normal burn already changed the orbit. A future live attempt still requires explicit authorization. No new successful landing or suitable within-budget landing window is claimed.
+
+## Restart preflight correction
+
+The first live preflight exposed an incorrect Swift RPC name for resource density. The official Python client invokes `Resources_static_Density`, not `Resources_Density`. Corrected that spelling and rebuilt before any flight controller was launched. A fresh native inspection succeeded: STS 26 parts, throttle zero, mass 26,065.06 kg, OMS burnout mass 21,556.17 kg, 120 kN available thrust and 345 s Isp. The failed preflight binary/provenance remain separately retained in the restart directory. This validates the live inventory call path, not a landing.

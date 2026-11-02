@@ -898,7 +898,7 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
         let ratio=Double(try KRPCValue.decodeFloat(data[1]))
         let amount=try KRPCValue.decodeDouble(data[2])
         let density=Double(try KRPCValue.decodeFloat(try await session.call([
-          .init(procedure:"Resources_Density",arguments:[KRPCValue.string(name)])])[0]))
+          .init(procedure:"Resources_static_Density",arguments:[KRPCValue.string(name)])])[0]))
         guard ratio>0,amount>=0,density>0 else {throw FlightError.invalidTelemetry("Invalid OMS propellant inventory")}
         if let old=pools[name] {
           guard old.ratio==ratio else {throw FlightError.invalidTelemetry("OMS engines have different propellant mixtures")}

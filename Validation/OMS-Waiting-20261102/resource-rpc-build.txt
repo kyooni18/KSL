@@ -1,0 +1,8 @@
+Building for production...
+[Computing dependencies]
+[1 / 3]
+[2 / 3] KSLKRPC
+[3 / 4] KSLKRPC
+[9 / 9] ksl-landing-product
+[10 / 11] ksl-landing-product
+Build complete! (11.07초)
