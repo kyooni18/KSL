@@ -86,12 +86,12 @@ DEFAULTS: dict[str, Any] = {
         "autoWarp": True,         # initial runtime control; toggled live from the TUI
     },
     "landing": {
-        "backendConfiguration": "Configuration/sts-live.json",
-        "modelProfile": "sts-live-20261029",
+        "backendConfiguration": "Configuration/sts.json",
+        "modelProfile": "sts",
         "autoWarp": True,
-        # "c" = native C backend (deorbit..rollout); "swift" = swift/KSL-Landing
-        # (airborne takeover from mm304 on; it has no deorbit/orbit commands).
-        "engine": "c",
+        # Swift's NDJSON backend owns the complete deorbit-through-rollout flow.
+        # Explicit "c" preserves the legacy backend; "swift" is direct airborne takeover.
+        "engine": "swift-backend",
         "swiftVessel": "STS",
         "swiftAirbrakeGroup": 1,
         "swiftConfiguration": "",     # optional Swift MissionConfiguration JSON (repo-relative)
@@ -266,7 +266,7 @@ class MissionConfig:
                              ("landing", "modelProfile"), ("simulation", "scenario")):
             if not self.data[section][key].strip():
                 problems.append(f"{section}.{key} must not be empty")
-        if self.data["landing"].get("engine", "c") not in ("c", "swift", "swift-backend"):
+        if self.data["landing"].get("engine", "swift-backend") not in ("c", "swift", "swift-backend"):
             problems.append("landing.engine must be 'c', 'swift' or 'swift-backend'")
         if self.data["landing"].get("engine") == "swift" and not 0 <= int(self.data["landing"]["swiftAirbrakeGroup"]) <= 9:
             problems.append("landing.swiftAirbrakeGroup must be 0-9")

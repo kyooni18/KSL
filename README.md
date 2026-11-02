@@ -59,19 +59,21 @@ bin/ksl continue latest --use-save                 # …after loading the checkp
 bin/ksl status --watch                             # follow a running mission from another shell
 ```
 
-The standard STS mission profiles use `Configuration/sts-taem.json`. This is
-normal landing configuration, not a run-directory override: it carries the
-35,023 m TAEM interface objective, 2,286 m Final inlet, 24° outer glide,
-18 m flare height, and 400 m touchdown aim used by the successful checkpoint
-run. `Configuration/sts-taem-native.json` is the equivalent native SI profile
-for direct engine use:
+The standard STS mission profiles and CLI defaults use `Configuration/sts.json`.
+This is the mainstream configuration, not a run-directory or experimental override.
+It includes the 35,023 m TAEM interface objective, 2,286 m Final inlet, 24°
+TAEM/outer-glide envelope, response-limited terminal rolls, and 400 m touchdown aim.
+Measured-energy split-rudder control runs in TAEM and Final when energy and
+attainable lift reserves permit it. Ground-contact-gated parachutes are enabled.
+The older `sts-taem*.json` files remain historical reproduction inputs, not the
+configuration used by normal missions. The revised terminal behavior has focused
+recorded-state checks, **not** a new full-chain live landing certification:
 
 ```sh
 make swift
 bin/ksl land --from mm304 --dry-run     # review configuration and commands; no KSP control
 bin/ksl land --from mm304              # take over the current atmospheric flight
-# Developer/direct engine equivalent:
-bin/ksl swift fly --configuration Configuration/sts-taem-native.json --vessel STS
+# No experimental configuration, environment variable, or test switch is needed.
 ```
 
 `ksl land` records configuration, telemetry, status and checkpoints through the
@@ -219,7 +221,7 @@ mission. Unset keys take the defaults in `ksl/config.py`.
 | `checkpoints` | phases at which live missions write KSP saves |
 
 The native backend keeps its own detailed configuration
-(`Configuration/sts-live.json` for the STS, `default.json` for STS-N). The
+(`Configuration/sts.json` for the STS, `default.json` for STS-N). The
 profile references it and overrides its kRPC endpoint.
 
 Profiles reject unknown keys, invalid types, nonfinite numbers and invalid

@@ -3,5 +3,5 @@
   "ascent": {"targetAltitudeKm": 85, "inclinationDeg": 0.1},
   "profile": {"kind": "geo", "gtoPerigeeKm": 85, "geoLongitudeDeg": -74.6, "targetLongitude": true, "geoCircularize": "auto"},
   "checkpoints": {"kspSaveOnPhases": ["orbit"]},
-  "landing": {"engine": "swift-backend", "backendConfiguration": "Configuration/sts-taem.json", "modelProfile": "sts-taem"}
+  "landing": {"engine": "swift-backend", "backendConfiguration": "Configuration/sts.json", "modelProfile": "sts"}
 }

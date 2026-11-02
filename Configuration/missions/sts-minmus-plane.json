@@ -3,5 +3,5 @@
   "ascent": {"targetAltitudeKm": 90, "inclinationDeg": 6},
   "profile": {"kind": "plane", "planeTarget": "Minmus", "launchWindow": true},
   "checkpoints": {"kspSaveOnPhases": ["orbit"]},
-  "landing": {"engine": "swift-backend", "backendConfiguration": "Configuration/sts-taem.json", "modelProfile": "sts-taem"}
+  "landing": {"engine": "swift-backend", "backendConfiguration": "Configuration/sts.json", "modelProfile": "sts"}
 }
