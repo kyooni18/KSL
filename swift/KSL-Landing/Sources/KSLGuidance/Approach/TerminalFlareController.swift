@@ -74,9 +74,8 @@ public final class TerminalFlareController {
         upwardAcceleration: 0, triggerHeight: trigger,
         oneGravitySpeed: oneGravitySpeed, availablePull: available, designAcceleration: arrest)
     }
-    let longLanding = p.along > c.guidance.touchdownAlong + 0.35*c.runway.length
-    let floatHeight = longLanding ? 0.0 : 1.5
-    let floatSink = longLanding ? 1.8 : abs(c.guidance.touchdownSinkRate ?? -1.0)
+    let floatHeight = 1.5
+    let floatSink = abs(c.guidance.touchdownSinkRate ?? -1.0)
     var acceleration: Double, desired: Double
     if height > shallowHeight {
       let residualLag = min(response, max(1, abs(pull.alpha-a.angleOfAttack)/slew))
@@ -92,6 +91,13 @@ public final class TerminalFlareController {
       let profile = Self.sinkProfile(height: lead, arrestAcceleration: arrest, gravity: gravity,
         floatHeight: floatHeight, floatSink: floatSink)
       desired = height > 4.5 ? profile : min(profile, max(floatSink, sink))
+      // Close touchdown range from the beginning of float, rather than wait
+      // until the aim has been missed by 35% of the runway. Reserve measured
+      // pitch-response travel before dividing height by available flight time.
+      // The structural sink limit, not runway urgency, bounds settling.
+      let room = max(0, c.guidance.touchdownAlong-p.along-state.horizontalSpeed*response)
+      let timeToAim = max(c.guidance.controlInterval, room/max(1, state.horizontalSpeed))
+      desired = max(desired, min(c.vehicle.maximumTouchdownSink, height/timeToAim))
       // C float energy guard: use the measured drag and remaining speed
       // above max-lift 1-g speed to settle while lift can still support it.
       let deceleration = a.drag/state.mass

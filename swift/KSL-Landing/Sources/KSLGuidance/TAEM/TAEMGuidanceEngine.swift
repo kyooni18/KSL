@@ -468,10 +468,10 @@ final class TAEMGuidanceEngine {
       return .init(side: side, turn: turn, range: leg.length + Self.spiralLength(hac, to: turn),
         tangent: entry, hac: hac, arc: leg.arc, arcLoad: leg.load)
     }
-    // outerGlideAngle belongs to Final. With no TAEM-specific constraint,
-    // the descent planner may use the full descending geometric domain;
-    // actual commands still obey q/load/lift/bank/actuator limits below.
-    let glideLimit = c.guidance.taemGlideAngle ?? (.pi / 2)
+    // Absent a separate mission descent envelope, continue the configured
+    // Final glide envelope upstream. nil must not authorize a vertical HAC.
+    // Force checks still decide attainability; this is not a lift guarantee.
+    let glideLimit = c.guidance.taemGlideAngle ?? c.guidance.outerGlideAngle
     func descentPlan(for t: Track) -> TAEMDescentReference {
       .init(distance: max(vh*c.guidance.controlInterval,t.range),startHeight:p.height,
         endHeight:nep.height,startSlope:max(0,-tan(state.flightPathAngle)),
@@ -640,7 +640,7 @@ final class TAEMGuidanceEngine {
     if descent == nil {descent=descentPlan(for:t)}
     status.descentPlanFits=descent!.fits(maximumGlide:glideLimit)
     let planned=descent!.sample(t.range)
-    let referenceUsable = descentCheck?.result.failure == nil
+    let referenceUsable = status.descentPlanFits && descentCheck?.result.failure == nil
       && (descentCheck?.result.energy ?? -Double.infinity) >= requiredNEPEnergy
     status.referenceTracking = referenceUsable
     let nominal = lines!.nominal.sample(t.range), minimum = lines!.minimum.sample(t.range)
@@ -787,7 +787,10 @@ final class TAEMGuidanceEngine {
     let referenceGamma = tracksReference
       ? descent!.flightPath(at: t.range, height: p.height, horizontalSpeed: vh, responseSeconds: tau)
       : atan2(desiredRate, vh)
-    let gamma = referenceUsable ? clamp(referenceGamma, -glide, glide) : state.flightPathAngle
+    // A rejected path must not latch the aircraft's existing steep descent
+    // as the new goal. Recover toward the mission glide envelope; lift/q
+    // protection below may report/saturate an unattainable recovery.
+    let gamma = clamp(referenceUsable ? referenceGamma : state.flightPathAngle, -glide, glide)
     var vertical = (tracksReference ? normalReference : support) + speed * (gamma - state.flightPathAngle) / tau
     // Hard q bounds (QBMNNZ/QBMXNZ) for a state far off the target.
     // In still air qdot/q = V*gammaSin*dln(rho)/dh
@@ -824,17 +827,11 @@ final class TAEMGuidanceEngine {
       gear: state.systems.gearDown).maximumAcceleration * liftGain * (1 - v.aerodynamicUncertainty))
     let cannotHoldReference = referenceUsable && vertical > attainableNormal && p.height < targetHeight
       && a.dynamicPressure < frontQ
-    if !referenceUsable, a.dynamicPressure <= v.maximumDynamicPressure {
-      // Preserve efficient total lift while allocating its direction to
-      // recovery steering. A descending turn may reduce upward support;
-      // constant-gamma support is not a prerequisite for banking. The bank
-      // envelope bounds that trade; q protection above retains priority.
-      let efficientLift = min(maximumLift, max(0,
-        a.dynamicPressure * aero.referenceArea * bestLift / state.mass))
-      let turnAllowance = efficientLift * sin(v.maximumBank)
-      lateral = clamp(lateral, -turnAllowance, turnAllowance)
-      vertical = sqrt(max(0, efficientLift*efficientLift-lateral*lateral))
-    }
+    // Recovery uses the same jointly attainable force cone as tracking.
+    // Previously the best-L/D fallback tilted almost all efficient lift into
+    // a 70-degree turn, silently sacrificing descent support. Preserve the
+    // normal acceleration needed for the glide/pressure recovery and steer
+    // with what remains. Maximum lift/load/trim limits remain authoritative.
     vertical = clamp(vertical, 0, maximumLift)
     // A nearly ballistic descent has little lift to tilt. Do not turn a
     // small lateral correction into a near-limit roll solely because the

@@ -20,10 +20,16 @@ public struct GuidanceTargetLimiter: Sendable {
     var target = requested
     if let old = previous {
       let plant = c.vehicle.controlPlant
-      let rollRateLimit = [.approach, .preflare, .flare].contains(phase)
+      var rollRateLimit = [.approach, .preflare, .flare].contains(phase)
         ? (c.guidance.approachRollRate ?? c.guidance.bankSlewRate)
         : [.acquisition, .headingAlignment].contains(phase)
-        ? (c.guidance.terminalRollRate ?? c.guidance.bankSlewRate) : c.entrySettings.rollRate
+        ? (c.guidance.terminalRollRate ?? c.entrySettings.rollRate) : c.entrySettings.rollRate
+      if [.acquisition, .headingAlignment, .approach, .preflare, .flare].contains(phase) {
+        // Transfer attitude over the outer-loop/identified response horizon,
+        // not a minimum-time slew to a moving force-allocation corner.
+        let response = max(c.guidance.pathLookaheadTime, rollResponseSeconds ?? 0)
+        rollRateLimit = min(rollRateLimit, abs(wrapAngle(target.bank-old.bank))/response)
+      }
       let pitchRateLimit = phase == .preflare || phase == .flare
         ? plant.maximumPitchRate * 0.8 : c.guidance.alphaSlewRate
       // Use the same active actuator envelope as the FCS. Reaction wheels

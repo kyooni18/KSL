@@ -172,17 +172,14 @@ public enum OperatorConfigurationMapper {
     if let enabled = try boolean("guidance.stsTrajectoryDelivery"), enabled {
       throw FlightError.invalidConfiguration("Experimental C trajectory delivery is not a substitute for native route qualification")
     }
-    c.guidance.rolloutParachutes = try boolean("guidance.rolloutParachutes")
+    if let enabled = try boolean("guidance.rolloutParachutes") { c.guidance.rolloutParachutes = enabled }
     if let enabled = try boolean("guidance.terminalSpeedbrake") {
-      if enabled && c.vehicle.speedbrakeFullDeploymentDragArea == nil {
-        throw FlightError.invalidConfiguration(
-          "terminalSpeedbrake requires vehicle.speedbrakeFullDeploymentDragArea")
-      }
-      if !enabled { c.vehicle.speedbrakeFullDeploymentDragArea = nil }
-      setEffective("guidance", "terminalSpeedbrake", enabled)
+      // Compatibility input only: normal terminal control always owns drag.
+      // An old experimental switch must not silently disable the actuator or
+      // erase a valid vehicle model. Unknown drag benefit remains unpriced.
+      setEffective("guidance", "terminalSpeedbrake", true)
       record("guidance.terminalSpeedbrake", enabled ? "applied" : "policyOverride",
-        enabled ? "Energy-priced split-rudder control with identified drag area"
-          : "Split-rudder energy actuation disabled")
+        "Normal measured-energy split-rudder control; no optional flight path")
     }
     if try boolean("guidance.useTimeWarp") != nil {
       setEffective("guidance", "useTimeWarp", false)

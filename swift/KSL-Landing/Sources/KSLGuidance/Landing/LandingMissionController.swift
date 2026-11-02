@@ -12,6 +12,7 @@ public final class LandingMissionController {
   private let approach: ApproachGuidanceEngine
   private let taem: TAEMGuidanceEngine
   private let nepSolver: NominalEnergyPointSolver
+  private let speedbrake: TAEMSpeedbrakeController
   private var nominalEnergyPoint: (time: Double, point: NominalEnergyPoint?)?
   private let frame: RunwayFrame
   private let touchdown: TouchdownMonitor
@@ -90,6 +91,7 @@ public final class LandingMissionController {
       aerodynamics: aerodynamics, externalPlanning: externalPlanning)
     taem = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
     nepSolver = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
+    speedbrake = .init(configuration: configuration, atmosphere: atmosphere)
     authority = .init(model: aerodynamics)
     maximumGlideRatio = aerodynamics.maximumLiftToDragRatio
     frame = .init(runway: configuration.runway, planet: configuration.planet)
@@ -495,7 +497,28 @@ public final class LandingMissionController {
       }
     }
     phase = raw.phase
-    let target = limiter.update(raw.target, phase: raw.phase, configuration: configuration, dt: dt,
+    var requested = raw.target
+    let brakeLift = TerminalBrakeAuthority.availableLift(state, configuration: configuration,
+      aerodynamics: aerodynamics, identifiedTrimCeiling: attainableAlphaCeiling,
+      liftEffectiveness: authority.liftEffectiveness)
+    if [.acquisition, .headingAlignment].contains(phase) {
+      if taem.status.referenceTracking == true, let nep = nominalEnergyPoint?.point {
+        requested.speedbrakeFraction = speedbrake.feedback(state, target: nep,
+          remainingDistance: taem.status.range, dt: dt,
+          responseSeconds: max(configuration.guidance.pathLookaheadTime, controlFeedback?.pitchResponseSeconds ?? 0),
+          availableLiftAcceleration: brakeLift)
+      } else { requested.speedbrakeFraction = 0 }
+    } else if [.approach, .preflare, .flare].contains(phase) {
+      let endpoint = NominalEnergyPoint(along: configuration.guidance.touchdownAlong,
+        height: configuration.vehicle.gearHeight, flightPathAngle: 0,
+        airspeed: configuration.vehicle.landingSpeed,
+        predictedTouchdownSpeed: configuration.vehicle.landingSpeed)
+      requested.speedbrakeFraction = speedbrake.feedback(state, target: endpoint,
+        remainingDistance: endpoint.along-p.along, dt: dt,
+        responseSeconds: max(configuration.guidance.pathLookaheadTime, controlFeedback?.pitchResponseSeconds ?? 0),
+        availableLiftAcceleration: brakeLift)
+    }
+    let target = limiter.update(requested, phase: raw.phase, configuration: configuration, dt: dt,
       dynamicPressure: state.aerodynamics.dynamicPressure,
       rollResponseSeconds: controlFeedback?.rollResponseSeconds,
       pitchResponseSeconds: controlFeedback?.pitchResponseSeconds,

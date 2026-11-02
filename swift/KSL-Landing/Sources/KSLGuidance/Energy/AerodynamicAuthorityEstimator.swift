@@ -27,7 +27,9 @@ public final class AerodynamicAuthorityEstimator {
       let observed = clamp(a.lift / (scale * c.lift), 0.5, 1.5)
       liftEffectiveness += filter * (observed - liftEffectiveness)
     }
-    if c.drag > 0.02 {
+    // Do not learn deployed split-fin drag into the clean polar. In particular
+    // an unpriced brake is not evidence that the orbiter's clean L/D changed.
+    if c.drag > 0.02, (state.systems.speedbrakeFraction ?? 0) == 0 {
       let observed = clamp(a.drag / (scale * c.drag), 0.5, 1.5)
       dragEffectiveness += filter * (observed - dragEffectiveness)
     }

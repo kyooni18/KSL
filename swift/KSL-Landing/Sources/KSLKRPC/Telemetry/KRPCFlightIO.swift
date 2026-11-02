@@ -1,5 +1,6 @@
 import Foundation
 import KSLCore
+import KSLPhysics
 
 /// Axis allocation for the installed OV-100 parts; nil leaves an unrelated
 /// surface's configuration unchanged. Deployment remains an independent trim.
@@ -28,6 +29,7 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
   // must not poison the armed flight-control connection or its object IDs.
   private let warpSession: KRPCSession
   private let configuration: MissionConfiguration
+  private let brakeAerodynamics: AerodynamicsEngine?
   private let airbrakeGroup: UInt32
   private var vessel: UInt64 = 0, control: UInt64 = 0, surfaceFrame: UInt64 = 0, flight: UInt64 = 0,
     parts: UInt64 = 0, autopilot: UInt64 = 0, bodyFrame: UInt64 = 0
@@ -65,6 +67,7 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
     configuration: MissionConfiguration = .init(), airbrakeActionGroup: UInt32 = 1
   ) {
     session = .init(configuration: connection)
+    brakeAerodynamics = try? .init(referenceArea: configuration.vehicle.referenceArea)
     var warpConnection = connection
     warpConnection.clientName = "KSL Orbital Rails Warp"
     warpConnection.timeout = 15
@@ -569,9 +572,13 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
     guard !envelope.command.rcs || configuration.vehicle.rcsAttitudeControl else {
       throw FlightError.invalidCommand("Attitude RCS disabled by vehicle configuration")
     }
-    guard (envelope.command.speedbrakeFraction ?? 0) == 0
-      || configuration.vehicle.speedbrakeFullDeploymentDragArea != nil else {
-      throw FlightError.invalidCommand("Speedbrake requires identified full-deployment drag area")
+    if (envelope.command.speedbrakeFraction ?? 0) > 0 {
+      guard let aero = brakeAerodynamics,
+        TerminalBrakeEnvelope.permits(latest, configuration: configuration,
+          availableLiftAcceleration: TerminalBrakeAuthority.availableLift(latest,
+            configuration: configuration, aerodynamics: aero)) else {
+        throw FlightError.invalidCommand("Speedbrake requires fresh measured-force, trim/lift and retraction-energy reserve")
+      }
     }
     guard (envelope.command.bodyFlapTrimFraction ?? 0) == 0
       || configuration.vehicle.bodyFlapTrimInputAtFullDeflection != nil else {

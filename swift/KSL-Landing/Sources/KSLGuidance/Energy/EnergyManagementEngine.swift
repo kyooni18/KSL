@@ -284,10 +284,10 @@ public final class EnergyManagementEngine {
       } else { brakeFraction = 0 }
       let brakeDrag = q * (configuration.vehicle.speedbrakeFullDeploymentDragArea ?? 0)
         * brakeFraction / initial.mass
-      if s.segment != .final, let maximumGlide = configuration.guidance.taemGlideAngle,
-        -gamma > max(maximumGlide, configuration.guidance.outerGlideAngle) {
+      let maximumGlide = configuration.guidance.taemGlideAngle ?? configuration.guidance.outerGlideAngle
+      if s.segment != .final, -gamma > maximumGlide {
         violations.append(.init(.invalidGeometry, "Terminal path exceeds configured glide-slope envelope",
-          value: -gamma, limit: max(maximumGlide, configuration.guidance.outerGlideAngle)))
+          value: -gamma, limit: maximumGlide))
       }
       let elapsed = time - previousStationTime
       if i > 0, elapsed > 0,

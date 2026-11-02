@@ -18,7 +18,7 @@ let package = Package(
     .target(name: "KSLPhysics", dependencies: ["KSLCore", "KSLControl", "CSQLite"], resources: [.process("Resources")]),
     .target(name: "KSLGuidance", dependencies: ["KSLCore", "KSLPhysics", "KSLControl"]),
     .target(name: "KSLControl", dependencies: ["KSLCore"]),
-    .target(name: "KSLKRPC", dependencies: ["KSLCore"]),
+    .target(name: "KSLKRPC", dependencies: ["KSLCore", "KSLPhysics"]),
     .target(name: "KSLDiagnostics", dependencies: ["KSLCore"]),
     .target(
       name: "KSLRuntime",
@@ -31,7 +31,8 @@ let package = Package(
       dependencies: ["KSLRuntime", "KSLKRPC", "KSLSimulation", "KSLDiagnostics", "KSLControl"]),
     .testTarget(name: "CoreTests", dependencies: ["KSLCore"]),
     .testTarget(name: "PhysicsTests", dependencies: ["KSLPhysics", "CSQLite"]),
-    .testTarget(name: "GuidanceTests", dependencies: ["KSLGuidance"]),
+    .testTarget(name: "GuidanceTests", dependencies: ["KSLGuidance", "KSLControl"],
+      resources: [.copy("Fixtures")]),
     .testTarget(name: "ControlTests", dependencies: ["KSLControl", "KSLPhysics"]),
     .testTarget(
       name: "IntegrationTests", dependencies: ["KSLKRPC", "KSLRuntime", "KSLSimulation"]),

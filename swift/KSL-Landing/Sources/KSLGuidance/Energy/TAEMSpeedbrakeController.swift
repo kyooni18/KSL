@@ -2,9 +2,9 @@ import Foundation
 import KSLCore
 import KSLPhysics
 
-/// Energy-to-drag allocation for the split rudder. It never creates drag to
-/// correct an energy deficit and never operates on Final, whose energy guide
-/// owns the remaining trajectory. A missing identified drag area disables it.
+/// Energy-to-drag allocation shared by TAEM and Final. Predictive allocation
+/// requires an identified drag area. Actual flight can instead close the loop
+/// on measured drag work, without inventing deployment authority for forecasts.
 struct TAEMSpeedbrakeController: Sendable {
   let configuration: MissionConfiguration
   let atmosphere: AtmosphericModelEngine
@@ -19,6 +19,35 @@ struct TAEMSpeedbrakeController: Sendable {
     let rotation = configuration.planet.angularVelocity
     return speed*speed/2 - configuration.planet.gravitationalParameter/position.length
       - rotation.cross(position).squaredLength/2
+  }
+
+  func feedback(_ state: VehicleState, target: NominalEnergyPoint,
+                remainingDistance: Double, dt: Double, responseSeconds: Double,
+                availableLiftAcceleration: Double) -> Double {
+    guard dt > 0, dt <= 1, remainingDistance > 0,
+      TerminalBrakeEnvelope.permits(state, configuration: configuration,
+        availableLiftAcceleration: availableLiftAcceleration) else { return 0 }
+    let targetPosition = frame.position(along: target.along, cross: 0, height: target.height)
+    let targetAir = atmosphere.sample(position: targetPosition, time: state.time)
+    let tangent = frame.direction(at: .init(target.along, 0), tangent: .init(1, 0))
+    let targetVelocity = target.airspeed * (tangent*cos(target.flightPathAngle)
+      + targetPosition.normalized*sin(target.flightPathAngle)) + targetAir.wind
+    let excess = effectiveEnergy(speed: state.velocity.length, position: state.position)
+      - effectiveEnergy(speed: targetVelocity.length, position: targetPosition)
+    guard excess > 0 else { return 0 }
+    let airVelocity = state.velocity-state.atmosphere.wind
+    let workPerGroundMetre = airVelocity.normalized.dot(state.velocity)/max(1, state.horizontalSpeed)
+    guard workPerGroundMetre > 0 else { return 0 }
+    let required = excess/(remainingDistance*workPerGroundMetre)
+    let observed = state.aerodynamics.drag/state.mass
+    let error = required-observed
+    let current = state.systems.speedbrakeFraction ?? 0
+    // Integral drag-work closure. The dimensionless relative residual is
+    // integrated over the existing guidance/actuator response horizon. No
+    // full-open CdA or artificial vehicle capability is inferred from it.
+    let horizon = max(TerminalBrakeEnvelope.travelSeconds, responseSeconds)
+    let increment = error/max(required, observed)*dt/horizon
+    return clamp(current+increment, 0, 1)
   }
 
   func fraction(speed: Double, position: Vector3, time: Double, mass: Double,
