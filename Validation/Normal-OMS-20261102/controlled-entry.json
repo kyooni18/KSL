@@ -1,0 +1,112 @@
+{
+  "aerodynamics" : {
+    "airspeed" : 0,
+    "angleOfAttack" : 0,
+    "bank" : 0,
+    "drag" : 0,
+    "dynamicPressure" : 0,
+    "force" : {
+      "x" : 0,
+      "y" : 0,
+      "z" : 0
+    },
+    "lift" : 0,
+    "mach" : 0,
+    "measuredForces" : false,
+    "sideslip" : 0
+  },
+  "angularVelocity" : {
+    "x" : -1.859733111760586e-05,
+    "y" : -0.0031433882892834344,
+    "z" : 6.360880426303057e-05
+  },
+  "appliedControls" : {
+    "gearDown" : false,
+    "pitch" : -1.3637180027288582e-05,
+    "roll" : -1.0248991832679619e-06,
+    "wheelBrake" : 0,
+    "wheelSteering" : 0,
+    "yaw" : -1.242587192061772e-06
+  },
+  "atmosphere" : {
+    "density" : 0,
+    "pressure" : 0,
+    "speedOfSound" : 274,
+    "temperature" : 186.946,
+    "wind" : {
+      "x" : 0,
+      "y" : 0,
+      "z" : 0
+    }
+  },
+  "attitude" : {
+    "w" : -0.10700668783894521,
+    "x" : 0.07166371915073311,
+    "y" : -0.7502518049251674,
+    "z" : 0.6484875552558831
+  },
+  "contact" : "airborne",
+  "controlAuthority" : {
+    "actuatorSources" : "aerodynamic-surfaces+active-powered-reaction-wheels",
+    "evidence" : "measured",
+    "inertia" : {
+      "x" : 86573.71875,
+      "y" : 947991.1875,
+      "z" : 983084.3125
+    },
+    "negativeTorque" : {
+      "x" : -10000,
+      "y" : -20000,
+      "z" : -20000
+    },
+    "positiveTorque" : {
+      "x" : 10000,
+      "y" : 20000,
+      "z" : 20000
+    },
+    "rcsExcludedNegativeTorque" : {
+      "x" : -10000,
+      "y" : -20000,
+      "z" : -20000
+    },
+    "rcsExcludedPositiveTorque" : {
+      "x" : 10000,
+      "y" : 20000,
+      "z" : 20000
+    }
+  },
+  "mass" : 23430.57677257812,
+  "position" : {
+    "x" : -344546.9013204446,
+    "y" : 569153.9914670512,
+    "z" : 74707.16448853
+  },
+  "propulsion" : {
+    "availableThrust" : 120000,
+    "dryMass" : 19965.501953125,
+    "evidence" : "measured",
+    "specificImpulse" : 345,
+    "thrustDirectionBody" : {
+      "x" : 0.9379879681330514,
+      "y" : 1.454445036749297e-06,
+      "z" : 0.3466678116518957
+    }
+  },
+  "radarAltitude" : 0,
+  "snapshotSpan" : 0,
+  "systems" : {
+    "airbrakes" : false,
+    "brakes" : false,
+    "gearDown" : false,
+    "rcs" : false,
+    "sas" : false,
+    "throttle" : 0,
+    "thrust" : 0
+  },
+  "time" : 218466.13378757675,
+  "velocity" : {
+    "x" : -1768.220016834847,
+    "y" : -1114.5605702224289,
+    "z" : -223.54356708082216
+  }
+}

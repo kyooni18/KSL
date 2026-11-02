@@ -70,7 +70,11 @@ enum ShuttleSimStream {
             throw FlightError.invalidConfiguration("Orbital experiment requires explicit --dry-mass")
           }
           let prop = PropulsionTelemetry(availableThrust: thrust, dryMass: dryMass, specificImpulse: isp, evidence: .provisional)
-          let result = try DeorbitWindowSearch(configuration: c).search(from: state, propulsion: prop)
+          // This experimental adapter executes a legacy fixed-angle servo,
+          // not the native two-component burn controller. Do not misexecute
+          // a normal-first candidate as one constant-angle deorbit burn.
+          let result = try DeorbitWindowSearch(configuration: c).search(from: state,
+            propulsion: prop, includeNormalCorrections: false)
           metadata = ["candidates": try object(result.candidates), "executionQualified": false,
             "limitation": "orbital thrust-axis servo is ShuttleSim-owned; no native vacuum actuator qualification"]
           if let legacy = option("--legacy-window").flatMap(Int.init) {

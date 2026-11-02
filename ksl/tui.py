@@ -810,7 +810,9 @@ class KSLApp(App[int]):
             except Exception as exc:
                 reason, warning = str(exc), None
             text = Text("Deorbit plan · awaiting execution · guidance is disengaged\n", style="bold yellow")
-            text.append(f"Burn UT {_fmt(plan.get('burnUT'), digits=1)} · Δv {_fmt(plan.get('deltaV'), unit='m/s')}\n")
+            text.append(f"Burn UT {_fmt(plan.get('burnUT'), digits=1)} · Retrograde Δv {_fmt(plan.get('deltaV'), unit='m/s')}\n")
+            if plan.get("normalCorrectionFirst"):
+                text.append(f"Normal correction first: {_fmt(plan.get('normalDeltaV'), unit='m/s')}\n")
             text.append(f"Entry qualified: {plan.get('executionQualified')} · Full-route capture: {plan.get('targetCaptureAchieved')}\n")
             text.append(f"Predicted miss: {_fmt(plan.get('predictedClosestDistance'), unit='m')} · "
                         f"Entry FPA: {_fmt(plan.get('predictedEntryFlightPathAngle'), unit='deg')}\n")

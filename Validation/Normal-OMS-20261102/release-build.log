@@ -1,0 +1,31 @@
+Building for production...
+[Computing dependencies]
+[Pre-planning 1 / 502]
+[Planning deferred tasks]
+[12 / 40] KSLCore
+[14 / 41] KSLCore
+[22 / 47] KSLDiagnostics
+[25 / 49] KSLControl
+[33 / 54] KSLPhysics
+[35 / 55] KSLPhysics
+[42 / 65] KSLKRPC
+[46 / 67] KSLKRPC
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Sources/KSLGuidance/Entry/EntryDragReference.swift:60:28: warning: immutable value 'e' was never used; consider replacing with '_' or removing it [#NoUsage]
+ 58 |                referenceRangeScale: Double = 1,
+ 59 |                objective: EntryCaptureObjective, maximumAlpha: Double) -> EntryDiagnostics {
+ 60 |     let c = configuration, e = c.entrySettings, a = s.aerodynamics
+    |                            `- warning: immutable value 'e' was never used; consider replacing with '_' or removing it [#NoUsage]
+ 61 |     let targetAltitude = objective.altitude, targetSpeed = objective.speed
+ 62 |     let speed = a.airspeed, height = s.position.length - c.planet.radius
+
+[#NoUsage]: <https://docs.swift.org/compiler/documentation/diagnostics/no-usage>
+[50 / 64] KSLGuidance
+[59 / 71] KSLRuntime
+[61 / 72] KSLRuntime
+[67 / 76] KSLSimulation
+[69 / 77] KSLSimulation
+[74 / 78] KSLLanding
+[76 / 80] ksl-landing-product
+[81 / 81] ksl-landing-product
+[83 / 84] ksl-landing-product
+Build complete! (40.82초)

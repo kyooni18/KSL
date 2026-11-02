@@ -3,6 +3,7 @@ import Foundation
 /// An orbital screening result. It carries no landing/execution certificate.
 public struct DeorbitWindow: Codable, Sendable {
   public let burnStart: Double
+  /// Retrograde-projected thrust impulse (m/s), including in legacy records.
   public let deltaV: Double
   public let duration: Double
   public let normalAngle: Double
@@ -15,16 +16,19 @@ public struct DeorbitWindow: Codable, Sendable {
   public let entryCourseError: Double
   public let crossrange: Double
   public let miss: Double
+  /// Signed orbital-normal impulse, m/s; nil preserves legacy fixed-angle burns.
+  public var normalDeltaV: Double? = nil
   public var closing: Bool { abs(entryCourseError) < .pi/2 }
   public init(burnStart: Double, deltaV: Double, duration: Double, normalAngle: Double,
     periapsisAltitude: Double, afterBurn: OrbitalState, entryInterface: OrbitalState,
     entryRange: Double, entrySpeed: Double, entryFlightPath: Double, entryCourseError: Double,
-    crossrange: Double, miss: Double) {
+    crossrange: Double, miss: Double, normalDeltaV: Double? = nil) {
     self.burnStart = burnStart; self.deltaV = deltaV; self.duration = duration
     self.normalAngle = normalAngle; self.periapsisAltitude = periapsisAltitude
     self.afterBurn = afterBurn; self.entryInterface = entryInterface
     self.entryRange = entryRange; self.entrySpeed = entrySpeed; self.entryFlightPath = entryFlightPath
     self.entryCourseError = entryCourseError; self.crossrange = crossrange; self.miss = miss
+    self.normalDeltaV = normalDeltaV
   }
 }
 

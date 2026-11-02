@@ -1,0 +1,43 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 55] CoreTests-product
+[2 / 26] KSLGuidance
+[5 / 29] KSLGuidance
+[12 / 35] GuidanceTests-product
+[16 / 37] GuidanceTests-product
+[21 / 43] KSLSimulation
+[24 / 44] GuidanceTests-product
+[29 / 47] KSLLanding
+[40 / 53] GuidanceTests-product
+[48 / 60] SimulationTests-product
+[48 / 61] SimulationTests-product
+[56 / 67] IntegrationTests-product
+[58 / 69] IntegrationTests-product
+[58 / 69] ksl-landing-product
+[60 / 69] IntegrationTests-product
+[65 / 71] SimulationTests-product
+[65 / 71] IntegrationTests-product
+[67 / 71] ksl-landing-product
+[71 / 73] ksl-landing-product
+Build complete! (5.76초)
+Test Suite 'Selected tests' started at 2026-11-02 20:39:38.353.
+Test Suite 'IntegrationTests.xctest' started at 2026-11-02 20:39:38.354.
+Test Suite 'DeorbitExecutionTests' started at 2026-11-02 20:39:38.354.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testBurnGapKeepsMeasuredImpulseSeparateFromUncertaintyBound]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testBurnGapKeepsMeasuredImpulseSeparateFromUncertaintyBound]' passed (0.001 seconds).
+Test Case '-[IntegrationTests.DeorbitExecutionTests testCPeriapsisTaperAndNoPrematureCutoff]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testCPeriapsisTaperAndNoPrematureCutoff]' passed (0.000 seconds).
+Test Case '-[IntegrationTests.DeorbitExecutionTests testLatePointingIsRecoveredWithoutThrustAndLostEngineStillTripsWatchdog]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testLatePointingIsRecoveredWithoutThrustAndLostEngineStillTripsWatchdog]' passed (0.001 seconds).
+Test Suite 'DeorbitExecutionTests' passed at 2026-11-02 20:39:38.357.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'NormalDeorbitCorrectionTests' started at 2026-11-02 20:39:38.357.
+Test Case '-[IntegrationTests.NormalDeorbitCorrectionTests testRecordedDessertBurnCanPriceAndExecuteIndependentNormalImpulse]' started.
+Test Case '-[IntegrationTests.NormalDeorbitCorrectionTests testRecordedDessertBurnCanPriceAndExecuteIndependentNormalImpulse]' passed (0.574 seconds).
+Test Suite 'NormalDeorbitCorrectionTests' passed at 2026-11-02 20:39:38.931.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.574 (0.574) seconds
+Test Suite 'IntegrationTests.xctest' passed at 2026-11-02 20:39:38.931.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.576 (0.576) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 20:39:38.931.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.576 (0.577) seconds
+NORMAL_OMS candidate DeorbitWindow(burnStart: 217562.10786701148, deltaV: 31.449987495693804, duration: 457.75, normalAngle: 1.5707963267948966, periapsisAltitude: 49999.41792174347, afterBurn: KSLCore.OrbitalState(time: 218019.85786701148, position: KSLCore.Vector3(x: 55224.421330498095, y: 680750.6072273654, z: 71421.91125876528), velocity: KSLCore.Vector3(x: -2219.4342170521627, y: 152.37088308628765, z: 229.2382452234854), mass: 23428.935120612907), entryInterface: KSLCore.OrbitalState(time: 218449.21820549262, position: KSLCore.Vector3(x: -649454.4698159401, y: 142603.9013093153, z: 78123.42137433034), velocity: KSLCore.Vector3(x: -452.1238558702752, y: -2240.0664352847302, z: -209.18220898051288), mass: 23428.935120612907), entryRange: 1030087.5587547696, entrySpeed: 2101.8308035461305, entryFlightPath: -0.02995836881527547, entryCourseError: 1.8214420830053868e-05, crossrange: 10.812355804507373, miss: 88.22382090370853, normalDeltaV: Optional(360.44528536798884)) finiteDeliveredNormal Optional(360.3831805153034) controlledEntry Vector3(x: -344546.9013204446, y: 569153.9914670512, z: 74707.16448853) Vector3(x: -1768.220016834847, y: -1114.5605702224289, z: -223.54356708082216) controlledEntryFPA -1.7029019029420527 controlledNormal 360.4471652193737 controlledCrossMiss 684.5646941097854 baselineControlledCrossMiss 67228.08994404259

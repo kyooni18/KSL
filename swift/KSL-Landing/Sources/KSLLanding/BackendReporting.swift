@@ -23,6 +23,8 @@ extension BackendServer {
     ["identifier": value.identifier, "burnUT": value.window.burnStart+value.window.duration/2,
       "burnStartUT": value.window.burnStart, "deltaV": value.window.deltaV,
       "estimatedBurnDuration": value.window.duration, "burnNormalAngle": degrees(value.window.normalAngle),
+      "normalDeltaV": value.window.normalDeltaV ?? value.window.deltaV*tan(value.window.normalAngle),
+      "normalCorrectionFirst": value.window.normalDeltaV != nil,
       "predictedPostBurnPeriapsisAltitude": value.window.periapsisAltitude,
       "predictedEntryRange": value.window.entryRange, "predictedEntryFlightPathAngle": degrees(value.window.entryFlightPath),
       "executionQualified": value.executionQualified, "fullRouteQualified": value.fullRouteQualified,

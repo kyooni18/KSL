@@ -68,7 +68,8 @@ public final class LandingAwareWindowSelector {
       try Task.checkCancellation()
       let start = seed.burnStart + offset
       guard start >= earliest,
-        let w = try? search.probe(initial: initial, start: start, normal: seed.normalAngle, propulsion: propulsion),
+        let w = try? search.probe(initial: initial, start: start, normal: seed.normalAngle,
+          propulsion: propulsion, normalDeltaV: seed.normalDeltaV),
         w.closing else { return nil }
       // The lateral aim is planned with the window: each burn option is
       // flown to each candidate aim and keeps the best capture.

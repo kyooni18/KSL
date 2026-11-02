@@ -739,7 +739,10 @@ class LandingProgram(Program):
         if not plan:
             raise BackendError(str(planned.get("lastError") or "no deorbit plan was produced"))
         ctx.log.write_json("deorbit-plan.json", plan)
-        ctx.log.emit(Event("milestone", "deorbit plan: burn UT {:.1f}, dv {:.2f} m/s, executable={}, strict={}".format(
+        if plan.get("normalCorrectionFirst"):
+            ctx.log.log("Normal correction first: {:.2f} m/s; retrograde deorbit: {:.2f} m/s".format(
+                float(plan.get("normalDeltaV") or 0), float(plan.get("deltaV") or 0)))
+        ctx.log.emit(Event("milestone", "deorbit plan: burn UT {:.1f}, retrograde dv {:.2f} m/s, executable={}, strict={}".format(
             float(plan.get("burnUT") or 0), float(plan.get("deltaV") or 0),
             bool(plan.get("executionQualified")), bool(plan.get("targetCaptureAchieved"))), data=plan))
         warning = validate_plan_qualification(

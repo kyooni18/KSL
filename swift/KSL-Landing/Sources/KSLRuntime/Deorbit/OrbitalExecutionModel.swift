@@ -6,6 +6,7 @@ import KSLPhysics
 struct OrbitalExecutionResult {
   let entry: VehicleState
   let burnCompleted: Bool
+  let deliveredNormalDeltaV: Double?
   let actualBurnEnd: Double
 }
 
@@ -61,7 +62,7 @@ final class OrbitalExecutionModel {
         guard burn.complete else { throw FlightError.infeasible("Entered atmosphere before native OMS shutdown") }
         state.systems = .init()
         state.controlAuthority = entryTorque
-        return .init(entry: state, burnCompleted: true, actualBurnEnd: burnEnd ?? state.time)
+        return .init(entry: state, burnCompleted: true, deliveredNormalDeltaV: window.normalDeltaV == nil ? nil : burn.deliveredNormalDeltaV, actualBurnEnd: burnEnd ?? state.time)
       }
       let axes: ControlCommand, throttle: Double
       if burn.complete {
