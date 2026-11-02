@@ -30,6 +30,7 @@ import re
 import subprocess
 import sys
 import time
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -56,7 +57,8 @@ def ffprobe(path: Path) -> dict:
 
 def recording_start_epoch(path: Path) -> float:
     """Wall-clock start from the macOS screen-recording file name, else the file's birth time."""
-    name = path.name
+    # macOS names commonly store Korean syllables as decomposed Unicode.
+    name = unicodedata.normalize("NFC", path.name)
     m = re.search(r"(\d{4})-(\d{2})-(\d{2}) (오전|오후) (\d{1,2})\.(\d{2})\.(\d{2})", name)
     if m:
         y, mo, d, ampm, h, mi, s = m.groups()
