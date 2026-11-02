@@ -26,10 +26,8 @@ from PIL import Image, ImageDraw
 
 try:
     from . import landing_video as old
-    from .archive_native_swift_flight import native_keyframe
 except ImportError:
     import landing_video as old
-    from archive_native_swift_flight import native_keyframe
 
 
 def increasing(rows, key):
@@ -164,16 +162,41 @@ class Timeline:
                 p=r['position']; self.native_xy.append((r['time'],p[0]/self.radius,-p[1]/self.radius))
 
     def native_row(self, record, wall):
-        k = native_keyframe(record, self.site)
-        s = record['state']; m=k['motion']; a=k['attitude']; p=k['position']
+        s=record['state']
+        pos=np.array([s['position'][k] for k in ('x','y','z')])
+        velocity=np.array([s['velocity'][k] for k in ('x','y','z')])
+        radius=float(np.linalg.norm(pos));up=pos/radius
+        lon=math.atan2(pos[1],pos[0]);lat=math.asin(float(up[2]))
+        east=np.array([-math.sin(lon),math.cos(lon),0]);north=np.cross(up,east)
+        q=s['attitude'];qv=np.array([q[k] for k in ('x','y','z')])
+        def rotate(v):
+            v=np.array(v);cross=2*np.cross(qv,v)
+            return v+q['w']*cross+np.cross(qv,cross)
+        forward,right,roof=rotate([1,0,0]),rotate([0,1,0]),rotate([0,0,-1])
+        heading=math.degrees(math.atan2(float(forward@east),float(forward@north)))%360
+        pitch=math.degrees(math.asin(float(np.clip(forward@up,-1,1))))
+        roll=-math.degrees(math.atan2(float(right@up),float(roof@up)))
+        vertical=float(velocity@up);horizontal=float(np.linalg.norm(velocity-vertical*up))
+        fpa=math.degrees(math.atan2(vertical,horizontal))
+        vel_heading=math.degrees(math.atan2(float(velocity@east),float(velocity@north)))%360
+        lat0=math.radians(self.site['latitude']);dlon=lon-math.radians(self.site['longitude'])
+        hav=math.sin((lat-lat0)/2)**2+math.cos(lat)*math.cos(lat0)*math.sin(dlon/2)**2
+        distance=2*self.radius*math.asin(math.sqrt(max(0,min(1,hav))))
+        bearing=math.atan2(math.sin(dlon)*math.cos(lat),
+            math.cos(lat0)*math.sin(lat)-math.sin(lat0)*math.cos(lat)*math.cos(dlon))
+        delta=bearing-self.runway['heading']
         phase=record.get('guidance',{}).get('phase','orbitalCoast')
-        return dict(time=wall,ut=s['time'],**p, speed=s['aerodynamics']['airspeed'],
-                    **m,**a,**k['guidance'],gForce=float('nan'),
+        return dict(time=wall,ut=s['time'],altitude=radius-self.radius,
+                    latitude=math.degrees(lat),longitude=math.degrees(lon),
+                    speed=float(np.linalg.norm(velocity)),horizontalSpeed=horizontal,
+                    verticalSpeed=vertical,pitch=pitch,heading=heading,roll=roll,
+                    rangeToSite=distance,runwayAlongTrack=distance*math.cos(delta),
+                    runwayCrossTrack=distance*math.sin(delta),gForce=float('nan'),
                     dynamicPressure=s['aerodynamics']['dynamicPressure'],
                     mach=s['aerodynamics']['mach'],
-                    vel_heading=m['groundTrackHeading'],vel_fpa=m['flightPathAngle'],
+                    vel_heading=vel_heading,vel_fpa=fpa,
                     mode='launch' if phase in ('orbitalCoast','burnSetup','deorbitBurn','entryCoast') else 'landing',
-                    position=[s['position'][axis] for axis in ('x','y','z')])
+                    position=pos.tolist(),velocity=velocity.tolist())
 
     def clock(self,t):
         if t < self.clock_t[0]:
