@@ -9,6 +9,7 @@ public struct EntryPlanningRequest: Sendable {
   let memory: EntryLawMemory
   let rangeMultiplier: Double
   let previousTarget: GuidanceTarget?
+  var targetLimiter: GuidanceTargetLimiter? = nil
   let environment: EnvironmentCalibration
 }
 public struct EntryPlanningProposal: Codable, Sendable {
@@ -53,12 +54,13 @@ public final class EntryGuidanceEngine {
     frame = .init(runway: configuration.runway, planet: configuration.planet)
   }
   public func request(from state: VehicleState, controls: FlightControlSnapshot? = nil,
-                      previousTarget: GuidanceTarget? = nil) -> EntryPlanningRequest? {
+                      previousTarget: GuidanceTarget? = nil,
+                      targetLimiter: GuidanceTargetLimiter? = nil) -> EntryPlanningRequest? {
     guard permitsReplanning,
       state.time - lastSolve >= configuration.guidance.entryReplanInterval else { return nil }
     lastSolve = state.time
     return .init(state: state, controls: controls, memory: law.memory, rangeMultiplier: rangeMultiplier,
-      previousTarget: previousTarget, environment: environment)
+      previousTarget: previousTarget, targetLimiter: targetLimiter, environment: environment)
   }
   /// Lateral aim planned backward from TAEM capture (deorbit selection).
   public func setCrossAim(_ value: Double) { law.memory.retargetCrossAim(value) }
@@ -105,8 +107,9 @@ public final class EntryGuidanceEngine {
   public func update(_ state: VehicleState, synchronousPlanning: Bool = true,
                      controls: FlightControlSnapshot? = nil,
                      previousTarget: GuidanceTarget? = nil,
+                     targetLimiter: GuidanceTargetLimiter? = nil,
                      feedback: ControlDiagnostics? = nil) -> GuidanceTarget {
-    if synchronousPlanning, let request = request(from: state, controls: controls, previousTarget: previousTarget) {
+    if synchronousPlanning, let request = request(from: state, controls: controls, previousTarget: previousTarget, targetLimiter: targetLimiter) {
       accept(plan(request), at: state.time)
     }
     law.memory.pitchResponseSeconds = feedback?.pitchResponseSeconds
@@ -227,7 +230,7 @@ public final class EntryGuidanceEngine {
     func fly(_ list: [Double]) {
       for factor in list where !Task.isCancelled {
         forecasts.append(forecaster.forecast(from: state, memory: request.memory, rangeMultiplier: factor,
-          controls: request.controls, previousTarget: request.previousTarget))
+          controls: request.controls, previousTarget: request.previousTarget, targetLimiter: request.targetLimiter))
       }
     }
     fly(factors)
@@ -242,7 +245,7 @@ public final class EntryGuidanceEngine {
         var memory = request.memory; memory.retargetCrossAim(aim)
         forecasts.append(forecaster.forecast(from: state, memory: memory,
           rangeMultiplier: request.rangeMultiplier,
-          controls: request.controls, previousTarget: request.previousTarget))
+          controls: request.controls, previousTarget: request.previousTarget, targetLimiter: request.targetLimiter))
       }
     }
     var chosen = forecasts.min(by: ranksAhead)
@@ -281,7 +284,7 @@ public final class EntryGuidanceEngine {
     if let best = chosen, let objective = best.suggestedObjective {
       var memory = request.memory; memory.objective = objective; memory.crossAim = best.crossAim
       let consistent = forecaster.forecast(from: state, memory: memory,
-        rangeMultiplier: best.rangeMultiplier, controls: request.controls, previousTarget: request.previousTarget)
+        rangeMultiplier: best.rangeMultiplier, controls: request.controls, previousTarget: request.previousTarget, targetLimiter: request.targetLimiter)
       // Publish exactly the objective that this branch flew, rather than its
       // next optimizer iterate.
       var verified = consistent; verified.objective = objective

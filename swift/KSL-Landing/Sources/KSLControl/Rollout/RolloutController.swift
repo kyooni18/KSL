@@ -1,6 +1,14 @@
 import Foundation
 import KSLCore
 
+/// Value history copied into prediction branches; no live controller is shared.
+struct RolloutSnapshot: Sendable {
+  let brake: Double
+  let mainContact: Bool, noseContact: Bool
+  let groundHistory: [(time: Double, speed: Double, position: Vector3)]
+  let diagnostics: RolloutDiagnostics?
+}
+
 public final class RolloutController {
   private let frame: RunwayFrame
   private let configuration: MissionConfiguration
@@ -11,6 +19,15 @@ public final class RolloutController {
   public init(configuration: MissionConfiguration) {
     self.configuration = configuration
     frame = .init(runway: configuration.runway, planet: configuration.planet)
+  }
+  var snapshot: RolloutSnapshot {
+    .init(brake: brake, mainContact: mainContact, noseContact: noseContact,
+      groundHistory: groundHistory, diagnostics: diagnostics)
+  }
+  convenience init(configuration: MissionConfiguration, snapshot: RolloutSnapshot) {
+    self.init(configuration: configuration)
+    brake = snapshot.brake; mainContact = snapshot.mainContact; noseContact = snapshot.noseContact
+    groundHistory = snapshot.groundHistory; diagnostics = snapshot.diagnostics
   }
   public func command(state: VehicleState, dt: Double) -> ControlCommand {
     let p = frame.coordinates(of: state.position)

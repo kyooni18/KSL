@@ -9,6 +9,9 @@ public struct MissionPlanningRequest: Sendable {
   public let terminalState: VehicleState?
   public let controls: FlightControlSnapshot?
   public let previousTarget: GuidanceTarget?
+  /// Full reference history, including bank/alpha rates; preferred over the
+  /// legacy previousTarget when present. Value copied into both planning lanes.
+  public var targetLimiter: GuidanceTargetLimiter? = nil
   public var approach: ApproachPlanningRequest?
   public var environment = EnvironmentCalibration()
   public var hac: HACFitContext? = nil
@@ -19,12 +22,12 @@ public struct MissionPlanningRequest: Sendable {
   /// only the work it owns. This also preserves the historical plan API.
   public func entryOnly() -> Self {
     .init(time: time, entry: entry, terminalState: nil, controls: controls,
-      previousTarget: previousTarget, approach: nil, environment: environment,
+      previousTarget: previousTarget, targetLimiter: targetLimiter, approach: nil, environment: environment,
       hac: hac, dynamicsRevision: dynamicsRevision)
   }
   public func terminalOnly() -> Self {
     .init(time: time, entry: nil, terminalState: terminalState, controls: controls,
-      previousTarget: previousTarget, approach: approach, environment: environment,
+      previousTarget: previousTarget, targetLimiter: targetLimiter, approach: approach, environment: environment,
       hac: hac, dynamicsRevision: dynamicsRevision)
   }
 }
@@ -70,7 +73,7 @@ public actor MissionPlanningWorker {
       let planner = HACPlanningEngine(configuration: configuration,
         atmosphere: atmosphere.corrected(request.environment), aerodynamics: model)
       let preview = planner.plan(from: $0, allowDirect: request.hac?.onSpiral != true, preview: true,
-        controlSnapshot: request.controls, previousTarget: request.previousTarget, context: request.hac)
+        controlSnapshot: request.controls, previousTarget: request.previousTarget, targetLimiter: request.targetLimiter, context: request.hac)
       // The preexisting worker only ever returned previews, while MM305's
       // actual ownership contract requires a successful closed-loop stop.
       // Qualify only an inlet that has passed the cheap physical/geometry
@@ -78,7 +81,7 @@ public actor MissionPlanningWorker {
       if let candidate = preview.plan, !Task.isCancelled,
          MM305Admission.shouldQualifyPreview($0, plan: candidate, configuration: configuration) {
         return planner.plan(from: $0, allowDirect: request.hac?.onSpiral != true, preview: false,
-          controlSnapshot: request.controls, previousTarget: request.previousTarget, context: request.hac)
+          controlSnapshot: request.controls, previousTarget: request.previousTarget, targetLimiter: request.targetLimiter, context: request.hac)
       }
       return preview
     }

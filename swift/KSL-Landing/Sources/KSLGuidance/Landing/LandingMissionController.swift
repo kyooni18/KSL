@@ -191,10 +191,10 @@ public final class LandingMissionController {
     // Separate entry and terminal workers can update independently. Neither
     // consumes the other's request epoch or cancels its trajectory rollout.
     let entryRequest = allowEntry && phase == .entry && plan == nil
-      ? entry.request(from: state, controls: controls, previousTarget: limiter.previous) : nil
+      ? entry.request(from: state, controls: controls, previousTarget: limiter.previous, targetLimiter: limiter) : nil
     guard entryRequest != nil || terminalState != nil else { return nil }
     return .init(time: state.time, entry: entryRequest, terminalState: terminalState,
-      controls: controls, previousTarget: limiter.previous, environment: environment, hac: hacContext())
+      controls: controls, previousTarget: limiter.previous, targetLimiter: limiter, environment: environment, hac: hacContext())
   }
   public func accept(_ proposal: MissionPlanningProposal, state: VehicleState) {
     guard proposal.time <= state.time else { return }
@@ -256,7 +256,7 @@ public final class LandingMissionController {
     if previousTime == nil && [.acquisition, .headingAlignment].contains(phase) {
       if plan == nil {
         acceptTerminal(planner.plan(from: state, allowDirect: !hacContext().onSpiral,
-          controlSnapshot: controlSnapshot, previousTarget: limiter.previous), state: state)
+          controlSnapshot: controlSnapshot, previousTarget: limiter.previous, targetLimiter: limiter), state: state)
       }
       if let plan { lastAdmission = MM305Admission.evaluate(state, plan: plan, configuration: configuration) }
     }
@@ -398,12 +398,12 @@ public final class LandingMissionController {
           aerodynamics: aerodynamics.scaled(lift: context.liftScale, drag: context.dragScale))
         let preview = currentPlanner.plan(
           from: state, allowDirect: !hacContext().onSpiral, preview: true,
-          controlSnapshot: controlSnapshot, previousTarget: limiter.previous, context: context)
+          controlSnapshot: controlSnapshot, previousTarget: limiter.previous, targetLimiter: limiter, context: context)
         let result: PlanningResult
         if let candidate = preview.plan,
            MM305Admission.shouldQualifyPreview(state, plan: candidate, configuration: configuration) {
           result = currentPlanner.plan(from: state, allowDirect: !hacContext().onSpiral, preview: false,
-            controlSnapshot: controlSnapshot, previousTarget: limiter.previous, context: context)
+            controlSnapshot: controlSnapshot, previousTarget: limiter.previous, targetLimiter: limiter, context: context)
         } else {
           result = preview
         }
@@ -464,7 +464,7 @@ public final class LandingMissionController {
         }
       } else {
         let target = entry.update(state, synchronousPlanning: !externalPlanning,
-          controls: controlSnapshot, previousTarget: limiter.previous, feedback: controlFeedback)
+          controls: controlSnapshot, previousTarget: limiter.previous, targetLimiter: limiter, feedback: controlFeedback)
         var failures: [ConstraintViolation] = []
         if p.height < 1200 && !approach.canCapture(state) {
           failures = [

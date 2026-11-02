@@ -12,6 +12,9 @@ public struct FlightControlSnapshot: Sendable {
     return trimModel.predictionInput(time: state.time, mach: state.aerodynamics.mach,
       pressure: state.aerodynamics.dynamicPressure, alpha: state.aerodynamics.angleOfAttack)
   }
+  let diagnostics: ControlDiagnostics
+  let mainContactLatched: Bool
+  let rollout: RolloutSnapshot
   let pitchAuthority: AxisAuthority, rollAuthority: AxisAuthority, yawAuthority: AxisAuthority
   let betaModel: SideslipResponseModel
   let pitchTrim: Double, rollTrim: Double, pitchScale: Double

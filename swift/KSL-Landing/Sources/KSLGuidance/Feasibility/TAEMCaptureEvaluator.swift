@@ -100,14 +100,15 @@ public final class TAEMCaptureEvaluator {
   public func evaluate(_ state: VehicleState, certify: Bool = false,
                        controlSnapshot: FlightControlSnapshot? = nil,
                        previousTarget: GuidanceTarget? = nil,
+                       targetLimiter: GuidanceTargetLimiter? = nil,
                        context: HACFitContext? = nil) -> TAEMCaptureAssessment {
     let c = configuration
     let preview = planner.plan(from: state, allowDirect: context?.onSpiral != true, preview: true,
-      controlSnapshot: controlSnapshot, previousTarget: previousTarget, context: context)
+      controlSnapshot: controlSnapshot, previousTarget: previousTarget, targetLimiter: targetLimiter, context: context)
     var a = Self.assess(preview, state: state, configuration: c)
     guard a.feasible, certify else { return a }
     let closed = planner.plan(from: state, allowDirect: context?.onSpiral != true,
-      controlSnapshot: controlSnapshot, previousTarget: previousTarget, context: context)
+      controlSnapshot: controlSnapshot, previousTarget: previousTarget, targetLimiter: targetLimiter, context: context)
     if let plan = closed.plan {
       a.certified = plan.nominalQualified; Self.describe(plan, into: &a)
       if !a.certified {

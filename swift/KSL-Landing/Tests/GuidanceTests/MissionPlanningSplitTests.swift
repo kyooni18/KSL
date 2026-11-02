@@ -27,6 +27,16 @@ final class MissionPlanningSplitTests: XCTestCase {
     var request = MissionPlanningRequest(time: state.time, entry: nil,
       terminalState: state, controls: nil, previousTarget: nil)
     request.dynamicsRevision = 6
+    let c = MissionConfiguration(), target = GuidanceTarget(angleOfAttack: 0.1, bank: 0.2)
+    var limiter = GuidanceTargetLimiter(previous: .init())
+    _ = limiter.update(target, phase: .entry, configuration: c, dt: 0.1, dynamicPressure: 3000)
+    request.targetLimiter = limiter
+    let expected = limiter.update(target, phase: .entry, configuration: c, dt: 0.1, dynamicPressure: 3000)
+    for split in [request.entryOnly(), request.terminalOnly()] {
+      var copy = split.targetLimiter
+      XCTAssertEqual(copy?.update(target, phase: .entry, configuration: c, dt: 0.1,
+        dynamicPressure: 3000), expected)
+    }
     XCTAssertNotNil(request.terminalOnly().terminalState)
     XCTAssertEqual(request.terminalOnly().dynamicsRevision, 6)
     XCTAssertNil(request.entryOnly().terminalState)

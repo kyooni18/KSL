@@ -22,8 +22,10 @@ public final class TrajectoryPropagationEngine {
     from initial: VehicleState, duration: Double, step: Double = 2, recordEvery: Int = 5,
     terminalSpeed: Double = 650, minimumDuration: Double = 0,
     controlSnapshot: FlightControlSnapshot? = nil, previousTarget: GuidanceTarget? = nil,
+    targetLimiter: GuidanceTargetLimiter? = nil,
     feedback: ((ControlDiagnostics) -> Void)? = nil,
     handoff: ((FlightControlSnapshot, GuidanceTarget?) -> Void)? = nil,
+    limiterHandoff: ((GuidanceTargetLimiter) -> Void)? = nil,
     terminalCondition: ((VehicleState) -> Bool)? = nil,
     law: (VehicleState) -> PredictionAttitude
   ) -> TrajectoryPrediction {
@@ -33,15 +35,13 @@ public final class TrajectoryPropagationEngine {
       return .init(samples: [], terminalState: s,
         violations: [.init(.invalidGeometry, "Invalid prediction interval")], duration: 0, reachedTerminalRegion: false)
     }
-    let controller = FlightController(configuration: configuration, snapshot: controlSnapshot)
-    let physics = ShuttlePhysicsEngine(configuration: configuration, atmosphere: dynamics.atmosphere,
-      aerodynamics: dynamics.aerodynamics, initialControls: initial.appliedControls ?? .init(),
-      initialState: initial, pitchBalancingInput: controlSnapshot?.predictionPitchTrim(state: initial))
+    let rollout = NativeCommandRollout(seed: .init(state: initial, controls: controlSnapshot,
+      limiter: targetLimiter ?? GuidanceTargetLimiter(previous: previousTarget)),
+      configuration: configuration, atmosphere: dynamics.atmosphere, aerodynamics: dynamics.aerodynamics)
     let controlStep = min(configuration.guidance.controlInterval, step)
     let end = initial.time + duration
     var nextRecord = initial.time
-    var limiter = GuidanceTargetLimiter(previous: previousTarget)
-    s = physics.observe(s)
+    s = rollout.state
     // A sub-resolution remainder is float residue, not a step to fly.
     while end - s.time > controlStep * 1e-6 {
       if Task.isCancelled { break }
@@ -68,24 +68,19 @@ public final class TrajectoryPropagationEngine {
         nextRecord += step * Double(recordEvery)
       }
       let dt = min(controlStep, end - s.time)
-      feedback?(controller.diagnostics)
+      feedback?(rollout.diagnostics)
       let requested = law(s)
-      let target = limiter.update(.init(angleOfAttack: requested.alpha, bank: requested.bank),
-        phase: .entry, configuration: configuration, dt: dt, dynamicPressure: s.aerodynamics.dynamicPressure,
-        rollResponseSeconds: controller.diagnostics.rollResponseSeconds,
-        pitchResponseSeconds: controller.diagnostics.pitchResponseSeconds,
-        controlAuthority: s.controlAuthority)
       do {
-        let command = try controller.command(state: s,
-          solution: .init(phase: .entry, target: target), dt: dt)
-        s = try physics.advance(s, command: command, duration: dt, maximumStep: 0.02)
+        s = try rollout.advance(.init(phase: .entry,
+          target: .init(angleOfAttack: requested.alpha, bank: requested.bank)), duration: dt).after
       } catch {
         violations.append(.init(.actuatorAuthority, "Closed-loop forecast failed: \(error)")); break
       }
     }
     // Carry the propagated controller and target history across a predicted
     // phase boundary; the entry seed snapshot is no longer the terminal state.
-    handoff?(controller.snapshot, limiter.previous)
+    handoff?(rollout.controlSnapshot, rollout.limiter.previous)
+    limiterHandoff?(rollout.limiter)
     return .init(samples: samples, terminalState: s, violations: violations,
       duration: s.time - initial.time, reachedTerminalRegion: reached)
   }

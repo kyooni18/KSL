@@ -16,21 +16,19 @@ public final class TerminalTrajectoryEvaluator {
   }
   public func evaluate(plan: TerminalPlan, from initial: VehicleState,
                        controlSnapshot: FlightControlSnapshot?, previousTarget: GuidanceTarget?,
+                       targetLimiter: GuidanceTargetLimiter? = nil,
                        lift: Double, drag: Double,
                        trace: ((VehicleState, PathStation, GuidanceTarget) -> Void)? = nil) -> TerminalClosedLoopCase {
     let c = configuration, dt = c.guidance.controlInterval
-    let controller = FlightController(configuration: c, snapshot: controlSnapshot)
-    let plant = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere,
-      aerodynamics: aerodynamics.scaled(lift: lift, drag: drag),
-      initialControls: initial.appliedControls ?? .init(), initialState: initial,
-      pitchBalancingInput: controlSnapshot?.predictionPitchTrim(state: initial))
+    let rollout = NativeCommandRollout(seed: .init(state: initial, controls: controlSnapshot,
+      limiter: targetLimiter ?? GuidanceTargetLimiter(previous: previousTarget)),
+      configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics.scaled(lift: lift, drag: drag))
     let tracker = PathTrackingEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
     let approach = ApproachGuidanceEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
     let authority = AerodynamicAuthorityEstimator(model: aerodynamics)
     let touchdown = TouchdownMonitor(configuration: c)
     let frame = RunwayFrame(runway: c.runway, planet: c.planet)
-    var limiter = GuidanceTargetLimiter(previous: previousTarget)
-    var state = plant.observe(initial), phase = MissionPhase.acquisition
+    var state = rollout.state, phase = MissionPhase.acquisition
     var failures: [ConstraintViolation] = [], maximumTrackingError = 0.0
     var finalCaptured = false, stoppedSince: Double?, success = false
     var lastReference: PathStation?
@@ -48,7 +46,7 @@ public final class TerminalTrajectoryEvaluator {
         failures.append(.init(.excessiveLoad, "Closed-loop terminal load envelope")); break
       }
       authority.observe(state)
-      let trim = controller.diagnostics.trimEvidence == .identified ? controller.diagnostics.trimAlphaCeiling : nil
+      let trim = rollout.diagnostics.trimEvidence == .identified ? rollout.diagnostics.trimAlphaCeiling : nil
       let raw: GuidanceSolution
       if state.contact.isGrounded {
         phase = state.wheelContact?.noseGear == true ? .rollout : .touchdown
@@ -63,31 +61,26 @@ public final class TerminalTrajectoryEvaluator {
         raw = .init(phase: phase, target: .init(gearDown: true))
       } else if finalCaptured {
         raw = approach.update(state, previousPhase: phase, liftEffectiveness: authority.liftEffectiveness, dragEffectiveness: authority.dragEffectiveness,
-          pitchResponseSeconds: controller.diagnostics.pitchResponseSeconds, identifiedTrimCeiling: trim)
+          pitchResponseSeconds: rollout.diagnostics.pitchResponseSeconds, identifiedTrimCeiling: trim)
       } else {
         let (target, reference) = tracker.update(state, plan: plan, liftEffectiveness: authority.liftEffectiveness,
           identifiedTrimCeiling: trim,
-          rollResponseSeconds: controller.diagnostics.rollResponseSeconds, pitchResponseSeconds: controller.diagnostics.pitchResponseSeconds)
+          rollResponseSeconds: rollout.diagnostics.rollResponseSeconds, pitchResponseSeconds: rollout.diagnostics.pitchResponseSeconds)
         lastReference = reference
         maximumTrackingError = max(maximumTrackingError, tracker.trackingError)
         if reference.segment == .final && approach.canCapture(state) {
           finalCaptured = true
           raw = approach.update(state, previousPhase: phase, liftEffectiveness: authority.liftEffectiveness, dragEffectiveness: authority.dragEffectiveness,
-            pitchResponseSeconds: controller.diagnostics.pitchResponseSeconds, identifiedTrimCeiling: trim)
+            pitchResponseSeconds: rollout.diagnostics.pitchResponseSeconds, identifiedTrimCeiling: trim)
         } else {
           raw = .init(phase: reference.segment == .spiral ? .headingAlignment : .acquisition, target: target)
         }
       }
       phase = raw.phase
-      let target = limiter.update(raw.target, phase: phase, configuration: c, dt: dt,
-        dynamicPressure: state.aerodynamics.dynamicPressure,
-        rollResponseSeconds: controller.diagnostics.rollResponseSeconds,
-        pitchResponseSeconds: controller.diagnostics.pitchResponseSeconds,
-        controlAuthority: state.controlAuthority)
-      if let reference = lastReference { trace?(state, reference, target) }
       do {
-        let command = try controller.command(state: state, solution: .init(phase: phase, target: target), dt: dt)
-        state = try plant.advance(state, command: command, duration: dt, maximumStep: 0.02)
+        let step = try rollout.advance(raw, duration: dt)
+        if let reference = lastReference { trace?(step.before, reference, step.limited) }
+        state = step.after
       } catch {
         failures.append(.init(.actuatorAuthority, "Closed-loop terminal computation: \(error)")); break
       }
@@ -95,7 +88,7 @@ public final class TerminalTrajectoryEvaluator {
     if !success && failures.isEmpty {
       failures.append(.init(.timeout, Task.isCancelled ? "Terminal qualification cancelled" : "Terminal qualification did not complete rollout"))
     }
-    let event = plant.touchdown
+    let event = rollout.touchdown
     return .init(liftMultiplier: lift, dragMultiplier: drag, feasible: success && event?.acceptable == true,
       elapsed: state.time-initial.time, touchdownSpeed: event?.horizontalSpeed,
       touchdownSink: event?.verticalSpeed, touchdownPitch: event?.pitch,

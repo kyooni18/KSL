@@ -1,0 +1,50 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 43] CoreTests-product
+[2 / 44] KSLControl
+[4 / 46] KSLControl
+[8 / 49] KSLGuidance
+[15 / 49] KSLKRPC-product
+[18 / 49] KSLGuidance
+[26 / 51] PhysicsTests-product
+[26 / 51] KSLGuidance
+[34 / 42] ksl-landing-product
+[38 / 45] IntegrationTests-product
+[40 / 45] GuidanceTests-product
+[45 / 49] GuidanceTests-product
+Build complete! (2.81초)
+Test Suite 'Selected tests' started at 2026-11-03 01:48:31.098.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-03 01:48:31.099.
+Test Suite 'MissionPlanningSplitTests' started at 2026-11-03 01:48:31.099.
+Test Case '-[GuidanceTests.MissionPlanningSplitTests testApproachRequestSurvivesTerminalWorkerSplit]' started.
+Test Case '-[GuidanceTests.MissionPlanningSplitTests testApproachRequestSurvivesTerminalWorkerSplit]' passed (0.002 seconds).
+Test Case '-[GuidanceTests.MissionPlanningSplitTests testUnrelatedStateAndDynamicsRevisionAreRetainedBySplit]' started.
+Test Case '-[GuidanceTests.MissionPlanningSplitTests testUnrelatedStateAndDynamicsRevisionAreRetainedBySplit]' passed (0.001 seconds).
+Test Suite 'MissionPlanningSplitTests' passed at 2026-11-03 01:48:31.101.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'NativeCommandRolloutTests' started at 2026-11-03 01:48:31.101.
+Test Case '-[GuidanceTests.NativeCommandRolloutTests testSharedRolloutMatchesNativePipelineWithWarmControllerAndLimiter]' started.
+Test Case '-[GuidanceTests.NativeCommandRolloutTests testSharedRolloutMatchesNativePipelineWithWarmControllerAndLimiter]' passed (0.008 seconds).
+Test Suite 'NativeCommandRolloutTests' passed at 2026-11-03 01:48:31.109.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.008 (0.008) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-03 01:48:31.109.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.010 (0.011) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 01:48:31.109.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.010 (0.012) seconds
+Test Suite 'Selected tests' started at 2026-11-03 01:48:31.208.
+Test Suite 'CoreTests.xctest' started at 2026-11-03 01:48:31.209.
+Test Suite 'GuidanceAuthorityRegressionTests' started at 2026-11-03 01:48:31.209.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testActiveAttitudeAuthorityRemainsContinuousAtAtmosphereBoundary]' started.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testActiveAttitudeAuthorityRemainsContinuousAtAtmosphereBoundary]' passed (0.002 seconds).
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testBrakingAReferenceCannotOvershootOrMoveAwayFromItsGoal]' started.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testBrakingAReferenceCannotOvershootOrMoveAwayFromItsGoal]' passed (0.000 seconds).
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testMeasuredZeroAuthorityDoesNotBecomeAnUnlimitedSlew]' started.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testMeasuredZeroAuthorityDoesNotBecomeAnUnlimitedSlew]' passed (0.000 seconds).
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testPredictionCopyPreservesSlewMomentumWithoutOvershoot]' started.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testPredictionCopyPreservesSlewMomentumWithoutOvershoot]' passed (0.000 seconds).
+Test Suite 'GuidanceAuthorityRegressionTests' passed at 2026-11-03 01:48:31.212.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'CoreTests.xctest' passed at 2026-11-03 01:48:31.212.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 01:48:31.212.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.002 (0.004) seconds

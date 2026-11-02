@@ -94,7 +94,8 @@ public final class EntryCaptureForecaster {
 
   func forecast(from state: VehicleState, memory: EntryLawMemory, rangeMultiplier: Double,
                 certify: Bool = false,
-                controls: FlightControlSnapshot?, previousTarget: GuidanceTarget?) -> EntryCaptureForecast {
+                controls: FlightControlSnapshot?, previousTarget: GuidanceTarget?,
+                targetLimiter: GuidanceTargetLimiter? = nil) -> EntryCaptureForecast {
     let c = configuration
     var memory = memory
     if memory.objective == nil { memory.objective = objectivePlanner.objective(from: state, crossAim: memory.crossAim) }
@@ -135,17 +136,19 @@ public final class EntryCaptureForecaster {
       return assessment
     }
     var terminalControls = controls, terminalTarget = previousTarget
+    var terminalLimiter = targetLimiter
     var capture = TAEMCaptureAssessment()
     var searched = false, handedOff = false, nextCapture = state.time
     let first = predictor.predict(from: state, duration: c.guidance.maximumPredictionDuration,
       step: c.guidance.predictionStep, recordEvery: 10, terminalSpeed: 0,
-      controlSnapshot: controls, previousTarget: previousTarget,
+      controlSnapshot: controls, previousTarget: previousTarget, targetLimiter: targetLimiter,
       feedback: {
         law.memory.pitchResponseSeconds = $0.pitchResponseSeconds
         law.memory.rollResponseSeconds = $0.rollResponseSeconds
         law.memory.identifiedTrimCeiling = $0.trimEvidence == .identified ? $0.trimAlphaCeiling : nil
       },
       handoff: { terminalControls = $0; terminalTarget = $1 },
+      limiterHandoff: { terminalLimiter = $0 },
       terminalCondition: { s in
         let altitude = s.position.length-c.planet.radius
         let objective = law.memory.objective ?? EntryCaptureObjective.seed(configuration: c,
@@ -197,7 +200,7 @@ public final class EntryCaptureForecaster {
     let samples = first.samples, violations = first.violations, end = first.terminalState
     if handedOff && capture.feasible && certify {
       capture = evaluator.evaluate(end, certify: true, controlSnapshot: terminalControls,
-        previousTarget: terminalTarget, context: captureContext())
+        previousTarget: terminalTarget, targetLimiter: terminalLimiter, context: captureContext())
     }
     let p = frame.coordinates(of: end.position)
     if !searched {

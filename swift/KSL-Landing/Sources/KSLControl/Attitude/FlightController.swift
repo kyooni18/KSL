@@ -39,10 +39,13 @@ public final class FlightController {
       previousFeedforward = s.previousFeedforward; feedforwardWasIdentified = s.feedforwardWasIdentified
       feedforwardWasPrior = s.feedforwardWasPrior
       coupledRollAcceleration = s.coupledRollAcceleration
+      diagnostics = s.diagnostics; mainContactLatched = s.mainContactLatched
+      rollout = .init(configuration: configuration, snapshot: s.rollout)
     }
   }
   public var snapshot: FlightControlSnapshot {
-    .init(pitchAuthority: pitchAuthority, rollAuthority: rollAuthority, yawAuthority: yawAuthority,
+    .init(diagnostics: diagnostics, mainContactLatched: mainContactLatched, rollout: rollout.snapshot,
+      pitchAuthority: pitchAuthority, rollAuthority: rollAuthority, yawAuthority: yawAuthority,
       betaModel: betaModel, pitchTrim: pitchTrim, rollTrim: rollTrim, pitchScale: pitchScale,
       previous: previous, previousError: previousError, errorRate: errorRate,
       previousDesiredAttitude: previousDesiredAttitude, pitchReferenceRate: pitchReferenceRate,

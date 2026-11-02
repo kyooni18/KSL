@@ -61,7 +61,8 @@ public final class ShuttlePhysicsEngine {
       s.controlAuthority?.actuatorSources = "provisional q-only moment model; no measured anchor"
     }
     s.appliedControls = .init(pitch: surfaces.pitch, roll: surfaces.roll, yaw: surfaces.yaw,
-                              gearDown: s.systems.gearDown)
+                              gearDown: s.systems.gearDown, speedbrakeFraction: surfaces.speedbrake,
+                              bodyFlapTrimFraction: surfaces.bodyFlapTrim)
     let r = RunwayFrame(runway: configuration.runway, planet: configuration.planet).coordinates(
       of: s.position)
     let terrain =

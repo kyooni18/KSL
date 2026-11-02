@@ -45,4 +45,26 @@ final class GuidanceAuthorityRegressionTests: XCTestCase {
     XCTAssertLessThanOrEqual(reversed.0, 0)
     XCTAssertGreaterThanOrEqual(reversed.0, -0.001)
   }
+  func testPredictionCopyPreservesSlewMomentumWithoutOvershoot() {
+    let c = MissionConfiguration()
+    let request = GuidanceTarget(angleOfAttack: radians(18), bank: radians(20))
+    var live = GuidanceTargetLimiter(previous: .init())
+    for _ in 0..<4 {
+      _ = live.update(request, phase: .acquisition, configuration: c, dt: 0.1,
+        dynamicPressure: 3000, controlAuthority: authority)
+    }
+    var branch = live
+    var cold = GuidanceTargetLimiter(previous: live.previous)
+    let expected = live.update(request, phase: .acquisition, configuration: c, dt: 0.1,
+      dynamicPressure: 3000, controlAuthority: authority)
+    let copied = branch.update(request, phase: .acquisition, configuration: c, dt: 0.1,
+      dynamicPressure: 3000, controlAuthority: authority)
+    let reset = cold.update(request, phase: .acquisition, configuration: c, dt: 0.1,
+      dynamicPressure: 3000, controlAuthority: authority)
+    XCTAssertEqual(copied, expected)
+    XCTAssertNotEqual(copied.bank, reset.bank, "Last target alone loses the reference rates")
+    XCTAssertLessThanOrEqual(copied.bank, request.bank)
+    XCTAssertLessThanOrEqual(copied.angleOfAttack, request.angleOfAttack)
+  }
+
 }
