@@ -1,0 +1,11 @@
+{
+  "flownRevision": "3d7aab71e6ed6e45b068640ff408177503e0743b",
+  "run": "runs/20261102T122809Z-dessert-normal-oms-restart",
+  "files": {
+    "runs/20261102T122809Z-dessert-normal-oms-restart/live.jsonl": "1e4689fd548733292dda694684b5f9704c21fb43cc0345c6e6acf7453448c916",
+    "runs/20261102T122809Z-dessert-normal-oms-restart/live.jsonl.configuration.json": "37087461ffbea85f6ae16727bdbcc6d0ec28333afc9d28bd9a69f8e7d03867cc",
+    "runs/20261102T122809Z-dessert-normal-oms-restart/live.jsonl.deorbit-plan.json": "babbd98452f708c62634efc276c53692630442f634c2cbde0e7008a02f61d623",
+    "Validation/Runway36-Restart-Investigation-20261102/entry-through-handoff.jsonl": "58f72e84f72b990cdac353094604cc342b28fe816ecf22e45bc703f737b9c70a"
+  },
+  "note": "Frozen executable/resource identities and source.patch retained in run/provenance.json; live-results.json has flight outcome. Prefix is derived and intentionally excluded from Git."
+}

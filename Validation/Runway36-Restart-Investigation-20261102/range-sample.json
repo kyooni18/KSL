@@ -1,0 +1,224 @@
+{
+  "state": {
+    "aerodynamics": {
+      "airspeed": 1629.2945556640625,
+      "angleOfAttack": 0.3524648239550125,
+      "bank": 0.00550803131346413,
+      "drag": 121061.098634857,
+      "dynamicPressure": 2499.359375,
+      "force": {
+        "x": -132139.58555304483,
+        "y": 54769.293347566396,
+        "z": -13450.997140662383
+      },
+      "lift": 77367.21066008332,
+      "mach": 4.96221589844976,
+      "measuredForces": true,
+      "sideslip": -5.34530377853975e-05
+    },
+    "angularVelocity": {
+      "x": -0.00018619075167375463,
+      "y": -0.0029101662510486953,
+      "z": -2.6084053235798368e-05
+    },
+    "appliedControls": {
+      "gearDown": false,
+      "pitch": 0.3145522177219391,
+      "roll": -0.0022699569817632437,
+      "wheelBrake": 0,
+      "wheelSteering": 0,
+      "yaw": 0.02330898679792881
+    },
+    "atmosphere": {
+      "density": 0.001883039757170099,
+      "evidence": "measured",
+      "pressure": 145.00381469726562,
+      "speedOfSound": 328.3401184082031,
+      "temperature": 268.2562561035156,
+      "wind": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    "attitude": {
+      "w": 0.5740773847217289,
+      "x": -0.5447990286305737,
+      "y": 0.40080259408393315,
+      "z": -0.4615045561311757
+    },
+    "contact": "airborne",
+    "controlAuthority": {
+      "actuatorSources": "aerodynamic-surfaces+active-powered-reaction-wheels+rcs",
+      "evidence": "measured",
+      "inertia": {
+        "x": 85086.234375,
+        "y": 922659.125,
+        "z": 957537.75
+      },
+      "negativeTorque": {
+        "x": -28982.024991795934,
+        "y": -31954.805778837257,
+        "z": -30713.908440238152
+      },
+      "positiveTorque": {
+        "x": 117972.06850015622,
+        "y": 150400.3324916603,
+        "z": 30710.711155423094
+      },
+      "rcsExcludedNegativeTorque": {
+        "x": -28981.95743560791,
+        "y": -31462.270118150627,
+        "z": -26891.925811767578
+      },
+      "rcsExcludedPositiveTorque": {
+        "x": 117972.0344543457,
+        "y": 145133.2430621842,
+        "z": 26888.83638381958
+      }
+    },
+    "mass": 25544.900390625,
+    "position": {
+      "x": -558046.103601248,
+      "y": -302335.17178723356,
+      "z": -42774.45632377201
+    },
+    "propulsion": {
+      "availableThrust": 120000,
+      "dryMass": 19965.50390625,
+      "evidence": "measured",
+      "specificImpulse": 345,
+      "thrustDirectionBody": {
+        "x": 0.9379882046280634,
+        "y": 4.633397687081981e-08,
+        "z": 0.3466671717636672
+      }
+    },
+    "radarAltitude": 34571.895997352316,
+    "snapshotSpan": 0,
+    "systems": {
+      "airbrakes": false,
+      "brakes": false,
+      "gearDown": false,
+      "rcs": true,
+      "sas": false,
+      "speedbrakeFraction": 0,
+      "throttle": 0,
+      "thrust": 0
+    },
+    "time": 216350.05094672475,
+    "velocity": {
+      "x": 928.1303410369308,
+      "y": -1334.301252084671,
+      "z": 113.20257057881581
+    },
+    "vesselConfiguration": {
+      "anchorPart": 16962,
+      "centerOfMassBodyFRD": {
+        "x": -0.39863209798932786,
+        "y": -2.222848703993331,
+        "z": 9.68983871412323
+      },
+      "centerOfMassEvidence": "measured",
+      "centerOfMassFromAnchor": {
+        "x": -4.375766523762037e-05,
+        "y": -9.944940808664095,
+        "z": 0.3018120712734982
+      },
+      "inertiaTensorFRD": [
+        85086.1953125,
+        -23.88511848449707,
+        -1443.84521484375,
+        -23.885356903076172,
+        922658.75,
+        49.09086227416992,
+        -1443.84521484375,
+        49.09065246582031,
+        957537.5
+      ],
+      "measuredAt": 216350.05094672475,
+      "partCount": 26,
+      "revision": 1
+    },
+    "wheelContact": {
+      "evidence": "measured",
+      "mainGear": false,
+      "noseGear": false,
+      "wheelCount": 3
+    }
+  },
+  "control": {
+    "aerodynamicRate": {
+      "x": -2.2791850918493218e-05,
+      "y": -0.0002977638795046821,
+      "z": 2.2515193098169914e-05
+    },
+    "appliedDemand": {
+      "x": -0.0023287427262300253,
+      "y": 0.31644092538344315,
+      "z": -0.02109269610571403
+    },
+    "authority": {
+      "x": 0.36589119000594783,
+      "y": 0.03463338183409529,
+      "z": 0.027837172864992214
+    },
+    "authorityConfidence": {
+      "x": 0.955340660795274,
+      "y": 1,
+      "z": 0.9999987790393843
+    },
+    "authorityEvidence": "measured",
+    "bankError": -0.00550803131346413,
+    "betaConfidence": 0.03186034606002689,
+    "betaRollGain": 0.029437993135156465,
+    "betaYawGain": -0.03368358274089578,
+    "bodyRate": {
+      "x": -0.00018619075167375463,
+      "y": -0.0029101662510486953,
+      "z": -2.6084053235798368e-05
+    },
+    "pitchBandwidthScale": 0.9999999999999989,
+    "pitchError": -0.0033967970607166054,
+    "pitchFeedforward": 0,
+    "pitchResponseSeconds": 2.419782140559807,
+    "pitchSaturated": false,
+    "pitchTrim": 0.3924287431032921,
+    "quaternionError": {
+      "x": -0.005172744519643981,
+      "y": -0.003396640674714578,
+      "z": -0.0019496119130769285
+    },
+    "rawDemand": {
+      "x": -0.0023287427262300253,
+      "y": 0.3175401159129985,
+      "z": -0.02109269610571403
+    },
+    "recoveryRateFirst": false,
+    "relativeRate": {
+      "x": -3.9775135072582464e-05,
+      "y": -1.6418621585854217e-05,
+      "z": -3.280062690947723e-05
+    },
+    "reportedAuthority": {
+      "x": 0.3406194339740509,
+      "y": 0.03463338183409529,
+      "z": 0.0320725852901602
+    },
+    "rollResponseSeconds": 5.3647520309599095,
+    "rollSaturated": false,
+    "rollTrim": 0,
+    "sampleInterval": 0.11999999993713573,
+    "touchdownPitchGuardActive": false,
+    "trimEvidence": "unavailable",
+    "yawSaturated": false
+  },
+  "objective": {
+    "speed": 754.7677528283236,
+    "flightPath": -0.41887902047863906,
+    "cross": 0,
+    "energyHeight": 52259.66205197481,
+    "altitude": 25000,
+    "along": -35023
+  }
+}

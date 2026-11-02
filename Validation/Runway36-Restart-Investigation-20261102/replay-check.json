@@ -1,0 +1,9 @@
+{
+  "commandOrGuidanceMismatches" : 0,
+  "evidence" : "full-rate-snapshot-and-accepted-proposal-replay",
+  "phases" : [
+    "entry",
+    "acquisition"
+  ],
+  "records" : 4240
+}

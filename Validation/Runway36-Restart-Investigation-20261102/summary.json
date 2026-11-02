@@ -1,0 +1,117 @@
+{
+  "phases": {
+    "orbitalCoast": 812,
+    "burnSetup": 116,
+    "deorbitBurn": 506,
+    "entryCoast": 4493,
+    "entry": 4239,
+    "acquisition": 4298,
+    "approach": 543,
+    "preflare": 73,
+    "flare": 276,
+    "rollout": 1424,
+    "touchdown": 26
+  },
+  "counts": {
+    "unbracketed": 4239,
+    "TAEM acquisition": 4298
+  },
+  "violations": {
+    "TAEM energy below best-L/D envelope; planned descent remains unqualified": 4298,
+    "TAEM committed-profile force check failed: trimLift; recovery remains unqualified": 4298,
+    "Insufficient runway braking distance": 4298,
+    "No TAEM descent plan fits the configured glide and geometry limits; continuing recovery": 3611,
+    "Runway exceeds even the optimistic still-air modeled range": 2979,
+    "Last MM305 capture verdict: inadequateControlAuthority": 2979
+  },
+  "dynamicsChanges": [
+    [
+      216262.79094677046,
+      {
+        "centerOfMassEvidence": "measured",
+        "currentMass": 25673.869140625,
+        "inertiaEvidence": "measured",
+        "previousMass": 25793.505859375,
+        "reasons": [
+          "center-of-mass-shifted"
+        ],
+        "revision": 1,
+        "time": 216262.79094677046
+      }
+    ],
+    [
+      216340.2109467299,
+      {
+        "centerOfMassEvidence": "measured",
+        "currentMass": 25555.302734375,
+        "inertiaEvidence": "measured",
+        "previousMass": 25673.869140625,
+        "reasons": [
+          "center-of-mass-shifted"
+        ],
+        "revision": 2,
+        "time": 216340.2109467299
+      }
+    ],
+    [
+      216401.03094669804,
+      {
+        "centerOfMassEvidence": "measured",
+        "currentMass": 25437.6015625,
+        "inertiaEvidence": "measured",
+        "previousMass": 25555.302734375,
+        "reasons": [
+          "center-of-mass-shifted"
+        ],
+        "revision": 3,
+        "time": 216401.03094669804
+      }
+    ],
+    [
+      216952.89094640894,
+      {
+        "centerOfMassEvidence": "measured",
+        "currentMass": 25360.677734375,
+        "inertiaEvidence": "measured",
+        "previousMass": 25437.6015625,
+        "reasons": [
+          "center-of-mass-shifted"
+        ],
+        "revision": 4,
+        "time": 216952.89094640894
+      }
+    ],
+    [
+      216952.99094640889,
+      {
+        "centerOfMassEvidence": "measured",
+        "currentMass": 25360.677734375,
+        "inertiaEvidence": "measured",
+        "previousMass": 25360.677734375,
+        "reasons": [
+          "center-of-mass-shifted"
+        ],
+        "revision": 5,
+        "time": 216952.99094640889
+      }
+    ],
+    [
+      216955.33094640766,
+      {
+        "centerOfMassEvidence": "measured",
+        "currentMass": 25130.671875,
+        "inertiaEvidence": "measured",
+        "previousMass": 25360.677734375,
+        "reasons": [
+          "part-topology-changed",
+          "inertia-changed",
+          "center-of-mass-shifted",
+          "inertia-tensor-changed"
+        ],
+        "revision": 6,
+        "time": 216955.33094640766
+      }
+    ]
+  ],
+  "acceptedEntryProposals": 88
+}

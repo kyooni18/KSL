@@ -1,0 +1,31 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 677]
+[Planning deferred tasks]
+[1 / 6] KSLRuntime
+[18 / 29] IntegrationTests-product
+[20 / 31] IntegrationTests-product
+[25 / 31] IntegrationTests-product
+[27 / 31] IntegrationTests-product
+Build complete! (2.59초)
+Test Suite 'Selected tests' started at 2026-11-02 22:22:07.802.
+Test Suite 'IntegrationTests.xctest' started at 2026-11-02 22:22:07.804.
+Test Suite 'ZZRunway36InvestigationTests' started at 2026-11-02 22:22:07.805.
+Test Case '-[IntegrationTests.ZZRunway36InvestigationTests testRecordedHandoff]' started.
+Test Case '-[IntegrationTests.ZZRunway36InvestigationTests testRecordedHandoff]' passed (12.533 seconds).
+Test Suite 'ZZRunway36InvestigationTests' passed at 2026-11-02 22:22:20.338.
+	 Executed 1 test, with 0 failures (0 unexpected) in 12.533 (12.534) seconds
+Test Suite 'IntegrationTests.xctest' passed at 2026-11-02 22:22:20.338.
+	 Executed 1 test, with 0 failures (0 unexpected) in 12.533 (12.534) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 22:22:20.338.
+	 Executed 1 test, with 0 failures (0 unexpected) in 12.533 (12.536) seconds
+TRIM_FAIL range 145202.23544634835 station 145202.23544634835 height 25859.6581804625 speed 735.1929139632791 q 2956.9762192710814 normal 9.044582298632706 lateral 20.70890433119791 bank 66.40677394470568 demand 22.597858030252507 max 5.076079617859356 ceiling 40.0 gain 0.8418595294851317 arc 81199.78383885916 curvature 3.868966769448891e-05
+TRIM_FAIL range 128999.97086131579 station 128999.97086131579 height 25859.658180462506 speed 735.1929139632791 q 2956.9762192710814 normal 8.629821433890848 lateral 20.70890433119791 bank 67.37751528456535 demand 22.435073803746434 max 5.076079617859356 ceiling 40.0 gain 0.8418595294851317 arc 81199.78383885916 curvature 3.868966769448891e-05
+TRIM_FAIL range 126332.61558187014 station 126332.61558187014 height 25859.658180462506 speed 735.1929139632791 q 2956.9762192710814 normal 8.537944035956011 lateral 20.70890433119791 bank 67.5944434943493 demand 22.399893012240582 max 5.076079617859356 ceiling 40.0 gain 0.8418595294851317 arc 81199.78383885916 curvature 3.868966769448891e-05
+TRIM_FAIL range 145202.23544634835 station 145202.23544634835 height 25859.6581804625 speed 735.1929139632791 q 2956.9762192710814 normal 9.044582298632706 lateral 20.70890433119791 bank 66.40677394470568 demand 22.597858030252507 max 5.076079617859356 ceiling 40.0 gain 0.8418595294851317 arc 81199.78383885916 curvature 3.868966769448891e-05
+TRIM_FAIL range 145202.23544634835 station 145202.23544634835 height 25859.6581804625 speed 735.1929139632791 q 2956.9762192710814 normal 9.044582298632706 lateral 20.70890433119791 bank 66.40677394470568 demand 22.597858030252507 max 5.076079617859356 ceiling 40.0 gain 0.8418595294851317 arc 81199.78383885916 curvature 3.868966769448891e-05
+TRIM_FAIL range 128999.97086131579 station 128999.97086131579 height 25859.658180462506 speed 735.1929139632791 q 2956.9762192710814 normal 8.629821433890848 lateral 20.70890433119791 bank 67.37751528456535 demand 22.435073803746434 max 5.076079617859356 ceiling 40.0 gain 0.8418595294851317 arc 81199.78383885916 curvature 3.868966769448891e-05
+TRIM_FAIL range 126332.61558187014 station 126332.61558187014 height 25859.658180462506 speed 735.1929139632791 q 2956.9762192710814 normal 8.537944035956011 lateral 20.70890433119791 bank 67.5944434943493 demand 22.399893012240582 max 5.076079617859356 ceiling 40.0 gain 0.8418595294851317 arc 81199.78383885916 curvature 3.868966769448891e-05
+PROBE_GAINS 0.8418595294851317 1.493643556965677 CEILING nil NEP NominalEnergyPoint(along: -2286.0, height: 961.5108126231888, flightPathAngle: -0.41887902047863906, airspeed: 120.43974161148071, predictedTouchdownSpeed: 84.99998263516903, finalAssessment: Optional(KSLGuidance.TerminalAssessment(feasible: false, violations: [KSLCore.ConstraintViolation(kind: KSLCore.FailureClassification.excessiveEnergy, message: "Insufficient runway braking distance", value: 1315.615469382481, limit: 1250.0)], touchdownSpeed: 84.99998263516903, minimumLiftMargin: 16.8773553773566, maximumBank: 0.0, maximumQ: 6914.313552506502, maximumLoad: 1.6970125608354478, score: 1000000.2686000003, uncertaintyFraction: 0.2, predictionComplete: Optional(true), predictedThroughDistance: Optional(2686.0), energyExhaustionDistance: nil, unpricedDistance: Optional(0.0), airborneFeasible: Optional(true), rolloutViolations: Optional([KSLCore.ConstraintViolation(kind: KSLCore.FailureClassification.excessiveEnergy, message: "Insufficient runway braking distance", value: 1315.615469382481, limit: 1250.0)]))))
+PROBE_TARGET GuidanceTarget(angleOfAttack: 0.0, bank: 0.0, desiredSpeed: 735.5099315810294, desiredHeight: 26680.6081804625, desiredFlightPath: -0.09873317204024666, gearDown: false, speedbrakeFraction: nil) STATUS TAEMStatus(phase: KSLGuidance.TAEMPhase.acquisition, side: 1, remainingTurn: 9.365494999072789, range: 145202.23544634835, energyHeight: 52282.283253755195, nominalEnergy: 1291519.4953738272, minimumEnergy: 957284.0071992535, referenceHeight: 25859.6581804625, referenceDynamicPressure: 2958.8444658018234, minimumDynamicPressure: 5247.533834489636, finalRadius: 3000.0, growth: 0.07599088773175333, downmoded: false, insufficientEnergy: true, descentPlanFits: true, descentCheckFailure: Optional("trimLift"), predictedNEPEnergy: nil, referenceTracking: Optional(false)) DEBUG side 1 turn 176.57566648904253 range 126332.61558187014 arc 81199.78383885916 EN 1128178.6873509067; side 1 turn 536.6033364977496 range 145202.23544634835 arc 81199.78383885916 EN 1291519.4953738272; side -1 turn 201.98226178273515 range 128999.97086131579 arc 81199.78383885916 EN 1151295.450138691 acqR 25846.693951895668
+RECORDED_TARGET GuidanceTarget(angleOfAttack: 0.6979196085495031, bank: 0.0, desiredSpeed: 735.5099315810294, desiredHeight: 26680.6081804625, desiredFlightPath: -0.09873317204024666, gearDown: false, speedbrakeFraction: Optional(0.0))

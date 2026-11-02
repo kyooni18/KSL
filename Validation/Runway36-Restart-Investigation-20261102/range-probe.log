@@ -1,0 +1,21 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 46] CoreTests-product
+[2 / 7] IntegrationTests-product
+[4 / 9] IntegrationTests-product
+[9 / 12] IntegrationTests-product
+[11 / 15] IntegrationTests-product
+Build complete! (2.75초)
+Test Suite 'Selected tests' started at 2026-11-02 22:23:58.292.
+Test Suite 'IntegrationTests.xctest' started at 2026-11-02 22:23:58.293.
+Test Suite 'ZZRunway36RangeInvestigationTests' started at 2026-11-02 22:23:58.293.
+Test Case '-[IntegrationTests.ZZRunway36RangeInvestigationTests testRecordedRangeChoice]' started.
+Test Case '-[IntegrationTests.ZZRunway36RangeInvestigationTests testRecordedRangeChoice]' passed (0.009 seconds).
+Test Suite 'ZZRunway36RangeInvestigationTests' passed at 2026-11-02 22:23:58.303.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.009 (0.009) seconds
+Test Suite 'IntegrationTests.xctest' passed at 2026-11-02 22:23:58.303.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.009 (0.010) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 22:23:58.303.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.009 (0.011) seconds
+RANGE_LOW InvestigationRangeReference(createdAt: 216350.05094672475, blend: 0.0, cross: 37902.85201511519, along: 32649.49382003457, altitude: 25361.163329996052, speed: 750.9993292890465, bracketed: false, reachedEnergy: true) RANGE_HIGH InvestigationRangeReference(createdAt: 216350.05094672475, blend: 1.0, cross: 96.88839729272058, along: 34111.41855250991, altitude: 27113.996489198296, speed: 729.8305649874851, bracketed: false, reachedEnergy: true) OBJECTIVE EntryCaptureObjective(along: -35023.0, cross: 0.0, altitude: 25000.0, speed: 754.7677528283236, energyHeight: 52259.66205197481, flightPath: Optional(-0.41887902047863906))
+RANGE_SELECTED InvestigationRangeReference(createdAt: 216350.05094672475, blend: 0.0, cross: 37902.85201511519, along: 32649.49382003457, altitude: 25361.163329996052, speed: 750.9993292890465, bracketed: false, reachedEnergy: true)

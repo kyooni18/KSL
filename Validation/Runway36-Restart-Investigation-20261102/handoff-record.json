@@ -1,0 +1,802 @@
+{
+  "calibration": {
+    "acceptedPassiveSamples": 0,
+    "acceptedTrajectorySamples": 0,
+    "altitudeResidual": 0,
+    "autoApplyRequested": true,
+    "bankEffectiveness": 1,
+    "certifiedProfileChanged": false,
+    "currentRegime": 2,
+    "environment": {
+      "densityScale": 0.999787494533327,
+      "evidence": "measured",
+      "observedAt": 216422.15094668698,
+      "soundSpeedScale": 0.9999752233096223
+    },
+    "observation": {
+      "forceEvidence": "measured",
+      "informationBlend": 0.0025734045757317458,
+      "informationIncrement": 0.0025767214729879983,
+      "passiveEligible": false,
+      "rejectionReasons": [
+        "conservative-stall-risk"
+      ],
+      "stallEvidence": "provisional",
+      "stallFraction": 0.3835672809803388,
+      "trajectoryEligible": false
+    },
+    "rangeResidual": 0,
+    "regimes": [
+      {
+        "ballisticCoefficient": 700,
+        "confidence": 0,
+        "liftToDrag": 0.4,
+        "machAnchor": 0.35
+      },
+      {
+        "ballisticCoefficient": 700,
+        "confidence": 0,
+        "liftToDrag": 0.4,
+        "machAnchor": 1.05
+      },
+      {
+        "ballisticCoefficient": 700,
+        "confidence": 0,
+        "liftToDrag": 0.4,
+        "machAnchor": 2.6
+      },
+      {
+        "ballisticCoefficient": 700,
+        "confidence": 0,
+        "liftToDrag": 0.4,
+        "machAnchor": 6
+      }
+    ],
+    "rejectedPassiveSamples": 206,
+    "speedResidual": 0,
+    "trajectoryConfidence": 0
+  },
+  "command": {
+    "gearDown": false,
+    "pitch": 0.988083149893075,
+    "roll": -0.002717129010945138,
+    "wheelBrake": 0,
+    "wheelSteering": 0,
+    "yaw": 0.23672119069797953
+  },
+  "control": {
+    "aerodynamicRate": {
+      "x": 0.0026652609389017936,
+      "y": 0.0007172780517494306,
+      "z": 0.0020062500774478452
+    },
+    "appliedDemand": {
+      "x": -0.002717129010945138,
+      "y": 0.988083149893075,
+      "z": 0.23672119069797953
+    },
+    "authority": {
+      "x": 0.7999457122231122,
+      "y": 0.18282800820689366,
+      "z": 0.06411772541393669
+    },
+    "authorityConfidence": {
+      "x": 0.9671491308224957,
+      "y": 1,
+      "z": 0.9999999999999997
+    },
+    "authorityEvidence": "measured",
+    "bankError": -0.011114769348210523,
+    "betaConfidence": 0.08732708316210754,
+    "betaRollGain": 0.10171786983993926,
+    "betaYawGain": -0.1428724659694699,
+    "bodyRate": {
+      "x": 0.0028138264361603823,
+      "y": -0.0027922431143060818,
+      "z": -0.0006292994798815
+    },
+    "pitchBandwidthScale": 0.9999999999999989,
+    "pitchError": 0.1073757133909129,
+    "pitchFeedforward": 0,
+    "pitchResponseSeconds": 2.3709832946428695,
+    "pitchSaturated": true,
+    "pitchTrim": 0.5310332467234096,
+    "quaternionError": {
+      "x": -0.008832343448465622,
+      "y": 0.10737981543092627,
+      "z": -0.0077740941516034985
+    },
+    "rawDemand": {
+      "x": -0.002717129010945138,
+      "y": 1.008832801649583,
+      "z": 0.23672119069797953
+    },
+    "recoveryRateFirst": false,
+    "relativeRate": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "reportedAuthority": {
+      "x": 1.6443601229197258,
+      "y": 0.18282800820689366,
+      "z": 0.03794858360097968
+    },
+    "rollResponseSeconds": 4.48344454038463,
+    "rollSaturated": false,
+    "rollTrim": 0,
+    "sampleInterval": 0.11999999993713573,
+    "touchdownPitchGuardActive": false,
+    "trimEvidence": "unavailable",
+    "yawSaturated": false
+  },
+  "guidance": {
+    "admission": {
+      "accepted": false,
+      "altitudeMargin": 3258.6580272513675,
+      "controlOwnershipTransferred": false,
+      "headingMargin": 0.5231317603677929,
+      "machMargin": 0.4047985285488731,
+      "physicallyFeasible": false,
+      "planAge": 0.0999999999476131,
+      "positionMargin": 996.9059095973798,
+      "violations": [
+        {
+          "kind": "insufficientLift",
+          "limit": 6.3911201368540675,
+          "message": "MM305 inlet force is unavailable at the current measured state",
+          "value": 6.462977021939053
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 6.394345378136063,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 6.4361353387160065
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 6.28907842644853,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.12988551132575
+        },
+        {
+          "kind": "actuatorAuthority",
+          "limit": 0,
+          "message": "Path bank-rate demand exceeds available response",
+          "value": 0
+        },
+        {
+          "kind": "actuatorAuthority",
+          "limit": 0,
+          "message": "Path angle-of-attack rate exceeds the guidance slew envelope",
+          "value": 0
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 6.143336807841294,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 12.238489573422402
+        },
+        {
+          "kind": "actuatorAuthority",
+          "limit": 0,
+          "message": "Path bank-rate demand exceeds available response",
+          "value": 0
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 5.964268143466241,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 14.430100877559521
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 5.759995027282306,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 15.370818185495725
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 5.537297962800458,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 14.74842826440613
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 5.3003981707785615,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 12.632949825552261
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 4.969949036398822,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.984153165406124
+        },
+        {
+          "kind": "actuatorAuthority",
+          "limit": 0,
+          "message": "Path bank-rate demand exceeds available response",
+          "value": 0
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 4.59180308729277,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 8.639438742150686
+        },
+        {
+          "kind": "actuatorAuthority",
+          "limit": 0,
+          "message": "Path bank-rate demand exceeds available response",
+          "value": 0
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 4.201094354624221,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.28690354117718
+        },
+        {
+          "kind": "actuatorAuthority",
+          "limit": 0,
+          "message": "Path bank-rate demand exceeds available response",
+          "value": 0
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 3.795629578537792,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 10.340569598240664
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 3.37448734500738,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 10.698950020122979
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 2.9816672673606,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 10.396550478926317
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 2.782692495575373,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.878868933425574
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 2.5511705299853897,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.484172190790813
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 1.5966957856605917,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.258203182725364
+        },
+        {
+          "kind": "actuatorAuthority",
+          "limit": 0,
+          "message": "Path angle-of-attack rate exceeds the guidance slew envelope",
+          "value": 0
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 1.5820542236610586,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.186839943964376
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 1.65916478305046,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.189948798891072
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 1.7310991414745214,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.190162915093548
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 1.7899049083415919,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.187793977119775
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 2.648863674026448,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.183340610000727
+        },
+        {
+          "kind": "actuatorAuthority",
+          "limit": 0,
+          "message": "Path angle-of-attack rate exceeds the guidance slew envelope",
+          "value": 0
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 2.4775122492542034,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.139239901895426
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 2.000249734593832,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.108226879100194
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 1.36527145630439,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.09182794800879
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 0.726543119777112,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.086579599398506
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 0.4819777287316144,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.088640458859873
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 0.3769892263313125,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.09244920228246
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 0.3219259535263291,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.096505572631669
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 0.2847405981741959,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.10033086867056
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 0.25398485432817397,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.10376765536366
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 0.22567683676488537,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.106771099451317
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 0.19850758625344925,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.109337844407852
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 0.17210220626059633,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.111480836897933
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 0.14640170188614138,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.113220356578335
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 0.12144844138856749,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.11458072078597
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 0.09731339930193586,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.115588919025601
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 0.07407188439839114,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.11627387979196
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 0.051795242309618,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.116665937256274
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 0.030547059040523523,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.116796361174059
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 0.010377909034691933,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.116696911344423
+        },
+        {
+          "kind": "insufficientEnergy",
+          "limit": 0,
+          "message": "Path exhausts kinetic energy before the next station; continuation is unpriced",
+          "value": -66.42223566538546
+        },
+        {
+          "kind": "modelUncertainty",
+          "limit": 0,
+          "message": "No physically priced NEP altitude/speed solution; candidate is recovery geometry only",
+          "value": 0
+        },
+        {
+          "kind": "modelUncertainty",
+          "limit": 0,
+          "message": "MM305 candidate remains advisory; the current guidance owner retains control",
+          "value": 0
+        },
+        {
+          "kind": "modelUncertainty",
+          "limit": 0,
+          "message": "MM305 nominal closed-loop touchdown and rollout unconfirmed (advisory)",
+          "value": 0
+        }
+      ]
+    },
+    "capture": {
+      "actualAlong": 33356.96723624091,
+      "actualCross": 8144.474320128516,
+      "actualRunwayRange": 34336.856657983146,
+      "advisoryPlanFeasible": false,
+      "advisoryPlanID": 2164212,
+      "advisoryReference": [
+        [
+          216421.21094668747,
+          -3.429173333018702,
+          -143.2732698306853,
+          26748.550808339147,
+          748.4119262695312
+        ],
+        [
+          216430.49158735873,
+          -3.386424712020935,
+          -142.66424471669364,
+          26083.51748460764,
+          604.0754232111503
+        ],
+        [
+          216439.98671701827,
+          -3.264810363413266,
+          -142.17675123037841,
+          25497.863577394397,
+          485.0696623907431
+        ],
+        [
+          216452.18088369726,
+          -3.1383970515143647,
+          -141.688343218389,
+          24911.85903332522,
+          360.10813573266944
+        ],
+        [
+          216473.21029657515,
+          -3.1117156649802156,
+          -141.07861288217774,
+          24243.77679583896,
+          258.05058451193804
+        ],
+        [
+          216501.09124486058,
+          -3.2019994833334002,
+          -140.4334239400512,
+          23619.5235933956,
+          224.05188948684872
+        ],
+        [
+          216543.61721425073,
+          -3.396090364169057,
+          -139.82131295550298,
+          23121.2064239108,
+          80.9547349735264
+        ],
+        [
+          216650.61054307982,
+          -3.685620775400446,
+          -139.2582480837119,
+          22757.83750733931,
+          48.656835677468784
+        ],
+        [
+          216799.56582412077,
+          -4.059903719784226,
+          -138.75839776643195,
+          22526.299637690652,
+          36.909606318877756
+        ],
+        [
+          217002.2405951601,
+          -4.506296531349073,
+          -138.33383536744302,
+          22414.18924505706,
+          23.899969091808014
+        ]
+      ],
+      "availableTurnRate": 0,
+      "mm305Advisory": "MM305 inlet force is unavailable at the current measured state; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path bank-rate demand exceeds available response; Path angle-of-attack rate exceeds the guidance slew envelope; Path demands unavailable lift/trim authority; Path bank-rate demand exceeds available response; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path bank-rate demand exceeds available response; Path demands unavailable lift/trim authority; Path bank-rate demand exceeds available response; Path demands unavailable lift/trim authority; Path bank-rate demand exceeds available response; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path angle-of-attack rate exceeds the guidance slew envelope; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path angle-of-attack rate exceeds the guidance slew envelope; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path demands unavailable lift/trim authority; Path exhausts kinetic energy before the next station; continuation is unpriced; No physically priced NEP altitude/speed solution; candidate is recovery geometry only; MM305 candidate remains advisory; the current guidance owner retains control; MM305 nominal closed-loop touchdown and rollout unconfirmed (advisory)",
+      "mm305Deficit": "inadequateControlAuthority",
+      "mm305MaximumSearchedLength": 220000,
+      "mm305MinimumRequiredLength": 33769.39083831212,
+      "mm305PlanAccepted": false,
+      "mm305SearchHorizonExceeded": false,
+      "mm305Searched": true,
+      "mm305TurnAuthorityAssessed": true,
+      "mm305Violations": [
+        {
+          "kind": "insufficientLift",
+          "limit": 6.394345378136063,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 6.4361353387160065
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 6.28907842644853,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 9.12988551132575
+        },
+        {
+          "kind": "actuatorAuthority",
+          "limit": 0,
+          "message": "Path bank-rate demand exceeds available response",
+          "value": 0
+        },
+        {
+          "kind": "actuatorAuthority",
+          "limit": 0,
+          "message": "Path angle-of-attack rate exceeds the guidance slew envelope",
+          "value": 0
+        },
+        {
+          "kind": "insufficientLift",
+          "limit": 6.143336807841294,
+          "message": "Path demands unavailable lift/trim authority",
+          "value": 12.238489573422402
+        },
+        {
+          "kind": "actuatorAuthority",
+          "limit": 0,
+          "message": "Path bank-rate demand exceeds available response",
+          "value": 0
+        }
+      ],
+      "nominalEnergyAirspeed": 120.43974161148071,
+      "nominalEnergyAlong": -2286,
+      "nominalEnergyFlightPath": -0.41887902047863906,
+      "nominalEnergyHeight": 961.5108126231888,
+      "nominalEnergyPredictedTouchdownSpeed": 84.99998263516903,
+      "plannedCrossAim": 0,
+      "predictedAlong": 33367.12197756348,
+      "predictedAltitude": 25834.33746207431,
+      "predictedAt": 216421.21094668747,
+      "predictedCaptureTime": 216422.5109466868,
+      "predictedCross": 8399.830335017312,
+      "predictedDeficit": "inadequateControlAuthority",
+      "predictedFeasible": false,
+      "predictedHACRadius": 3000,
+      "predictedHACSide": -1,
+      "predictedHACTurnAngle": 0.8108501355200708,
+      "predictedMach": 2.4116906983502924,
+      "predictedPathLength": 65360.11326803711,
+      "predictedTrack": [],
+      "rangeMultiplier": 1,
+      "requiredHeadingChange": 1.530767594295419
+    },
+    "diagnostic": "TAEM phase=acquisition side=1 hacTurn=536.6033364977496 deg rpred=145202.23544634835 m E=52282.283253755195 m EN=1291519.4953738272 m EMIN=957284.0071992535 m href=25859.6581804625 m qref=2958.8444658018234 Pa qmin=5247.533834489636 Pa rf=3000.0 m growth=0.07599088773175333 m/rad2 downmoded=false descentFits=true descentCheck=trimLift referenceTracking=false",
+    "pathRemaining": 145202.23544634835,
+    "phase": "acquisition",
+    "target": {
+      "angleOfAttack": 0.6979196085495031,
+      "bank": 0,
+      "desiredFlightPath": -0.09873317204024666,
+      "desiredHeight": 26680.6081804625,
+      "desiredSpeed": 735.5099315810294,
+      "gearDown": false,
+      "speedbrakeFraction": 0
+    },
+    "violations": [
+      {
+        "kind": "insufficientEnergy",
+        "limit": 957284.0071992535,
+        "message": "TAEM energy below best-L/D envelope; planned descent remains unqualified",
+        "value": 52282.283253755195
+      },
+      {
+        "kind": "invalidGeometry",
+        "limit": 0,
+        "message": "TAEM committed-profile force check failed: trimLift; recovery remains unqualified",
+        "value": 0
+      },
+      {
+        "kind": "excessiveEnergy",
+        "limit": 1250,
+        "message": "Insufficient runway braking distance",
+        "value": 1315.615469382481
+      }
+    ]
+  },
+  "planningMode": "external-proposals-v1",
+  "sequence": 4240,
+  "state": {
+    "aerodynamics": {
+      "airspeed": 735.4317626953125,
+      "angleOfAttack": 0.5905438951585902,
+      "bank": 0.011114769348210523,
+      "drag": 371785.0283708248,
+      "dynamicPressure": 2958.215576171875,
+      "force": {
+        "x": -359936.0637035772,
+        "y": 174297.50503322622,
+        "z": -21575.290161597106
+      },
+      "lift": 148912.6456688456,
+      "mach": 2.4084011413473165,
+      "measuredForces": true,
+      "sideslip": -0.0009108709962071332
+    },
+    "angularVelocity": {
+      "x": 0.0028138264361603823,
+      "y": -0.0027922431143060818,
+      "z": -0.0006292994798815
+    },
+    "appliedControls": {
+      "gearDown": false,
+      "pitch": 0.9676066637039185,
+      "roll": -0.0023770113475620747,
+      "wheelBrake": 0,
+      "wheelSteering": 0,
+      "yaw": 0.08976396918296814
+    },
+    "atmosphere": {
+      "density": 0.010938935198527877,
+      "evidence": "measured",
+      "pressure": 728.5747680664062,
+      "speedOfSound": 305.3609924316406,
+      "temperature": 232.02194213867188,
+      "wind": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    "attitude": {
+      "w": 0.5585286097909332,
+      "x": -0.5127317015939429,
+      "y": 0.44756462428447114,
+      "z": -0.47417075122226565
+    },
+    "contact": "airborne",
+    "controlAuthority": {
+      "actuatorSources": "aerodynamic-surfaces+active-powered-reaction-wheels+rcs",
+      "evidence": "measured",
+      "inertia": {
+        "x": 84764.625,
+        "y": 911201.5625,
+        "z": 946076.125
+      },
+      "negativeTorque": {
+        "x": -141086.19255797015,
+        "y": -166593.16674688432,
+        "z": -35944.91078078223
+      },
+      "positiveTorque": {
+        "x": 139383.56918424446,
+        "y": 188792.8284164533,
+        "z": 35902.2489224534
+      },
+      "rcsExcludedNegativeTorque": {
+        "x": -141086.0137939453,
+        "y": -166101.77961783484,
+        "z": -32135.693550109863
+      },
+      "rcsExcludedPositiveTorque": {
+        "x": 139383.48388671875,
+        "y": 183541.99173976667,
+        "z": 32093.31703186035
+      }
+    },
+    "mass": 25361.34765625,
+    "position": {
+      "x": -500968.82008993643,
+      "y": -374639.840764241,
+      "z": -37467.52833154912
+    },
+    "propulsion": {
+      "availableThrust": 120000,
+      "dryMass": 19965.501953125,
+      "evidence": "measured",
+      "specificImpulse": 345,
+      "thrustDirectionBody": {
+        "x": 0.9379882046280634,
+        "y": 4.633397687081981e-08,
+        "z": 0.3466671717636672
+      }
+    },
+    "radarAltitude": 26037.43655903137,
+    "snapshotSpan": 0,
+    "systems": {
+      "airbrakes": false,
+      "brakes": false,
+      "gearDown": false,
+      "rcs": true,
+      "sas": false,
+      "speedbrakeFraction": 0,
+      "throttle": 0,
+      "thrust": 0
+    },
+    "time": 216422.15094668698,
+    "velocity": {
+      "x": 495.24519453279134,
+      "y": -543.2211436036032,
+      "z": 22.425114794243754
+    },
+    "vesselConfiguration": {
+      "anchorPart": 16962,
+      "centerOfMassBodyFRD": {
+        "x": 0.1589086465537548,
+        "y": -1.1932566663370654,
+        "z": 9.892211685797747
+      },
+      "centerOfMassEvidence": "measured",
+      "centerOfMassFromAnchor": {
+        "x": -0.00012199076420887911,
+        "y": -9.960611005055778,
+        "z": 0.30198320718353955
+      },
+      "inertiaTensorFRD": [
+        84764.5625,
+        -30.87842559814453,
+        -1524.2557373046875,
+        -30.878433227539062,
+        911201.5,
+        48.96709060668945,
+        -1524.253662109375,
+        48.96709060668945,
+        946075.625
+      ],
+      "measuredAt": 216422.15094668698,
+      "partCount": 26,
+      "revision": 1
+    },
+    "wheelContact": {
+      "evidence": "measured",
+      "mainGear": false,
+      "noseGear": false,
+      "wheelCount": 3
+    }
+  },
+  "timing": {
+    "acquisitionSeconds": 0.011749833,
+    "commandSeconds": 0.026128958,
+    "computationSeconds": 0.021463375,
+    "missedDeadlines": 0,
+    "simulationInterval": 0.11999999993713573,
+    "wallInterval": 0.10487775
+  }
+}
