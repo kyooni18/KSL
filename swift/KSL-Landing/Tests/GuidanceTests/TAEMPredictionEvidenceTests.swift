@@ -128,4 +128,50 @@ final class TAEMPredictionEvidenceTests: XCTestCase {
     XCTAssertTrue(unsupported.violations.contains { $0.kind == .modelUncertainty })
   }
 
+  func testCommandSchedulePreservesHistoryAcrossSegmentsAndReturnsOnlyAPrefix() throws {
+    let r = try recorded(), c = r.configuration
+    let atmosphere = try AtmosphericModelEngine(planet: c.planet)
+    let aero = try AerodynamicsEngine(referenceArea: c.vehicle.referenceArea)
+    let controller = FlightController(configuration: c)
+    var previous: Double?
+    for row in r.balanceHistory.dropLast() {
+      _ = try controller.command(state: row.state, solution: .init(phase: row.phase, target: row.target),
+        dt: previous.map { row.state.time-$0 } ?? c.guidance.controlInterval)
+      previous = row.state.time
+    }
+    let row = try XCTUnwrap(r.balanceHistory.last)
+    let seed = NativeCommandSeed(state: row.state, controls: controller.snapshot,
+      limiter: .init(previous: row.target))
+    let command = GuidanceSolution(phase: row.phase, target: row.target)
+    let dt = c.guidance.controlInterval
+    let evaluator = TAEMCommandScheduleEvaluator(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+    let together = try evaluator.evaluate([.init(duration: dt, command: command),
+      .init(duration: dt/2, command: command)], from: seed)
+    let first = try evaluator.evaluate([.init(duration: dt, command: command)], from: seed)
+    let tail = try evaluator.evaluate([.init(duration: dt/2, command: command)], from: first.seed)
+    XCTAssertEqual(together.end, .scheduleExhausted)
+    XCTAssertEqual(together.steps.count, 2)
+    XCTAssertEqual(together.seed.originID, seed.originID)
+    XCTAssertEqual(together.seed.state, tail.seed.state)
+    XCTAssertEqual(together.seed.limiter, tail.seed.limiter)
+    XCTAssertEqual(together.steps.last?.issued, tail.steps.last?.issued)
+    XCTAssertEqual(together.distance, first.distance+tail.distance, accuracy: 1e-9)
+    let unsupported = try evaluator.evaluate([.init(duration: dt, command: command)],
+      from: .init(state: r.state, controls: nil, limiter: .init(previous: r.target)))
+    XCTAssertEqual(unsupported.end, .unsupportedDynamics)
+    XCTAssertTrue(unsupported.steps.isEmpty)
+    let cancelled = try evaluator.evaluate([.init(duration: dt, command: command)], from: seed, cancelled: { true })
+    XCTAssertEqual(cancelled.end, .cancelled)
+    XCTAssertTrue(cancelled.steps.isEmpty)
+    XCTAssertThrowsError(try evaluator.evaluate([.init(duration: .nan, command: command)], from: seed))
+    // Search coverage only; actual vehicle and plant are unchanged.
+    var short = c
+    short.guidance.maximumPredictionDuration = dt/2
+    let bounded = try TAEMCommandScheduleEvaluator(configuration: short, atmosphere: atmosphere,
+      aerodynamics: aero).evaluate([.init(duration: dt, command: command)], from: seed)
+    XCTAssertEqual(bounded.end, .durationCoverage)
+    XCTAssertEqual(bounded.steps.count, 1)
+    XCTAssertEqual(bounded.seed.state.time, seed.state.time+dt/2)
+  }
+
 }

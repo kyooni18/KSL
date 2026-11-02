@@ -1,0 +1,31 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 677]
+[Planning deferred tasks]
+[3 / 57]
+[9 / 36] KSLGuidance
+[11 / 38] KSLGuidance
+[15 / 40] KSLRuntime
+[25 / 37] ksl-landing-product
+[38 / 66] GuidanceTests-product
+[41 / 66] SimulationTests-product
+[48 / 68] GuidanceTests-product
+[49 / 68] GuidanceTests-product
+[53 / 68] GuidanceTests-product
+[60 / 72] IntegrationTests-product
+[66 / 72] GuidanceTests-product
+[68 / 73] GuidanceTests-product
+[68 / 73] IntegrationTests-product
+[72 / 74] GuidanceTests-product
+Build complete! (3.72초)
+Test Suite 'Selected tests' started at 2026-11-03 03:37:48.029.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-03 03:37:48.030.
+Test Suite 'TAEMPredictionEvidenceTests' started at 2026-11-03 03:37:48.030.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandSchedulePreservesHistoryAcrossSegmentsAndReturnsOnlyAPrefix]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandSchedulePreservesHistoryAcrossSegmentsAndReturnsOnlyAPrefix]' passed (0.008 seconds).
+Test Suite 'TAEMPredictionEvidenceTests' passed at 2026-11-03 03:37:48.038.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.008 (0.008) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-03 03:37:48.038.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.008 (0.008) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 03:37:48.038.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.008 (0.009) seconds
