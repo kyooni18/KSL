@@ -1,0 +1,31 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 677]
+[Planning deferred tasks]
+[1 / 38] KSLControl
+[13 / 50] KSLGuidance
+[15 / 52] KSLGuidance
+[22 / 59] KSLGuidance
+[28 / 63] KSLGuidance
+[28 / 63] KSLRuntime
+[30 / 64] KSLGuidance
+[32 / 64] KSLGuidance
+[39 / 66] KSLSimulation
+[41 / 67] GuidanceTests-product
+[51 / 72] GuidanceTests-product
+[65 / 77] IntegrationTests-product
+[67 / 77] ksl-landing-product
+[73 / 80] GuidanceTests-product
+[77 / 81] IntegrationTests-product
+Build complete! (3.20초)
+Test Suite 'Selected tests' started at 2026-11-03 04:13:39.390.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-03 04:13:39.391.
+Test Suite 'JointNormalForceProjectionTests' started at 2026-11-03 04:13:39.391.
+Test Case '-[GuidanceTests.JointNormalForceProjectionTests testJointProjectionCanTradeDesiredSupportForTurnWithoutIncreasingVehicleLimits]' started.
+Test Case '-[GuidanceTests.JointNormalForceProjectionTests testJointProjectionCanTradeDesiredSupportForTurnWithoutIncreasingVehicleLimits]' passed (0.007 seconds).
+Test Suite 'JointNormalForceProjectionTests' passed at 2026-11-03 04:13:39.399.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.007 (0.008) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-03 04:13:39.399.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.007 (0.008) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 04:13:39.399.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.007 (0.009) seconds

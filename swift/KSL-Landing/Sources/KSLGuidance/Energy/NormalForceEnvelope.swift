@@ -31,6 +31,21 @@ struct NormalForceEnvelope {
     return .init(bank: bank, lift: lift, vertical: lift * cosine, lateral: lift * sin(bank))
   }
 
+  /// Closest vector in the relaxed positive-lift sector, in squared m/s²
+  /// residual norm. Both axes have the same units; neither axis is reserved
+  /// first. This is a seed/bound calculation, not a validated mission objective
+  /// or proof that the entire 0...maximumLift interval is trim-attainable.
+  /// Aerodynamic inversion, finite response and terminal pricing remain required.
+  func projectJointly(vertical: Double, lateral: Double) -> Allocation? {
+    guard maximumLift.isFinite, maximumLift >= 0, maximumBank.isFinite,
+      maximumBank >= 0, maximumBank < .pi/2, vertical.isFinite, lateral.isFinite else { return nil }
+    let bank = clamp(atan2(lateral, vertical), -maximumBank, maximumBank)
+    let lift = clamp(vertical*cos(bank)+lateral*sin(bank), 0, maximumLift)
+    guard lift.isFinite else { return nil }
+    return .init(bank: lift > 0 ? bank : 0, lift: lift,
+      vertical: lift*cos(bank), lateral: lift*sin(bank))
+  }
+
   func lateralAuthority(reserving vertical: Double) -> Double {
     let limit = max(0, maximumLift)
     guard limit > max(0, vertical) else { return 0 }
