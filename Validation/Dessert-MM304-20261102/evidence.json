@@ -1,0 +1,13 @@
+{
+  "sourceRevision": "8ca5470",
+  "entrySourcesUnchangedSinceInvestigation": "68ea70c",
+  "probeKind": "two genuine recorded-state force allocation checks and one original scalar range-reference solve; no live flight or vehicle capability changes",
+  "artifacts": {
+    "summary.json": "3bfa4bf8b8c2e63ee25a98890c9633134e298b0dbd140587f7f0dfbe2dddfd9c",
+    "MM304-probe.swift": "f5d9551663de8596a8de7983dc9b581c16e8a31b1af6310627fcc5bce16fa6f1",
+    "force-probe.log": "98fba3a1929a0805a2dcfeca3c7db89c5028cf916e64d18495bdb7ccb15f9e88",
+    "forecast-summary.json": "b3a75be0067f4395bbf869ea24eb847981a3a6242d16fe84fd2e2f7c8d22cf7d",
+    "entry-diagnostics.json": "8b2eef70f22b8ebfea01fdefcb7d779f87e6d56256e03e2d51aa991c65c78348",
+    "force-samples.json": "b7e8203ff467be48cf1d20ea25309c59719b7cf9348d160fdd28d373a29004d9"
+  }
+}

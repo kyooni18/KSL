@@ -1,0 +1,37 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 677]
+[Planning deferred tasks]
+[15 / 79]
+[16 / 80] KSLCore
+[18 / 81] KSLCore
+[24 / 87] KSLDiagnostics
+[28 / 89] KSLControl
+[33 / 86] KSLPhysics
+[35 / 87] KSLPhysics
+[43 / 91] KSLKRPC
+[47 / 93] KSLKRPC
+[49 / 87] KSLGuidance
+[54 / 84] KSLRuntime
+[56 / 85] GuidanceTests-product
+[58 / 87] KSLRuntime
+[61 / 88] KSLSimulation
+[68 / 89] KSLSimulation
+[77 / 89] KSLLanding
+[79 / 90] KSLLanding
+[81 / 85] GuidanceTests-product
+Build complete! (4.47초)
+Test Suite 'Selected tests' started at 2026-11-02 18:07:18.138.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 18:07:18.138.
+Test Suite 'DessertMM304Probe' started at 2026-11-02 18:07:18.138.
+Test Case '-[GuidanceTests.DessertMM304Probe testRecordedForceAllocation]' started.
+Test Case '-[GuidanceTests.DessertMM304Probe testRecordedForceAllocation]' passed (0.009 seconds).
+Test Suite 'DessertMM304Probe' passed at 2026-11-02 18:07:18.148.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.009 (0.009) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 18:07:18.148.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.009 (0.009) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 18:07:18.148.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.009 (0.010) seconds
+FORCE 218940.07353368003 rawLateral 5.2465280253275735 support 4.751923111219462 ceilingDeg 40.0 selectedAlphaDeg 20.0 selectedLift 4.65109606698219 selectedBankDeg 0.0 maximumPolarLateral 3.458127341970351 atAlphaDeg 29.999999999999996 loggedJointLift Optional(7.078617772947576) loggedMaxLift Optional(5.877024584619718)
+SHOOTING_ENDPOINTS objective EntryCaptureObjective(along: -35023.0, cross: 0.0, altitude: 25000.0, speed: 754.2916625508666, energyHeight: 52178.28968582627, flightPath: Optional(-0.41887902047863906)) low DiagnosticRangeReference(createdAt: 218940.07353368003, blend: 0.0, cross: 40432.48588481908, along: -57776.423888491736, altitude: 25590.256629184354, speed: 747.2680026804687, bracketed: false, reachedEnergy: true) high DiagnosticRangeReference(createdAt: 218940.07353368003, blend: 1.0, cross: 76078.12418690366, along: -58333.08073590715, altitude: 28142.79991807358, speed: 716.0801312811749, bracketed: false, reachedEnergy: true)
+FORCE 219000.0735336486 rawLateral 7.359004671800509 support 7.0265615741722245 ceilingDeg 40.0 selectedAlphaDeg 21.875000000000004 selectedLift 4.891967777835984 selectedBankDeg 0.0 maximumPolarLateral 0.0 atAlphaDeg 0.0 loggedJointLift Optional(10.174847287070964) loggedMaxLift Optional(6.915453438308053)

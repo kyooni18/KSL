@@ -1,0 +1,59 @@
+{
+  "firstEntry": {
+    "ut": 218457.41353393288,
+    "height": 69494.88459395431,
+    "lat": 0.34924125929148025,
+    "lon": 119.22092589278924,
+    "course": 89.97219177452737,
+    "bank": 0.00015530050407421505,
+    "alpha": 17.98885617519368,
+    "lift": 0.00037311364060834665,
+    "q": 0.32958805561065674,
+    "mass": 26304.142578125,
+    "speed": 2099.865966796875
+  },
+  "lastEntry": {
+    "ut": 219045.07353362502,
+    "height": 23916.465658392175,
+    "lat": -0.9193005742211064,
+    "lon": -147.01107711960472,
+    "course": 93.64794952379748,
+    "bank": 6.580808602928024,
+    "alpha": 28.700966596366698,
+    "lift": 8.832734022543587,
+    "q": 3931.016845703125,
+    "mass": 26303.5546875,
+    "speed": 649.9768676757812
+  },
+  "bands": {
+    "above40km": {
+      "duration": 410.89999978474225,
+      "lateralImpulse": 14.662262518341915,
+      "count": 4006,
+      "approxAerodynamicHeadingChangeDeg": 0.40031238259192364,
+      "bankTrackingRMSDeg": 1.0939529566960708
+    },
+    "40to30km": {
+      "duration": 86.21999995483202,
+      "lateralImpulse": 76.33585840074,
+      "count": 946,
+      "approxAerodynamicHeadingChangeDeg": 2.8961202056170805,
+      "bankTrackingRMSDeg": 0.878743510283826
+    },
+    "below30km": {
+      "duration": 90.5399999525689,
+      "lateralImpulse": 5.395420705959952,
+      "count": 923,
+      "approxAerodynamicHeadingChangeDeg": 0.3783628063758786,
+      "bankTrackingRMSDeg": 0.5200055105634805
+    }
+  },
+  "feasibleForecasts": 0,
+  "forecastCount": 117,
+  "entryReferenceBracketedCounts": {
+    "False": 5876
+  },
+  "jointForceAttainableCounts": {
+    "False": 5876
+  }
+}
