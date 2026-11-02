@@ -1,0 +1,39 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 677]
+[Planning deferred tasks]
+[6 / 88] KSLKRPC
+[13 / 84]
+[16 / 87] KSLCore
+[18 / 88] KSLCore
+[24 / 94] CoreTests-product
+[28 / 95] KSLControl
+[33 / 92] KSLPhysics
+[35 / 93] KSLPhysics
+[43 / 95] KSLKRPC
+[47 / 97] KSLKRPC
+[49 / 91] KSLGuidance
+[54 / 88] KSLRuntime
+[56 / 89] GuidanceTests-product
+[58 / 91] KSLRuntime
+[61 / 92] KSLSimulation
+[68 / 93] KSLSimulation
+[75 / 89] KSLLanding
+[79 / 90] KSLLanding
+[81 / 85] GuidanceTests-product
+Build complete! (5.65초)
+Test Suite 'Selected tests' started at 2026-11-02 21:21:07.041.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 21:21:07.044.
+Test Suite 'LiveOvershootProbe' started at 2026-11-02 21:21:07.044.
+Test Case '-[GuidanceTests.LiveOvershootProbe testRecordedForceAllocation]' started.
+Test Case '-[GuidanceTests.LiveOvershootProbe testRecordedForceAllocation]' passed (0.019 seconds).
+Test Suite 'LiveOvershootProbe' passed at 2026-11-02 21:21:07.063.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.019 (0.019) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 21:21:07.063.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.019 (0.019) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 21:21:07.063.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.019 (0.022) seconds
+FORCE 214300.11711512564 rawLateral -0.7842405360854825 support 0.6952071169319824 ceilingDeg 40.0 selectedAlphaDeg 21.875000000000004 selectedLift 0.5335669831348545 selectedBankDeg 0.0 maximumPolarLateral 0.0 atAlphaDeg 0.0 loggedJointLift Optional(1.0480201113874315) loggedMaxLift Optional(0.6123912199043079)
+SHOOTING_ENDPOINTS objective EntryCaptureObjective(along: -35023.0, cross: 0.0, altitude: 25000.0, speed: 757.5551466176621, energyHeight: 52430.4506845198, flightPath: Optional(-0.41887902047863906)) low DiagnosticRangeReference(createdAt: 214300.11711512564, blend: 0.0, cross: -127093.71380578798, along: -30532.092279416505, altitude: 25772.636268506292, speed: 748.2933838175369, bracketed: false, reachedEnergy: true) high DiagnosticRangeReference(createdAt: 214300.11711512564, blend: 1.0, cross: 61426.09124216486, along: -19238.72232541843, altitude: 26914.60852486454, speed: 734.4640389666885, bracketed: false, reachedEnergy: true)
+FORCE 214480.07711503137 rawLateral -20.923410522926993 support 3.2013793607365857 ceilingDeg 40.0 selectedAlphaDeg 20.0 selectedLift 2.58323269410811 selectedBankDeg 0.0 maximumPolarLateral 0.5767195491614807 atAlphaDeg 29.999999999999996 loggedJointLift Optional(21.16690666399515) loggedMaxLift Optional(3.2529118109372734)
+SHOOTING_ENDPOINTS objective EntryCaptureObjective(along: -35023.0, cross: 0.0, altitude: 25000.0, speed: 754.4776523022736, energyHeight: 52192.63138102574, flightPath: Optional(-0.41887902047863906)) low DiagnosticRangeReference(createdAt: 214480.07711503137, blend: 0.0, cross: -101693.25558191804, along: -28926.23062452944, altitude: 25793.805947732413, speed: 744.9196582582159, bracketed: false, reachedEnergy: true) high DiagnosticRangeReference(createdAt: 214480.07711503137, blend: 1.0, cross: -44125.996863525186, along: -25492.086472539522, altitude: 27878.169213289744, speed: 719.4387701190057, bracketed: false, reachedEnergy: true)

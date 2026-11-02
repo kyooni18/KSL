@@ -1,0 +1,11 @@
+{
+  "entrySamples": 6394,
+  "unbracketed": 6394,
+  "taemSamples": 4233,
+  "TAEM: TAEM energy below best-L/D envelope; planned descent remains unqualified": 4233,
+  "TAEM: TAEM committed-profile force check failed: trimLift; recovery remains unqualified": 4233,
+  "TAEM: Insufficient runway braking distance": 4233,
+  "TAEM: No TAEM descent plan fits the configured glide and geometry limits; continuing recovery": 4086,
+  "TAEM: Runway exceeds even the optimistic still-air modeled range": 3758,
+  "TAEM: Last MM305 capture verdict: inadequateControlAuthority": 3758
+}

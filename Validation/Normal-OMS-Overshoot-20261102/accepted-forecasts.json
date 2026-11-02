@@ -1,0 +1,2529 @@
+[
+  {
+    "createdAt": 213966.1571153006,
+    "terminalTime": 214657.05711493865,
+    "terminalAlong": -32609.440477270837,
+    "terminalCross": -160940.30439324692,
+    "terminalAltitude": 23631.984046990936,
+    "terminalMach": 2.1482119591750473,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "along": -35023,
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "terminalRegionNotReached"
+  },
+  {
+    "createdAt": 213971.23711529793,
+    "terminalTime": 214656.83711493877,
+    "terminalAlong": -32548.456792890764,
+    "terminalCross": -159960.39229151522,
+    "terminalAltitude": 23588.117907318356,
+    "terminalMach": 2.1486125356423575,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "along": -35023,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "terminalRegionNotReached"
+  },
+  {
+    "createdAt": 213976.33711529526,
+    "terminalTime": 214656.73711493882,
+    "terminalAlong": -32509.47856557438,
+    "terminalCross": -159350.31341118045,
+    "terminalAltitude": 23553.166289747645,
+    "terminalMach": 2.1473041894403466,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "along": -35023,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "terminalRegionNotReached"
+  },
+  {
+    "createdAt": 213981.4171152926,
+    "terminalTime": 214656.51711493894,
+    "terminalAlong": -32465.921851833325,
+    "terminalCross": -158702.7663553407,
+    "terminalAltitude": 23532.784686989104,
+    "terminalMach": 2.149807658154301,
+    "objective": {
+      "cross": 0,
+      "altitude": 25000,
+      "along": -35023,
+      "energyHeight": 52430.4506845198,
+      "flightPath": -0.41887902047863906,
+      "speed": 757.5551466176621
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "terminalRegionNotReached"
+  },
+  {
+    "createdAt": 213986.47711528995,
+    "terminalTime": 214656.377114939,
+    "terminalAlong": -32425.711781792324,
+    "terminalCross": -158080.28020016887,
+    "terminalAltitude": 23498.351958277588,
+    "terminalMach": 2.148931356071309,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "along": -35023,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "terminalRegionNotReached"
+  },
+  {
+    "createdAt": 213991.5571152873,
+    "terminalTime": 214656.15711493912,
+    "terminalAlong": -32361.563687565,
+    "terminalCross": -157411.5869112487,
+    "terminalAltitude": 23477.85643653439,
+    "terminalMach": 2.148914581025989,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "along": -35023,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 213996.61711528464,
+    "terminalTime": 214656.0171149392,
+    "terminalAlong": -32311.95119998582,
+    "terminalCross": -156737.0823893461,
+    "terminalAltitude": 23438.66522167828,
+    "terminalMach": 2.147084199730167,
+    "objective": {
+      "cross": 0,
+      "altitude": 25000,
+      "speed": 757.5551466176621,
+      "flightPath": -0.41887902047863906,
+      "energyHeight": 52430.4506845198,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214001.71711528196,
+    "terminalTime": 214655.8171149393,
+    "terminalAlong": -32265.129905391783,
+    "terminalCross": -155968.0560715178,
+    "terminalAltitude": 23398.87672666118,
+    "terminalMach": 2.147634877535278,
+    "objective": {
+      "energyHeight": 52430.4506845198,
+      "speed": 757.5551466176621,
+      "along": -35023,
+      "cross": 0,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214006.7771152793,
+    "terminalTime": 214655.57711493943,
+    "terminalAlong": -32205.62440158046,
+    "terminalCross": -155139.54843817657,
+    "terminalAltitude": 23360.964965251926,
+    "terminalMach": 2.1479782789907342,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "along": -35023,
+      "altitude": 25000,
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214011.83711527666,
+    "terminalTime": 214655.33711493955,
+    "terminalAlong": -32148.26093747256,
+    "terminalCross": -154272.74383498493,
+    "terminalAltitude": 23317.649272408406,
+    "terminalMach": 2.1479557363814443,
+    "objective": {
+      "altitude": 25000,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "cross": 0,
+      "flightPath": -0.41887902047863906,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214016.87711527402,
+    "terminalTime": 214655.0771149397,
+    "terminalAlong": -32089.258116939767,
+    "terminalCross": -153370.4925429726,
+    "terminalAltitude": 23274.65739516618,
+    "terminalMach": 2.14793560385593,
+    "objective": {
+      "along": -35023,
+      "cross": 0,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214021.93711527137,
+    "terminalTime": 214651.73711494144,
+    "terminalAlong": -31906.41419088617,
+    "terminalCross": -150384.49162898218,
+    "terminalAltitude": 23683.308007706957,
+    "terminalMach": 2.1461650146557263,
+    "objective": {
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "altitude": 25000,
+      "cross": 0,
+      "along": -35023,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214027.0171152687,
+    "terminalTime": 214651.51711494155,
+    "terminalAlong": -31838.46758845492,
+    "terminalCross": -149494.13095836822,
+    "terminalAltitude": 23630.587411369033,
+    "terminalMach": 2.147833449647237,
+    "objective": {
+      "altitude": 25000,
+      "flightPath": -0.41887902047863906,
+      "speed": 757.5551466176621,
+      "cross": 0,
+      "along": -35023,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214032.05711526607,
+    "terminalTime": 214651.2571149417,
+    "terminalAlong": -31776.738591358502,
+    "terminalCross": -148587.6379756847,
+    "terminalAltitude": 23585.890266287908,
+    "terminalMach": 2.148919579355459,
+    "objective": {
+      "along": -35023,
+      "cross": 0,
+      "energyHeight": 52430.4506845198,
+      "altitude": 25000,
+      "speed": 757.5551466176621,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214037.11711526342,
+    "terminalTime": 214651.01711494182,
+    "terminalAlong": -31715.380623192184,
+    "terminalCross": -147710.0712133914,
+    "terminalAltitude": 23539.949279387085,
+    "terminalMach": 2.1495493825224323,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "along": -35023,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214042.15711526078,
+    "terminalTime": 214650.75711494195,
+    "terminalAlong": -31650.345724695,
+    "terminalCross": -146848.82445817505,
+    "terminalAltitude": 23503.459879964776,
+    "terminalMach": 2.148389268140185,
+    "objective": {
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "along": -35023,
+      "altitude": 25000,
+      "cross": 0,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214047.23711525812,
+    "terminalTime": 214650.53711494207,
+    "terminalAlong": -31592.806805880988,
+    "terminalCross": -146047.5464165372,
+    "terminalAltitude": 23462.402936338865,
+    "terminalMach": 2.1486432040297085,
+    "objective": {
+      "along": -35023,
+      "energyHeight": 52430.4506845198,
+      "altitude": 25000,
+      "speed": 757.5551466176621,
+      "cross": 0,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214052.27711525548,
+    "terminalTime": 214650.37711494215,
+    "terminalAlong": -31537.550267720904,
+    "terminalCross": -145331.8610493183,
+    "terminalAltitude": 23420.699403093266,
+    "terminalMach": 2.146329468773445,
+    "objective": {
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "along": -35023,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214057.29711525285,
+    "terminalTime": 214650.0971149423,
+    "terminalAlong": -31489.3690602737,
+    "terminalCross": -144595.62875893633,
+    "terminalAltitude": 23393.61646510551,
+    "terminalMach": 2.1488253095695895,
+    "objective": {
+      "along": -35023,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "altitude": 25000,
+      "flightPath": -0.41887902047863906,
+      "cross": 0
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214062.3771152502,
+    "terminalTime": 214649.97711494236,
+    "terminalAlong": -31441.60223741948,
+    "terminalCross": -144004.97770895588,
+    "terminalAltitude": 23356.36211948092,
+    "terminalMach": 2.1469535088783025,
+    "objective": {
+      "altitude": 25000,
+      "cross": 0,
+      "along": -35023,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214067.39711524756,
+    "terminalTime": 214649.79711494246,
+    "terminalAlong": -31400.779235945058,
+    "terminalCross": -143431.4343118275,
+    "terminalAltitude": 23331.900143948686,
+    "terminalMach": 2.1462380680560256,
+    "objective": {
+      "altitude": 25000,
+      "speed": 757.5551466176621,
+      "flightPath": -0.41887902047863906,
+      "energyHeight": 52430.4506845198,
+      "along": -35023,
+      "cross": 0
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214072.43711524492,
+    "terminalTime": 214649.5371149426,
+    "terminalAlong": -31360.261520256605,
+    "terminalCross": -142869.56790722418,
+    "terminalAltitude": 23317.418808361002,
+    "terminalMach": 2.1499656231372466,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "altitude": 25000,
+      "along": -35023,
+      "cross": 0
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214077.49711524227,
+    "terminalTime": 214649.39711494267,
+    "terminalAlong": -31328.42698312118,
+    "terminalCross": -142434.15662755375,
+    "terminalAltitude": 23297.9666739817,
+    "terminalMach": 2.1499216647984083,
+    "objective": {
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "along": -35023,
+      "energyHeight": 52430.4506845198,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214082.5771152396,
+    "terminalTime": 214646.17711494435,
+    "terminalAlong": -31185.395479604573,
+    "terminalCross": -139980.16808279086,
+    "terminalAltitude": 23734.376159193995,
+    "terminalMach": 2.147459970332258,
+    "objective": {
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "along": -35023,
+      "altitude": 25000,
+      "cross": 0,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214087.63711523695,
+    "terminalTime": 214646.03711494443,
+    "terminalAlong": -31161.785622315154,
+    "terminalCross": -139653.73948712402,
+    "terminalAltitude": 23722.861291372985,
+    "terminalMach": 2.1492041225821574,
+    "objective": {
+      "cross": 0,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198,
+      "flightPath": -0.41887902047863906,
+      "speed": 757.5551466176621,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214092.6971152343,
+    "terminalTime": 214645.99711494445,
+    "terminalAlong": -31112.154950412434,
+    "terminalCross": -139458.70960501625,
+    "terminalAltitude": 23709.89268849727,
+    "terminalMach": 2.1481127123591635,
+    "objective": {
+      "altitude": 25000,
+      "along": -35023,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214097.75711523165,
+    "terminalTime": 214645.95711494447,
+    "terminalAlong": -31061.93440951603,
+    "terminalCross": -139535.49644627594,
+    "terminalAltitude": 23724.05418491941,
+    "terminalMach": 2.1494760389340333,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "energyHeight": 52430.4506845198,
+      "cross": 0,
+      "altitude": 25000,
+      "along": -35023,
+      "speed": 757.5551466176621
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214102.85711522898,
+    "terminalTime": 214645.95711494447,
+    "terminalAlong": -31084.93188928641,
+    "terminalCross": -139442.3289107135,
+    "terminalAltitude": 23712.73603453983,
+    "terminalMach": 2.14852926109041,
+    "objective": {
+      "cross": 0,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198,
+      "flightPath": -0.41887902047863906,
+      "speed": 757.5551466176621,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214107.9571152263,
+    "terminalTime": 214645.95711494447,
+    "terminalAlong": -31113.748856701408,
+    "terminalCross": -139328.37688832573,
+    "terminalAltitude": 23698.695905724726,
+    "terminalMach": 2.1474279130249196,
+    "objective": {
+      "along": -35023,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "altitude": 25000,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214113.01711522366,
+    "terminalTime": 214645.9171149445,
+    "terminalAlong": -31140.52598012566,
+    "terminalCross": -139168.50955859732,
+    "terminalAltitude": 23687.699193349294,
+    "terminalMach": 2.1464859177980293,
+    "objective": {
+      "cross": 0,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198,
+      "flightPath": -0.41887902047863906,
+      "speed": 757.5551466176621,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214118.077115221,
+    "terminalTime": 214645.77711494456,
+    "terminalAlong": -31160.04881280889,
+    "terminalCross": -138922.23083824237,
+    "terminalAltitude": 23683.26077526512,
+    "terminalMach": 2.149361894440203,
+    "objective": {
+      "along": -35023,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "speed": 757.5551466176621
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214123.11711521837,
+    "terminalTime": 214645.7171149446,
+    "terminalAlong": -31177.424978051684,
+    "terminalCross": -138705.56536011727,
+    "terminalAltitude": 23671.142410841607,
+    "terminalMach": 2.148192605873643,
+    "objective": {
+      "along": -35023,
+      "cross": 0,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198,
+      "speed": 757.5551466176621
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214128.17711521572,
+    "terminalTime": 214645.6771149446,
+    "terminalAlong": -31189.950017587602,
+    "terminalCross": -138482.8980244783,
+    "terminalAltitude": 23655.4936485864,
+    "terminalMach": 2.1462102627188586,
+    "objective": {
+      "altitude": 25000,
+      "cross": 0,
+      "along": -35023,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214133.21711521308,
+    "terminalTime": 214645.5171149447,
+    "terminalAlong": -31191.47994701001,
+    "terminalCross": -138180.38191099116,
+    "terminalAltitude": 23648.375467361486,
+    "terminalMach": 2.149251096238308,
+    "objective": {
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "along": -35023,
+      "altitude": 25000,
+      "cross": 0,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214138.23711521045,
+    "terminalTime": 214645.43711494474,
+    "terminalAlong": -31183.160509065954,
+    "terminalCross": -138076.44376083888,
+    "terminalAltitude": 23652.88779948903,
+    "terminalMach": 2.149171537972451,
+    "objective": {
+      "cross": 0,
+      "energyHeight": 52430.4506845198,
+      "speed": 757.5551466176621,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214143.25711520782,
+    "terminalTime": 214645.35711494478,
+    "terminalAlong": -31167.72274887801,
+    "terminalCross": -137925.57210153784,
+    "terminalAltitude": 23654.99620643626,
+    "terminalMach": 2.1489351935174565,
+    "objective": {
+      "altitude": 25000,
+      "along": -35023,
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214148.33711520515,
+    "terminalTime": 214645.3371149448,
+    "terminalAlong": -31155.96035152983,
+    "terminalCross": -137780.56197485776,
+    "terminalAltitude": 23644.75386580948,
+    "terminalMach": 2.147716326555131,
+    "objective": {
+      "altitude": 25000,
+      "along": -35023,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214153.3971152025,
+    "terminalTime": 214645.2971149448,
+    "terminalAlong": -31150.345809367776,
+    "terminalCross": -137679.62865006732,
+    "terminalAltitude": 23641.067958137788,
+    "terminalMach": 2.1478418882571897,
+    "objective": {
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "flightPath": -0.41887902047863906,
+      "along": -35023,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214158.41711519987,
+    "terminalTime": 214645.21711494485,
+    "terminalAlong": -31145.57239861098,
+    "terminalCross": -137571.21388474898,
+    "terminalAltitude": 23646.19851152466,
+    "terminalMach": 2.147912007374276,
+    "objective": {
+      "altitude": 25000,
+      "speed": 757.5551466176621,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "energyHeight": 52430.4506845198,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214163.4971151972,
+    "terminalTime": 214645.19711494487,
+    "terminalAlong": -31146.02173207961,
+    "terminalCross": -137517.38013765047,
+    "terminalAltitude": 23643.194872633507,
+    "terminalMach": 2.148189399512638,
+    "objective": {
+      "energyHeight": 52430.4506845198,
+      "along": -35023,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "altitude": 25000,
+      "speed": 757.5551466176621
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214168.53711519457,
+    "terminalTime": 214645.1371149449,
+    "terminalAlong": -31143.707003706324,
+    "terminalCross": -137455.3345059093,
+    "terminalAltitude": 23648.941493279486,
+    "terminalMach": 2.148257843981709,
+    "objective": {
+      "energyHeight": 52430.4506845198,
+      "along": -35023,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "altitude": 25000,
+      "speed": 757.5551466176621
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214173.6171151919,
+    "terminalTime": 214645.1171149449,
+    "terminalAlong": -31144.41619758329,
+    "terminalCross": -137422.93239235526,
+    "terminalAltitude": 23649.66603193567,
+    "terminalMach": 2.1482615369003355,
+    "objective": {
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "altitude": 25000,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214178.67711518926,
+    "terminalTime": 214645.07711494493,
+    "terminalAlong": -31146.328388498878,
+    "terminalCross": -137357.63375056896,
+    "terminalAltitude": 23650.886920431698,
+    "terminalMach": 2.1482922102536404,
+    "objective": {
+      "cross": 0,
+      "altitude": 25000,
+      "along": -35023,
+      "energyHeight": 52430.4506845198,
+      "flightPath": -0.41887902047863906,
+      "speed": 757.5551466176621
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214183.71711518662,
+    "terminalTime": 214645.01711494496,
+    "terminalAlong": -31149.44306504723,
+    "terminalCross": -137289.60887085658,
+    "terminalAltitude": 23656.764425055426,
+    "terminalMach": 2.148785803769431,
+    "objective": {
+      "energyHeight": 52430.4506845198,
+      "flightPath": -0.41887902047863906,
+      "speed": 757.5551466176621,
+      "along": -35023,
+      "altitude": 25000,
+      "cross": 0
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214188.77711518397,
+    "terminalTime": 214644.97711494498,
+    "terminalAlong": -31155.340235438474,
+    "terminalCross": -137236.98563106277,
+    "terminalAltitude": 23658.5976972952,
+    "terminalMach": 2.1490822734571,
+    "objective": {
+      "altitude": 25000,
+      "speed": 757.5551466176621,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "energyHeight": 52430.4506845198,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214193.8571151813,
+    "terminalTime": 214644.957114945,
+    "terminalAlong": -31160.762066336374,
+    "terminalCross": -137164.09079351326,
+    "terminalAltitude": 23656.530435901437,
+    "terminalMach": 2.148357511072038,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "energyHeight": 52430.4506845198,
+      "cross": 0,
+      "altitude": 25000,
+      "along": -35023,
+      "speed": 757.5551466176621
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214198.89711517867,
+    "terminalTime": 214644.89711494502,
+    "terminalAlong": -31164.46029100524,
+    "terminalCross": -137062.69405364007,
+    "terminalAltitude": 23658.40139773786,
+    "terminalMach": 2.1483211203273176,
+    "objective": {
+      "energyHeight": 52430.4506845198,
+      "altitude": 25000,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "along": -35023,
+      "speed": 757.5551466176621
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214203.977115176,
+    "terminalTime": 214644.87711494503,
+    "terminalAlong": -31170.418415390468,
+    "terminalCross": -137005.38014694408,
+    "terminalAltitude": 23655.79296715681,
+    "terminalMach": 2.1478381552593624,
+    "objective": {
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "altitude": 25000,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214209.05711517335,
+    "terminalTime": 214644.85711494504,
+    "terminalAlong": -31175.388755220534,
+    "terminalCross": -136937.49339294902,
+    "terminalAltitude": 23652.370498211425,
+    "terminalMach": 2.1476868802149376,
+    "objective": {
+      "along": -35023,
+      "cross": 0,
+      "energyHeight": 52430.4506845198,
+      "flightPath": -0.41887902047863906,
+      "speed": 757.5551466176621,
+      "altitude": 25000
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214214.07711517072,
+    "terminalTime": 214644.7771149451,
+    "terminalAlong": -31174.433793869342,
+    "terminalCross": -136790.1745005192,
+    "terminalAltitude": 23653.43218654599,
+    "terminalMach": 2.147465620065506,
+    "objective": {
+      "energyHeight": 52430.4506845198,
+      "along": -35023,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "altitude": 25000,
+      "speed": 757.5551466176621
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214219.15711516805,
+    "terminalTime": 214644.7571149451,
+    "terminalAlong": -31176.221395079556,
+    "terminalCross": -136705.06555438443,
+    "terminalAltitude": 23650.069839326152,
+    "terminalMach": 2.1465808785264056,
+    "objective": {
+      "altitude": 25000,
+      "cross": 0,
+      "along": -35023,
+      "flightPath": -0.41887902047863906,
+      "energyHeight": 52430.4506845198,
+      "speed": 757.5551466176621
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214224.1971151654,
+    "terminalTime": 214644.69711494513,
+    "terminalAlong": -31176.07424635355,
+    "terminalCross": -136585.25221687835,
+    "terminalAltitude": 23647.958142932923,
+    "terminalMach": 2.1468124089272496,
+    "objective": {
+      "altitude": 25000,
+      "speed": 757.5551466176621,
+      "flightPath": -0.41887902047863906,
+      "energyHeight": 52430.4506845198,
+      "along": -35023,
+      "cross": 0
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214229.25711516276,
+    "terminalTime": 214644.65711494515,
+    "terminalAlong": -31178.87494744724,
+    "terminalCross": -136550.93812734223,
+    "terminalAltitude": 23652.845458360574,
+    "terminalMach": 2.1468083507933833,
+    "objective": {
+      "altitude": 25000,
+      "speed": 757.5551466176621,
+      "flightPath": -0.41887902047863906,
+      "energyHeight": 52430.4506845198,
+      "along": -35023,
+      "cross": 0
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214234.3371151601,
+    "terminalTime": 214644.63711494516,
+    "terminalAlong": -31180.66064233193,
+    "terminalCross": -136539.5128023497,
+    "terminalAltitude": 23654.1998923616,
+    "terminalMach": 2.147043484644333,
+    "objective": {
+      "along": -35023,
+      "cross": 0,
+      "energyHeight": 52430.4506845198,
+      "altitude": 25000,
+      "flightPath": -0.41887902047863906,
+      "speed": 757.5551466176621
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214239.39711515745,
+    "terminalTime": 214644.59711494518,
+    "terminalAlong": -31174.103455607263,
+    "terminalCross": -136465.91566481197,
+    "terminalAltitude": 23654.33827774513,
+    "terminalMach": 2.146833971943035,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "along": -35023,
+      "speed": 757.5551466176621,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214244.4771151548,
+    "terminalTime": 214644.5771149452,
+    "terminalAlong": -31160.549827165105,
+    "terminalCross": -136383.59266267228,
+    "terminalAltitude": 23649.546295167715,
+    "terminalMach": 2.1464458236464714,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "along": -35023,
+      "speed": 757.5551466176621,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214249.51711515215,
+    "terminalTime": 214644.51711494522,
+    "terminalAlong": -31123.286495480977,
+    "terminalCross": -136335.53498840536,
+    "terminalAltitude": 23655.454822200652,
+    "terminalMach": 2.146696891327652,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "altitude": 25000,
+      "along": -35023,
+      "cross": 0
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214254.5571151495,
+    "terminalTime": 214644.45711494525,
+    "terminalAlong": -31124.59102946239,
+    "terminalCross": -136271.66383308382,
+    "terminalAltitude": 23659.130773312016,
+    "terminalMach": 2.1472750762257755,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "cross": 0,
+      "along": -35023,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214259.61711514686,
+    "terminalTime": 214644.41711494527,
+    "terminalAlong": -31118.906781131383,
+    "terminalCross": -136229.46485150215,
+    "terminalAltitude": 23662.91661505769,
+    "terminalMach": 2.1476145052102584,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "along": -35023,
+      "speed": 757.5551466176621,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214264.63711514423,
+    "terminalTime": 214644.33711494532,
+    "terminalAlong": -31111.117519504267,
+    "terminalCross": -136155.46686305545,
+    "terminalAltitude": 23669.49940402289,
+    "terminalMach": 2.1480722567056088,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "along": -35023,
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "altitude": 25000
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214269.71711514157,
+    "terminalTime": 214644.31711494533,
+    "terminalAlong": -31104.847229065537,
+    "terminalCross": -136111.44041515604,
+    "terminalAltitude": 23668.71909560561,
+    "terminalMach": 2.1477795514015834,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "cross": 0,
+      "along": -35023,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214274.8371151389,
+    "terminalTime": 214644.33711494532,
+    "terminalAlong": -31099.707008248537,
+    "terminalCross": -136087.2041402609,
+    "terminalAltitude": 23661.92850648351,
+    "terminalMach": 2.14711359356355,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "energyHeight": 52430.4506845198,
+      "speed": 757.5551466176621,
+      "altitude": 25000,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214279.89711513623,
+    "terminalTime": 214644.29711494534,
+    "terminalAlong": -31092.153576795587,
+    "terminalCross": -136023.1785329656,
+    "terminalAltitude": 23662.239432270708,
+    "terminalMach": 2.147109544764055,
+    "objective": {
+      "cross": 0,
+      "altitude": 25000,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "flightPath": -0.41887902047863906,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214284.95711513358,
+    "terminalTime": 214644.25711494536,
+    "terminalAlong": -31083.599562970536,
+    "terminalCross": -135941.59960325217,
+    "terminalAltitude": 23661.27699649958,
+    "terminalMach": 2.146790320688167,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "along": -35023,
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "altitude": 25000
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214290.03711513092,
+    "terminalTime": 214644.23711494537,
+    "terminalAlong": -31076.491784220765,
+    "terminalCross": -135884.9175632959,
+    "terminalAltitude": 23657.397170298686,
+    "terminalMach": 2.1465161992451587,
+    "objective": {
+      "altitude": 25000,
+      "along": -35023,
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214295.0571151283,
+    "terminalTime": 214644.1571149454,
+    "terminalAlong": -31067.959311932776,
+    "terminalCross": -135806.1245942466,
+    "terminalAltitude": 23663.661134420963,
+    "terminalMach": 2.147294461095448,
+    "objective": {
+      "along": -35023,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198,
+      "speed": 757.5551466176621,
+      "flightPath": -0.41887902047863906,
+      "cross": 0
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214300.11711512564,
+    "terminalTime": 214644.11711494543,
+    "terminalAlong": -31062.183151361158,
+    "terminalCross": -135775.74972704233,
+    "terminalAltitude": 23668.079223674442,
+    "terminalMach": 2.147231280837616,
+    "objective": {
+      "energyHeight": 52430.4506845198,
+      "altitude": 25000,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "along": -35023,
+      "speed": 757.5551466176621
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214305.19711512298,
+    "terminalTime": 214644.09711494544,
+    "terminalAlong": -31058.077470004373,
+    "terminalCross": -135775.2234906058,
+    "terminalAltitude": 23671.557832542294,
+    "terminalMach": 2.1475701459917182,
+    "objective": {
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "flightPath": -0.41887902047863906,
+      "along": -35023,
+      "altitude": 25000,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214310.21711512035,
+    "terminalTime": 214644.01711494548,
+    "terminalAlong": -31047.234678907284,
+    "terminalCross": -135656.14117459563,
+    "terminalAltitude": 23672.987971375067,
+    "terminalMach": 2.1474590684585064,
+    "objective": {
+      "along": -35023,
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198,
+      "altitude": 25000,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214315.2771151177,
+    "terminalTime": 214643.9771149455,
+    "terminalAlong": -31042.644109717337,
+    "terminalCross": -135647.85369617483,
+    "terminalAltitude": 23677.605769526283,
+    "terminalMach": 2.1481432913594163,
+    "objective": {
+      "altitude": 25000,
+      "speed": 757.5551466176621,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "energyHeight": 52430.4506845198,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214320.31711511506,
+    "terminalTime": 214643.91711494554,
+    "terminalAlong": -31040.975899565878,
+    "terminalCross": -135693.5614040228,
+    "terminalAltitude": 23693.096844395925,
+    "terminalMach": 2.149690897575783,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "along": -35023,
+      "cross": 0,
+      "altitude": 25000,
+      "speed": 757.5551466176621,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214325.35711511242,
+    "terminalTime": 214643.95711494552,
+    "terminalAlong": -31043.856582170465,
+    "terminalCross": -135810.76650126968,
+    "terminalAltitude": 23701.43480996911,
+    "terminalMach": 2.1468796321533943,
+    "objective": {
+      "cross": 0,
+      "speed": 757.5551466176621,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "along": -35023,
+      "energyHeight": 52430.4506845198
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214330.3771151098,
+    "terminalTime": 214542.57711499862,
+    "terminalAlong": -20162.11475416805,
+    "terminalCross": 14166.992481858893,
+    "terminalAltitude": 25341.894517916557,
+    "terminalMach": 2.4398903809899313,
+    "objective": {
+      "along": -12445.857142037265,
+      "cross": -32737,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "energyHeight": 52196.235975419404,
+      "speed": 754.4014337244735
+    },
+    "crossAim": -32737,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214335.39711510716,
+    "terminalTime": 214535.29711500244,
+    "terminalAlong": -20587.671796755254,
+    "terminalCross": 18391.93882204448,
+    "terminalAltitude": 26177.44246328408,
+    "terminalMach": 2.388706551377755,
+    "objective": {
+      "along": -12445.857142037265,
+      "cross": -32737,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "speed": 754.4014337244735,
+      "energyHeight": 52196.235975419404
+    },
+    "crossAim": -32737,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214340.4571151045,
+    "terminalTime": 214535.85711500215,
+    "terminalAlong": -20661.690971518743,
+    "terminalCross": 17439.2288959731,
+    "terminalAltitude": 26199.985854024602,
+    "terminalMach": 2.387197839208801,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "along": -12445.857142037265,
+      "altitude": 25000,
+      "cross": -32737,
+      "speed": 754.4014337244735,
+      "energyHeight": 52196.235975419404
+    },
+    "crossAim": -32737,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214345.51711510186,
+    "terminalTime": 214637.01711494915,
+    "terminalAlong": -30116.430245365973,
+    "terminalCross": -119916.5536129956,
+    "terminalAltitude": 23349.729964349488,
+    "terminalMach": 2.147629632668475,
+    "objective": {
+      "along": -35023,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "altitude": 25000,
+      "speed": 754.3831382591436,
+      "energyHeight": 52185.34294835155
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214350.55711509922,
+    "terminalTime": 214631.7571149519,
+    "terminalAlong": -29544.1794752876,
+    "terminalCross": -110061.2933297014,
+    "terminalAltitude": 23335.36319456978,
+    "terminalMach": 2.1464589220064116,
+    "objective": {
+      "cross": 0,
+      "altitude": 25000,
+      "along": -35023,
+      "energyHeight": 52185.34294835155,
+      "flightPath": -0.41887902047863906,
+      "speed": 754.3831382591436
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214355.59711509658,
+    "terminalTime": 214631.49711495204,
+    "terminalAlong": -29501.261465019677,
+    "terminalCross": -109394.1933297849,
+    "terminalAltitude": 23313.941166201676,
+    "terminalMach": 2.147784944808851,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "altitude": 25000,
+      "speed": 754.3831382591436,
+      "energyHeight": 52185.34294835155,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214356.3171150962,
+    "terminalTime": 214631.51711495203,
+    "terminalAlong": -29507.07919891718,
+    "terminalCross": -109517.93010583063,
+    "terminalAltitude": 23327.673050387482,
+    "terminalMach": 2.1468008098397386,
+    "objective": {
+      "cross": 0,
+      "altitude": 25000,
+      "energyHeight": 52184.67449972324,
+      "flightPath": -0.41887902047863906,
+      "speed": 754.3744694402089,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214361.41711509353,
+    "terminalTime": 214631.61711495198,
+    "terminalAlong": -29535.326129902674,
+    "terminalCross": -110120.92049349702,
+    "terminalAltitude": 23373.437966251,
+    "terminalMach": 2.149905528194449,
+    "objective": {
+      "speed": 754.3744694402089,
+      "energyHeight": 52184.67449972324,
+      "flightPath": -0.41887902047863906,
+      "along": -35023,
+      "altitude": 25000,
+      "cross": 0
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214366.49711509087,
+    "terminalTime": 214631.69711495194,
+    "terminalAlong": -29551.289239659814,
+    "terminalCross": -110457.73963622046,
+    "terminalAltitude": 23395.2689282655,
+    "terminalMach": 2.1497590903970947,
+    "objective": {
+      "along": -35023,
+      "cross": 0,
+      "speed": 754.3744694402089,
+      "energyHeight": 52184.67449972324,
+      "altitude": 25000,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214371.55711508822,
+    "terminalTime": 214631.65711495196,
+    "terminalAlong": -29553.163490261228,
+    "terminalCross": -110550.25517408227,
+    "terminalAltitude": 23414.0223812124,
+    "terminalMach": 2.1498391869157643,
+    "objective": {
+      "cross": 0,
+      "flightPath": -0.41887902047863906,
+      "along": -35023,
+      "altitude": 25000,
+      "energyHeight": 52184.67449972324,
+      "speed": 754.3744694402089
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214376.61711508557,
+    "terminalTime": 214631.81711495187,
+    "terminalAlong": -29562.399543147563,
+    "terminalCross": -110760.2336919751,
+    "terminalAltitude": 23410.00871738775,
+    "terminalMach": 2.146328984407098,
+    "objective": {
+      "cross": 0,
+      "altitude": 25000,
+      "along": -35023,
+      "energyHeight": 52184.67449972324,
+      "flightPath": -0.41887902047863906,
+      "speed": 754.3744694402089
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214381.7171150829,
+    "terminalTime": 214631.71711495193,
+    "terminalAlong": -29561.670144296688,
+    "terminalCross": -110809.93062060575,
+    "terminalAltitude": 23433.91259701324,
+    "terminalMach": 2.149282245575225,
+    "objective": {
+      "speed": 754.3744694402089,
+      "altitude": 25000,
+      "along": -35023,
+      "energyHeight": 52184.67449972324,
+      "cross": 0,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214386.77711508024,
+    "terminalTime": 214631.7771149519,
+    "terminalAlong": -29567.74175682908,
+    "terminalCross": -110968.80779176265,
+    "terminalAltitude": 23439.756949747167,
+    "terminalMach": 2.1478557403837035,
+    "objective": {
+      "cross": 0,
+      "altitude": 25000,
+      "speed": 754.3744694402089,
+      "energyHeight": 52184.67449972324,
+      "flightPath": -0.41887902047863906,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214391.89711507756,
+    "terminalTime": 214631.79711495189,
+    "terminalAlong": -29572.106392435882,
+    "terminalCross": -111103.88942710972,
+    "terminalAltitude": 23450.20741272189,
+    "terminalMach": 2.149185587069843,
+    "objective": {
+      "along": -35023,
+      "cross": 0,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "energyHeight": 52184.67449972324,
+      "speed": 754.3744694402089
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214396.9771150749,
+    "terminalTime": 214631.7771149519,
+    "terminalAlong": -29574.17795990315,
+    "terminalCross": -111195.05077648823,
+    "terminalAltitude": 23469.56573014399,
+    "terminalMach": 2.1483652012467234,
+    "objective": {
+      "speed": 754.3744694402089,
+      "energyHeight": 52184.67449972324,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "altitude": 25000,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214402.01711507226,
+    "terminalTime": 214631.71711495193,
+    "terminalAlong": -29569.008002624716,
+    "terminalCross": -111160.85997326509,
+    "terminalAltitude": 23474.12594928611,
+    "terminalMach": 2.1492983935475056,
+    "objective": {
+      "cross": 0,
+      "altitude": 25000,
+      "energyHeight": 52184.67449972324,
+      "flightPath": -0.41887902047863906,
+      "speed": 754.3744694402089,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214407.1171150696,
+    "terminalTime": 214631.71711495193,
+    "terminalAlong": -29566.926535000042,
+    "terminalCross": -111172.7981542143,
+    "terminalAltitude": 23474.80805315643,
+    "terminalMach": 2.1493239390109844,
+    "objective": {
+      "altitude": 25000,
+      "along": -35023,
+      "cross": 0,
+      "energyHeight": 52184.67449972324,
+      "flightPath": -0.41887902047863906,
+      "speed": 754.3744694402089
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214412.15711506695,
+    "terminalTime": 214631.7571149519,
+    "terminalAlong": -29565.385141849383,
+    "terminalCross": -111193.00976502227,
+    "terminalAltitude": 23469.792647444945,
+    "terminalMach": 2.1483514561279455,
+    "objective": {
+      "energyHeight": 52184.67449972324,
+      "cross": 0,
+      "along": -35023,
+      "speed": 754.3744694402089,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214417.2371150643,
+    "terminalTime": 214631.63711495197,
+    "terminalAlong": -29556.780758518424,
+    "terminalCross": -111095.84721326646,
+    "terminalAltitude": 23481.323295489372,
+    "terminalMach": 2.149687961550728,
+    "objective": {
+      "along": -35023,
+      "cross": 0,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "energyHeight": 52184.67449972324,
+      "speed": 754.3744694402089
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214422.33711506161,
+    "terminalTime": 214631.63711495197,
+    "terminalAlong": -29551.484392944552,
+    "terminalCross": -111055.76747235532,
+    "terminalAltitude": 23474.878311931458,
+    "terminalMach": 2.14903434423362,
+    "objective": {
+      "altitude": 25000,
+      "along": -35023,
+      "cross": 0,
+      "speed": 754.3744694402089,
+      "energyHeight": 52184.67449972324,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214427.37711505897,
+    "terminalTime": 214631.577114952,
+    "terminalAlong": -29542.798672665085,
+    "terminalCross": -110958.12192998595,
+    "terminalAltitude": 23472.23459949293,
+    "terminalMach": 2.148939408635745,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "cross": 0,
+      "along": -35023,
+      "speed": 754.3744694402089,
+      "energyHeight": 52184.67449972324
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214432.4571150563,
+    "terminalTime": 214631.45711495206,
+    "terminalAlong": -29530.1888674238,
+    "terminalCross": -110796.93757268063,
+    "terminalAltitude": 23475.490297703956,
+    "terminalMach": 2.149154203583915,
+    "objective": {
+      "cross": 0,
+      "speed": 754.3744694402089,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "energyHeight": 52184.67449972324,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214437.51711505366,
+    "terminalTime": 214631.41711495208,
+    "terminalAlong": -29520.835754787004,
+    "terminalCross": -110690.33974985394,
+    "terminalAltitude": 23467.873967569158,
+    "terminalMach": 2.1480070094401906,
+    "objective": {
+      "energyHeight": 52184.67449972324,
+      "cross": 0,
+      "along": -35023,
+      "speed": 754.3744694402089,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214442.55711505102,
+    "terminalTime": 214631.35711495212,
+    "terminalAlong": -29511.24809355178,
+    "terminalCross": -110582.60210750767,
+    "terminalAltitude": 23463.617987433052,
+    "terminalMach": 2.1475055430211603,
+    "objective": {
+      "energyHeight": 52184.67449972324,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "cross": 0,
+      "speed": 754.3744694402089,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214447.5771150484,
+    "terminalTime": 214631.27711495216,
+    "terminalAlong": -29500.818204146304,
+    "terminalCross": -110461.7295401269,
+    "terminalAltitude": 23463.32665481309,
+    "terminalMach": 2.1475448452311983,
+    "objective": {
+      "speed": 754.3744694402089,
+      "energyHeight": 52184.67449972324,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "cross": 0,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214452.61711504575,
+    "terminalTime": 214631.2171149522,
+    "terminalAlong": -29490.56988595233,
+    "terminalCross": -110346.36899573226,
+    "terminalAltitude": 23458.63992597647,
+    "terminalMach": 2.1473474557457575,
+    "objective": {
+      "cross": 0,
+      "speed": 754.3744694402089,
+      "energyHeight": 52184.67449972324,
+      "along": -35023,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214457.6571150431,
+    "terminalTime": 214631.15711495222,
+    "terminalAlong": -29479.56760750045,
+    "terminalCross": -110222.16240406486,
+    "terminalAltitude": 23449.068155875964,
+    "terminalMach": 2.148860218462479,
+    "objective": {
+      "along": -35023,
+      "cross": 0,
+      "flightPath": -0.41887902047863906,
+      "speed": 754.3744694402089,
+      "energyHeight": 52184.67449972324,
+      "altitude": 25000
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214462.71711504046,
+    "terminalTime": 214631.0171149523,
+    "terminalAlong": -29464.992604583094,
+    "terminalCross": -110041.13918156073,
+    "terminalAltitude": 23452.234347336296,
+    "terminalMach": 2.149406111823999,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "altitude": 25000,
+      "along": -35023,
+      "speed": 754.3744694402089,
+      "energyHeight": 52184.67449972324
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214467.75711503782,
+    "terminalTime": 214630.95711495233,
+    "terminalAlong": -29456.825994048333,
+    "terminalCross": -109970.80939591973,
+    "terminalAltitude": 23454.1215266302,
+    "terminalMach": 2.149776929845826,
+    "objective": {
+      "speed": 754.3744694402089,
+      "energyHeight": 52184.67449972324,
+      "along": -35023,
+      "altitude": 25000,
+      "cross": 0,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214472.7771150352,
+    "terminalTime": 214630.97711495231,
+    "terminalAlong": -29438.43294174438,
+    "terminalCross": -109914.35634878933,
+    "terminalAltitude": 23441.754582011792,
+    "terminalMach": 2.146231036753096,
+    "objective": {
+      "energyHeight": 52184.67449972324,
+      "along": -35023,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "altitude": 25000,
+      "speed": 754.3744694402089
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214474.33711503437,
+    "terminalTime": 214630.93711495234,
+    "terminalAlong": -29437.84223043736,
+    "terminalCross": -109869.85940658303,
+    "terminalAltitude": 23440.66985456734,
+    "terminalMach": 2.1487659120174922,
+    "objective": {
+      "speed": 754.4776523022736,
+      "energyHeight": 52192.63138102574,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "cross": 0,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214479.4371150317,
+    "terminalTime": 214630.8371149524,
+    "terminalAlong": -29413.394321450396,
+    "terminalCross": -109765.93789070444,
+    "terminalAltitude": 23444.803692414145,
+    "terminalMach": 2.1496348934728564,
+    "objective": {
+      "altitude": 25000,
+      "energyHeight": 52192.63138102574,
+      "along": -35023,
+      "cross": 0,
+      "speed": 754.4776523022736,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214484.49711502905,
+    "terminalTime": 214630.7971149524,
+    "terminalAlong": -29392.30511261047,
+    "terminalCross": -109682.67030405189,
+    "terminalAltitude": 23440.845260356855,
+    "terminalMach": 2.1491666213587375,
+    "objective": {
+      "speed": 754.4776523022736,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "energyHeight": 52192.63138102574,
+      "along": -35023,
+      "altitude": 25000
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214489.5371150264,
+    "terminalTime": 214630.73711495244,
+    "terminalAlong": -29372.165493121225,
+    "terminalCross": -109589.17730013563,
+    "terminalAltitude": 23437.666232033585,
+    "terminalMach": 2.149024387994393,
+    "objective": {
+      "along": -35023,
+      "altitude": 25000,
+      "energyHeight": 52192.63138102574,
+      "cross": 0,
+      "speed": 754.4776523022736,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214494.59711502376,
+    "terminalTime": 214630.69711495246,
+    "terminalAlong": -29353.324029294796,
+    "terminalCross": -109506.45735150848,
+    "terminalAltitude": 23431.31543612778,
+    "terminalMach": 2.14834962560088,
+    "objective": {
+      "altitude": 25000,
+      "along": -35023,
+      "speed": 754.4776523022736,
+      "energyHeight": 52192.63138102574,
+      "cross": 0,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214499.61711502113,
+    "terminalTime": 214630.6171149525,
+    "terminalAlong": -29332.8860774803,
+    "terminalCross": -109386.23244028905,
+    "terminalAltitude": 23426.028908897842,
+    "terminalMach": 2.14795753038979,
+    "objective": {
+      "energyHeight": 52192.63138102574,
+      "cross": 0,
+      "along": -35023,
+      "speed": 754.4776523022736,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214504.6571150185,
+    "terminalTime": 214630.55711495253,
+    "terminalAlong": -29313.613982842908,
+    "terminalCross": -109286.45510431839,
+    "terminalAltitude": 23420.90638592299,
+    "terminalMach": 2.1468323048712827,
+    "objective": {
+      "energyHeight": 52192.63138102574,
+      "cross": 0,
+      "along": -35023,
+      "speed": 754.4776523022736,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214509.69711501585,
+    "terminalTime": 214630.39711495262,
+    "terminalAlong": -29291.29713142851,
+    "terminalCross": -109126.3081772757,
+    "terminalAltitude": 23427.411194901866,
+    "terminalMach": 2.149150321364353,
+    "objective": {
+      "cross": 0,
+      "along": -35023,
+      "speed": 754.4776523022736,
+      "energyHeight": 52192.63138102574,
+      "altitude": 25000,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214514.7571150132,
+    "terminalTime": 214630.35711495264,
+    "terminalAlong": -29274.450767077848,
+    "terminalCross": -109047.78199798088,
+    "terminalAltitude": 23424.422946107643,
+    "terminalMach": 2.1469383139876714,
+    "objective": {
+      "altitude": 25000,
+      "cross": 0,
+      "speed": 754.4776523022736,
+      "energyHeight": 52192.63138102574,
+      "flightPath": -0.41887902047863906,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214519.79711501056,
+    "terminalTime": 214630.19711495272,
+    "terminalAlong": -29254.579832179727,
+    "terminalCross": -108907.38592360745,
+    "terminalAltitude": 23434.369803068064,
+    "terminalMach": 2.1492641233892615,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "along": -35023,
+      "speed": 754.4776523022736,
+      "cross": 0,
+      "energyHeight": 52192.63138102574
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214524.8571150079,
+    "terminalTime": 214630.15711495274,
+    "terminalAlong": -29239.978148898306,
+    "terminalCross": -108851.35622506806,
+    "terminalAltitude": 23432.40898993467,
+    "terminalMach": 2.147452580769989,
+    "objective": {
+      "speed": 754.4776523022736,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "along": -35023,
+      "altitude": 25000,
+      "energyHeight": 52192.63138102574
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214529.89711500527,
+    "terminalTime": 214629.99711495283,
+    "terminalAlong": -29218.553771600276,
+    "terminalCross": -108706.37297555969,
+    "terminalAltitude": 23439.926546073588,
+    "terminalMach": 2.1482841088232156,
+    "objective": {
+      "along": -35023,
+      "energyHeight": 52192.63138102574,
+      "altitude": 25000,
+      "speed": 754.4776523022736,
+      "cross": 0,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214535.01711500259,
+    "terminalTime": 214629.81711495292,
+    "terminalAlong": -29172.76254320728,
+    "terminalCross": -108516.63656613292,
+    "terminalAltitude": 23439.299103734153,
+    "terminalMach": 2.1471867748278806,
+    "objective": {
+      "energyHeight": 52192.63138102574,
+      "flightPath": -0.41887902047863906,
+      "speed": 754.4776523022736,
+      "along": -35023,
+      "cross": 0,
+      "altitude": 25000
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214539.85711500005,
+    "terminalTime": 214629.55711495306,
+    "terminalAlong": -29109.804534172294,
+    "terminalCross": -108272.03502505347,
+    "terminalAltitude": 23437.21656597273,
+    "terminalMach": 2.148222343502788,
+    "objective": {
+      "altitude": 25000,
+      "speed": 755.6300802014093,
+      "flightPath": -0.41887902047863906,
+      "along": -35023,
+      "energyHeight": 52281.57408459378,
+      "cross": 0
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214544.87711499742,
+    "terminalTime": 214626.27711495478,
+    "terminalAlong": -28946.4004936743,
+    "terminalCross": -106017.1243669785,
+    "terminalAltitude": 23873.411788982292,
+    "terminalMach": 2.1486620992132512,
+    "objective": {
+      "altitude": 25000,
+      "along": -35023,
+      "speed": 755.6300802014093,
+      "energyHeight": 52281.57408459378,
+      "cross": 0,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214549.8971149948,
+    "terminalTime": 214625.89711495498,
+    "terminalAlong": -28898.333163528623,
+    "terminalCross": -105692.22084897688,
+    "terminalAltitude": 23860.782466552755,
+    "terminalMach": 2.1489191862293526,
+    "objective": {
+      "along": -35023,
+      "energyHeight": 52281.57408459378,
+      "altitude": 25000,
+      "speed": 755.6300802014093,
+      "cross": 0,
+      "flightPath": -0.41887902047863906
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214554.95711499214,
+    "terminalTime": 214625.6571149551,
+    "terminalAlong": -28858.546743289724,
+    "terminalCross": -105469.31127224212,
+    "terminalAltitude": 23820.45946883615,
+    "terminalMach": 2.1480644382998224,
+    "objective": {
+      "energyHeight": 52281.57408459378,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "cross": 0,
+      "speed": 755.6300802014093,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214560.05711498947,
+    "terminalTime": 214625.15711495536,
+    "terminalAlong": -28791.46188618191,
+    "terminalCross": -104737.02923009785,
+    "terminalAltitude": 23703.799719405662,
+    "terminalMach": 2.1479580379055574,
+    "objective": {
+      "altitude": 25000,
+      "cross": 0,
+      "flightPath": -0.41887902047863906,
+      "along": -35023,
+      "energyHeight": 52281.57408459378,
+      "speed": 755.6300802014093
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214565.09711498683,
+    "terminalTime": 214624.99711495545,
+    "terminalAlong": -28767.473785100377,
+    "terminalCross": -104781.19065501382,
+    "terminalAltitude": 23733.103857051417,
+    "terminalMach": 2.1471654697710556,
+    "objective": {
+      "altitude": 25000,
+      "energyHeight": 52281.57408459378,
+      "along": -35023,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "speed": 755.6300802014093
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214570.1371149842,
+    "terminalTime": 214624.83711495553,
+    "terminalAlong": -28746.45913316947,
+    "terminalCross": -104838.00620293074,
+    "terminalAltitude": 23756.344623086577,
+    "terminalMach": 2.148650308301948,
+    "objective": {
+      "altitude": 25000,
+      "speed": 755.6300802014093,
+      "flightPath": -0.41887902047863906,
+      "along": -35023,
+      "energyHeight": 52281.57408459378,
+      "cross": 0
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214575.15711498156,
+    "terminalTime": 214624.65711495563,
+    "terminalAlong": -28721.430454725385,
+    "terminalCross": -104860.23128229093,
+    "terminalAltitude": 23774.900015339907,
+    "terminalMach": 2.148563127051789,
+    "objective": {
+      "energyHeight": 52281.57408459378,
+      "along": -35023,
+      "altitude": 25000,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "speed": 755.6300802014093
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214580.19711497892,
+    "terminalTime": 214624.4971149557,
+    "terminalAlong": -28701.13651703871,
+    "terminalCross": -104877.22000462047,
+    "terminalAltitude": 23784.174545705388,
+    "terminalMach": 2.148597715760791,
+    "objective": {
+      "altitude": 25000,
+      "energyHeight": 52281.57408459378,
+      "along": -35023,
+      "flightPath": -0.41887902047863906,
+      "cross": 0,
+      "speed": 755.6300802014093
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214585.25711497627,
+    "terminalTime": 214624.35711495578,
+    "terminalAlong": -28682.75297078844,
+    "terminalCross": -104879.49847132448,
+    "terminalAltitude": 23790.242600520793,
+    "terminalMach": 2.1484926479512745,
+    "objective": {
+      "along": -35023,
+      "cross": 0,
+      "altitude": 25000,
+      "speed": 755.6300802014093,
+      "flightPath": -0.41887902047863906,
+      "energyHeight": 52281.57408459378
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214590.27711497364,
+    "terminalTime": 214624.17711495588,
+    "terminalAlong": -28664.31726998036,
+    "terminalCross": -104857.7132324373,
+    "terminalAltitude": 23764.42483284925,
+    "terminalMach": 2.149732768122284,
+    "objective": {
+      "along": -35023,
+      "cross": 0,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "energyHeight": 52281.57408459378,
+      "speed": 755.6300802014093
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214594.23711497156,
+    "terminalTime": 214624.43711495574,
+    "terminalAlong": -28665.956707341804,
+    "terminalCross": -105125.11862913509,
+    "terminalAltitude": 23675.54596171337,
+    "terminalMach": 2.146598240936657,
+    "objective": {
+      "altitude": 25000,
+      "cross": 0,
+      "speed": 756.2849125130055,
+      "energyHeight": 52332.17357068369,
+      "flightPath": -0.41887902047863906,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214599.25711496893,
+    "terminalTime": 214624.25711495584,
+    "terminalAlong": -28654.620901137438,
+    "terminalCross": -105041.4964264436,
+    "terminalAltitude": 23677.464657454355,
+    "terminalMach": 2.149261143425485,
+    "objective": {
+      "energyHeight": 52332.17357068369,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "cross": 0,
+      "speed": 756.2849125130055,
+      "along": -35023
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214604.31711496628,
+    "terminalTime": 214624.21711495586,
+    "terminalAlong": -28650.051267029874,
+    "terminalCross": -105041.95897063219,
+    "terminalAltitude": 23672.37247798424,
+    "terminalMach": 2.1479918447757003,
+    "objective": {
+      "cross": 0,
+      "speed": 756.2849125130055,
+      "along": -35023,
+      "energyHeight": 52332.17357068369,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214609.33711496365,
+    "terminalTime": 214623.83711495606,
+    "terminalAlong": -28632.021049440325,
+    "terminalCross": -104811.7120390973,
+    "terminalAltitude": 23712.6488740616,
+    "terminalMach": 2.1499668037016586,
+    "objective": {
+      "cross": -32737,
+      "altitude": 25000,
+      "along": -12445.857142037265,
+      "energyHeight": 52346.4678918849,
+      "flightPath": -0.41887902047863906,
+      "speed": 756.3471583603109
+    },
+    "crossAim": -32737,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214614.417114961,
+    "terminalTime": 214624.21711495586,
+    "terminalAlong": -28641.431842653794,
+    "terminalCross": -105117.18133651187,
+    "terminalAltitude": 23625.227455469732,
+    "terminalMach": 2.1495728832071292,
+    "objective": {
+      "cross": -32737,
+      "speed": 756.3471583603109,
+      "along": -12445.857142037265,
+      "energyHeight": 52346.4678918849,
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000
+    },
+    "crossAim": -32737,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214619.47711495834,
+    "terminalTime": 214625.0771149554,
+    "terminalAlong": -28681.46531612454,
+    "terminalCross": -105696.191764249,
+    "terminalAltitude": 23508.818240234115,
+    "terminalMach": 2.146923002987032,
+    "objective": {
+      "along": -35023,
+      "altitude": 25000,
+      "speed": 756.3419469351875,
+      "cross": 0,
+      "flightPath": -0.41887902047863906,
+      "energyHeight": 52336.58274719711
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  },
+  {
+    "createdAt": 214624.5171149557,
+    "terminalTime": 214625.11711495538,
+    "terminalAlong": -28680.367917322543,
+    "terminalCross": -105714.31931779957,
+    "terminalAltitude": 23491.4430920501,
+    "terminalMach": 2.146587672036674,
+    "objective": {
+      "flightPath": -0.41887902047863906,
+      "altitude": 25000,
+      "cross": 0,
+      "along": -35023,
+      "speed": 756.3419469351875,
+      "energyHeight": 52336.58274719711
+    },
+    "crossAim": 0,
+    "feasible": false,
+    "deficit": "inadequateControlAuthority"
+  }
+]

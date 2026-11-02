@@ -1,0 +1,574 @@
+{
+  "attempts": [
+    {
+      "run": "/Users/kyooni18/Code/KSL/runs/20261102T114658Z-dessert-normal-oms-live",
+      "revision": "3d7aab71e6ed6e45b068640ff408177503e0743b",
+      "executableSHA256": "936f4055c5b82afa6dc77987816b8866914b68291f60aa18b7a6b239f0b17020",
+      "runway": {
+        "elevation": 820.95,
+        "heading": -3.1251437718986597,
+        "latitude": -0.11228090925436227,
+        "length": 1750,
+        "longitude": -2.513938652604966,
+        "name": "Dessert Airfield Runway 18",
+        "width": 42.6
+      },
+      "selectedWindow": {
+        "afterBurn": {
+          "mass": 24380.13186154937,
+          "position": {
+            "x": 688595.9780539181,
+            "y": -39103.71036612156,
+            "z": 60734.936828710706
+          },
+          "time": 213452.9128178996,
+          "velocity": {
+            "x": 122.49050787027693,
+            "y": 2219.1966202111876,
+            "z": -4.5354534747984125
+          }
+        },
+        "burnStart": 213167.4128178996,
+        "crossrange": 11523.120921661133,
+        "deltaV": 32.034003077601405,
+        "duration": 285.5,
+        "entryCourseError": 0.01973031090270716,
+        "entryFlightPath": -0.034393228426635655,
+        "entryInterface": {
+          "mass": 24380.13186154937,
+          "position": {
+            "x": 41304.832535435235,
+            "y": 668223.9186649572,
+            "z": -977.4114974318558
+          },
+          "time": 213928.54837042885,
+          "velocity": {
+            "x": -2289.7739528594975,
+            "y": 68.70810789997245,
+            "z": -201.53808598075926
+          }
+        },
+        "entryRange": 1081206.0500025367,
+        "entrySpeed": 2105.3738810025666,
+        "miss": 52486.587549940006,
+        "normalAngle": 1.5707963267948966,
+        "normalDeltaV": 206.01293614388487,
+        "periapsisAltitude": 50008.432427865104
+      },
+      "nominal": {
+        "burnCompleted": true,
+        "entryFlightPath": -0.03412158303009714,
+        "evidence": "offline-native-feedback-rollout-without-recursive-entry-search",
+        "hardUnsafe": false,
+        "index": 0,
+        "maximumDynamicPressure": 4172.686449347308,
+        "maximumLoad": 1.1912935261424487,
+        "passed": false,
+        "touchdownAlong": -18411.976240908414,
+        "touchdownCross": -183416.47511141558,
+        "touchdownPitch": -0.08978438853415463,
+        "touchdownSink": -18.02288558375515,
+        "violations": [
+          {
+            "kind": "contactQuality",
+            "limit": 0,
+            "message": "Full native route failed ground contact or runway containment",
+            "value": 0
+          }
+        ]
+      },
+      "phases": {
+        "orbitalCoast": {
+          "UT": 213124.57711574147,
+          "phase": "orbitalCoast",
+          "speed": 2057.82080078125,
+          "parts": 26,
+          "contact": "airborne",
+          "along": -72482.00982885442,
+          "cross": -1246163.3241652928,
+          "thresholdRange": 1248269.471005168,
+          "heightASL": 91158.47082137992
+        },
+        "burnSetup": {
+          "UT": 213155.41711572531,
+          "phase": "burnSetup",
+          "speed": 2057.0732421875,
+          "parts": 26,
+          "contact": "airborne",
+          "along": -64409.45646267094,
+          "cross": -1301574.075341882,
+          "thresholdRange": 1303166.778153852,
+          "heightASL": 91368.44324991317
+        },
+        "deorbitBurn": {
+          "UT": 213167.497115719,
+          "phase": "deorbitBurn",
+          "speed": 2056.794189453125,
+          "parts": 26,
+          "contact": "airborne",
+          "along": -60528.05706405918,
+          "cross": -1323268.4174366356,
+          "thresholdRange": 1324652.0110116496,
+          "heightASL": 91446.90344782756
+        },
+        "entryCoast": {
+          "UT": 213468.3371155614,
+          "phase": "entryCoast",
+          "speed": 2019.831298828125,
+          "parts": 26,
+          "contact": "airborne",
+          "along": 896803.6603782108,
+          "cross": -1623348.0405513549,
+          "thresholdRange": 1854593.126815065,
+          "heightASL": 93062.98484531115
+        },
+        "entry": {
+          "UT": 213966.1571153006,
+          "phase": "entry",
+          "speed": 2106.1962890625,
+          "parts": 26,
+          "contact": "airborne",
+          "along": 44108.98986017284,
+          "cross": 1014831.3395306201,
+          "thresholdRange": 1015789.4716327776,
+          "heightASL": 69492.79333099164
+        },
+        "acquisition": {
+          "UT": 214624.93711495548,
+          "phase": "acquisition",
+          "speed": 649.2525024414062,
+          "parts": 26,
+          "contact": "airborne",
+          "along": -28674.580151989052,
+          "cross": -105603.02486557984,
+          "thresholdRange": 109426.82672751283,
+          "heightASL": 24328.75153058942
+        },
+        "preflare": {
+          "UT": 215191.73711465855,
+          "phase": "preflare",
+          "speed": 33.73707580566406,
+          "parts": 26,
+          "contact": "airborne",
+          "along": -2070.404259719983,
+          "cross": -158219.4352167506,
+          "thresholdRange": 158232.98093035538,
+          "heightASL": 1782.2436991404975
+        },
+        "flare": {
+          "UT": 215252.75711462658,
+          "phase": "flare",
+          "speed": 44.59475326538086,
+          "parts": 26,
+          "contact": "airborne",
+          "along": -2485.717400592933,
+          "cross": -158694.2011544885,
+          "thresholdRange": 158713.6675622388,
+          "heightASL": 835.8074061723892
+        },
+        "touchdown": {
+          "UT": 215325.2371145886,
+          "phase": "touchdown",
+          "speed": 32.14924621582031,
+          "parts": 26,
+          "contact": "rolling",
+          "along": -2865.8639019502457,
+          "cross": -157094.7775229949,
+          "thresholdRange": 157120.9161789218,
+          "heightASL": 2.54766221717
+        }
+      },
+      "sampleCounts": {
+        "orbitalCoast": 299,
+        "burnSetup": 117,
+        "deorbitBurn": 2921,
+        "entryCoast": 4829,
+        "entry": 6394,
+        "acquisition": 5504,
+        "preflare": 592,
+        "flare": 705,
+        "touchdown": 888
+      },
+      "burnClosure": {
+        "alignmentError": 0,
+        "burnElapsed": 300.83999984239927,
+        "deliveredDeltaV": 31.595605492442665,
+        "deliveredNormalDeltaV": 206.01295311863356,
+        "periapsisAltitude": 50305.673063443974,
+        "planID": "F162A3B7-F847-4ECF-9990-F740556316F8",
+        "reducedAssuranceAuthorized": true,
+        "targetDeltaV": 32.034003077601405,
+        "targetNormalDeltaV": 206.01293614388487,
+        "telemetryGapResumed": false,
+        "thrustLossSeconds": 0,
+        "unobservedDeltaVUpperBound": 0
+      },
+      "closestThreshold": {
+        "UT": 214517.83711501159,
+        "phase": "entry",
+        "speed": 1471.4188232421875,
+        "parts": 26,
+        "contact": "airborne",
+        "along": -22714.07748623471,
+        "cross": 1344.0131705186109,
+        "thresholdRange": 22753.805999287284,
+        "heightASL": 32451.279929939075
+      },
+      "centerlineCrossing": {
+        "UT": 214518.87711501104,
+        "phase": "entry",
+        "speed": 1464.0223388671875,
+        "parts": 26,
+        "contact": "airborne",
+        "along": -22800.22747989127,
+        "cross": -99.17132988167072,
+        "thresholdRange": 22800.44315550598,
+        "heightASL": 32357.383238966577
+      },
+      "firstGround": {
+        "UT": 215325.2371145886,
+        "phase": "touchdown",
+        "speed": 32.14924621582031,
+        "parts": 26,
+        "contact": "rolling",
+        "along": -2865.8639019502457,
+        "cross": -157094.7775229949,
+        "thresholdRange": 157120.9161789218,
+        "heightASL": 2.54766221717
+      },
+      "firstPartLoss": null,
+      "lastRecord": {
+        "UT": 215416.53711454078,
+        "phase": "touchdown",
+        "speed": 0.0032470179721713066,
+        "parts": 26,
+        "contact": "stopped",
+        "along": -2872.3483646875284,
+        "cross": -157097.0873222314,
+        "thresholdRange": 157123.34400163754,
+        "heightASL": 1.0978709212504327
+      },
+      "exit": {
+        "returncode": 2,
+        "startedUnix": 1793620096.029535,
+        "endedUnix": 1793622414.604583
+      },
+      "logSHA256": "6e74931c44fe0939131e3cf07ee5f36a145ab3a1bbdbeec361cf038ee2cf121a",
+      "actualConfigurationSHA256": "39bd0ef88e2fa37094885b3b11902b5ac07ba3801601fdd773e13297dc08ce58"
+    },
+    {
+      "run": "/Users/kyooni18/Code/KSL/runs/20261102T122809Z-dessert-normal-oms-restart",
+      "revision": "3d7aab71e6ed6e45b068640ff408177503e0743b",
+      "executableSHA256": "936f4055c5b82afa6dc77987816b8866914b68291f60aa18b7a6b239f0b17020",
+      "runway": {
+        "elevation": 820.95,
+        "heading": 0.016454362747342143,
+        "latitude": -0.11519718122401937,
+        "length": 1750,
+        "longitude": -2.5139869463627975,
+        "name": "Dessert Airfield Runway 36",
+        "width": 42.6
+      },
+      "selectedWindow": {
+        "afterBurn": {
+          "mass": 25795.755645605313,
+          "position": {
+            "x": 296012.89495067234,
+            "y": 621979.6758108201,
+            "z": 27758.578989111145
+          },
+          "time": 215518.70155628782,
+          "velocity": {
+            "x": -2005.0083693932395,
+            "y": 959.9147025182082,
+            "z": -174.640746104504
+          }
+        },
+        "burnStart": 215469.70155628782,
+        "crossrange": 27616.182383595584,
+        "deltaV": 34.48954083984128,
+        "duration": 49,
+        "entryCourseError": 0.04835729610168693,
+        "entryFlightPath": -0.032180970847131396,
+        "entryInterface": {
+          "mass": 25795.755645605313,
+          "position": {
+            "x": -586982.8369381897,
+            "y": 317926.2896731134,
+            "z": -51032.08279683705
+          },
+          "time": 215979.18408600718,
+          "velocity": {
+            "x": -1026.3167133971726,
+            "y": -2052.749152178521,
+            "z": -95.9744413526654
+          }
+        },
+        "entryRange": 755519.5594161893,
+        "entrySpeed": 2102.684264260943,
+        "miss": 275866.20995063323,
+        "normalAngle": 0.19634954084936207,
+        "periapsisAltitude": 49944.809122812236
+      },
+      "nominal": {
+        "burnCompleted": true,
+        "entryFlightPath": -0.031926319137583065,
+        "evidence": "offline-native-feedback-rollout-without-recursive-entry-search",
+        "hardUnsafe": false,
+        "index": 0,
+        "maximumDynamicPressure": 8471.43858314772,
+        "maximumLoad": 1.3841795400794603,
+        "passed": false,
+        "touchdownAlong": 11909.23006671837,
+        "touchdownCross": 82893.58551541039,
+        "touchdownPitch": -0.08961838353123279,
+        "touchdownSink": -18.482627153770242,
+        "violations": [
+          {
+            "kind": "contactQuality",
+            "limit": 0,
+            "message": "Full native route failed ground contact or runway containment",
+            "value": 0
+          }
+        ]
+      },
+      "phases": {
+        "orbitalCoast": {
+          "UT": 215374.05094723604,
+          "phase": "orbitalCoast",
+          "speed": 2065.1806640625,
+          "parts": 26,
+          "contact": "airborne",
+          "along": -1083125.929905037,
+          "cross": -1488578.0455372962,
+          "thresholdRange": 1840930.845438874,
+          "heightASL": 89087.39919709973
+        },
+        "burnSetup": {
+          "UT": 215457.77094719218,
+          "phase": "burnSetup",
+          "speed": 2064.50537109375,
+          "parts": 26,
+          "contact": "airborne",
+          "along": -324154.4329880206,
+          "cross": -1664407.3933202093,
+          "thresholdRange": 1695679.2348096853,
+          "heightASL": 89282.41762466973
+        },
+        "deorbitBurn": {
+          "UT": 215469.73094718592,
+          "phase": "deorbitBurn",
+          "speed": 2064.393310546875,
+          "parts": 26,
+          "contact": "airborne",
+          "along": -298971.2937378024,
+          "cross": -1647426.05304476,
+          "thresholdRange": 1674334.6244791963,
+          "heightASL": 89314.67021075683
+        },
+        "entryCoast": {
+          "UT": 215521.91094715858,
+          "phase": "entryCoast",
+          "speed": 2029.8734130859375,
+          "parts": 26,
+          "contact": "airborne",
+          "along": -226843.73083179008,
+          "cross": -1565392.2715125491,
+          "thresholdRange": 1581743.0391593017,
+          "heightASL": 89395.18002824031
+        },
+        "entry": {
+          "UT": 215984.990946916,
+          "phase": "entry",
+          "speed": 2102.949462890625,
+          "parts": 26,
+          "contact": "airborne",
+          "along": -43893.469102736846,
+          "cross": -743752.4112912728,
+          "thresholdRange": 745046.4991740151,
+          "heightASL": 69497.7799072063
+        },
+        "acquisition": {
+          "UT": 216422.15094668698,
+          "phase": "acquisition",
+          "speed": 735.4317626953125,
+          "parts": 26,
+          "contact": "airborne",
+          "along": 33356.96723624089,
+          "cross": 8144.4743201285,
+          "thresholdRange": 34336.85665798314,
+          "heightASL": 26680.6081804625
+        },
+        "approach": {
+          "UT": 216864.81094645508,
+          "phase": "approach",
+          "speed": 73.65177917480469,
+          "parts": 26,
+          "contact": "airborne",
+          "along": -6249.735352436445,
+          "cross": 54334.33442790946,
+          "thresholdRange": 54692.58715492806,
+          "heightASL": 1781.1714965006104
+        },
+        "preflare": {
+          "UT": 216920.63094642584,
+          "phase": "preflare",
+          "speed": 59.489017486572266,
+          "parts": 26,
+          "contact": "airborne",
+          "along": -8230.486597312882,
+          "cross": 55283.232265010214,
+          "thresholdRange": 55892.54582943609,
+          "heightASL": 894.167190968059
+        },
+        "flare": {
+          "UT": 216928.1509464219,
+          "phase": "flare",
+          "speed": 47.897640228271484,
+          "parts": 26,
+          "contact": "airborne",
+          "along": -7879.310846961614,
+          "cross": 55489.626867882704,
+          "thresholdRange": 56046.250805561445,
+          "heightASL": 836.0876044570468
+        },
+        "rollout": {
+          "UT": 216952.89094640894,
+          "phase": "rollout",
+          "speed": 31.620365142822266,
+          "parts": 26,
+          "contact": "rolling",
+          "along": -7121.362080287951,
+          "cross": 55297.43466665552,
+          "thresholdRange": 55754.103692836805,
+          "heightASL": 609.3917822506046
+        },
+        "touchdown": {
+          "UT": 216952.99094640889,
+          "phase": "touchdown",
+          "speed": 31.737943649291992,
+          "parts": 26,
+          "contact": "mainGear",
+          "along": -7119.093882123243,
+          "cross": 55295.344796743724,
+          "thresholdRange": 55751.741263329684,
+          "heightASL": 610.2101322459057
+        }
+      },
+      "sampleCounts": {
+        "orbitalCoast": 812,
+        "burnSetup": 116,
+        "deorbitBurn": 506,
+        "entryCoast": 4493,
+        "entry": 4239,
+        "acquisition": 4298,
+        "approach": 543,
+        "preflare": 73,
+        "flare": 276,
+        "rollout": 1424,
+        "touchdown": 26
+      },
+      "burnClosure": {
+        "alignmentError": 0.00034973104831169605,
+        "burnElapsed": 52.17999997266452,
+        "deliveredDeltaV": 34.664547317951325,
+        "periapsisAltitude": 50244.59698374162,
+        "planID": "8EF5FC58-32A3-466B-ABA3-08D0EF27F109",
+        "reducedAssuranceAuthorized": true,
+        "targetDeltaV": 34.48954083984128,
+        "telemetryGapResumed": false,
+        "thrustLossSeconds": 0,
+        "unobservedDeltaVUpperBound": 0
+      },
+      "closestThreshold": {
+        "UT": 216410.0509466933,
+        "phase": "entry",
+        "speed": 917.8148803710938,
+        "parts": 26,
+        "contact": "airborne",
+        "along": 32976.949665684726,
+        "cross": -1350.8876928254433,
+        "thresholdRange": 33004.60735733317,
+        "heightASL": 27554.524055169662
+      },
+      "centerlineCrossing": {
+        "UT": 216411.71094669244,
+        "phase": "entry",
+        "speed": 890.7554321289062,
+        "parts": 26,
+        "contact": "airborne",
+        "along": 33033.906096972874,
+        "cross": 78.84629112220898,
+        "thresholdRange": 33034.000193153195,
+        "heightASL": 27431.25425257755
+      },
+      "firstGround": {
+        "UT": 216952.89094640894,
+        "phase": "rollout",
+        "speed": 31.620365142822266,
+        "parts": 26,
+        "contact": "rolling",
+        "along": -7121.362080287951,
+        "cross": 55297.43466665552,
+        "thresholdRange": 55754.103692836805,
+        "heightASL": 609.3917822506046
+      },
+      "firstPartLoss": {
+        "UT": 216955.33094640766,
+        "phase": "flare",
+        "speed": 20.043006896972656,
+        "parts": 25,
+        "contact": "airborne",
+        "along": -7074.4758394008295,
+        "cross": 55252.924024885935,
+        "thresholdRange": 55703.98389435072,
+        "heightASL": 616.0989814056084
+      },
+      "lastRecord": {
+        "UT": 217105.6709463289,
+        "phase": "rollout",
+        "speed": 0.014403978362679482,
+        "parts": 25,
+        "contact": "stopped",
+        "along": -7025.0657830843575,
+        "cross": 55203.68898747811,
+        "thresholdRange": 55648.88882163663,
+        "heightASL": 615.8936407690635
+      },
+      "exit": {
+        "returncode": 2,
+        "startedUnix": 1793622508.4267719,
+        "endedUnix": 1793624275.406348
+      },
+      "logSHA256": "1e4689fd548733292dda694684b5f9704c21fb43cc0345c6e6acf7453448c916",
+      "actualConfigurationSHA256": "37087461ffbea85f6ae16727bdbcc6d0ec28333afc9d28bd9a69f8e7d03867cc",
+      "postflight": {
+        "UT": 217190.13094628465,
+        "contact": "stopped",
+        "parts": 25,
+        "systems": {
+          "airbrakes": false,
+          "brakes": true,
+          "gearDown": true,
+          "rcs": false,
+          "sas": false,
+          "speedbrakeFraction": 0,
+          "throttle": 0,
+          "thrust": 0
+        },
+        "wheelContact": {
+          "evidence": "measured",
+          "mainGear": true,
+          "noseGear": true,
+          "wheelCount": 3
+        },
+        "along": -7025.640790716747,
+        "cross": 55202.37188172295,
+        "thresholdRange": 55647.654846257625,
+        "heightASL": 615.9580001017312
+      }
+    }
+  ],
+  "landingSuccess": false,
+  "restartAuthorization": "User explicitly requested restart; existing quicksave loaded only after first controller stopped; no automatic further attempt."
+}
