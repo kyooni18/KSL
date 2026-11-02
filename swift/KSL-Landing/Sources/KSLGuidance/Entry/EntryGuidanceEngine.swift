@@ -41,6 +41,7 @@ public final class EntryGuidanceEngine {
   public private(set) var captureForecast: EntryCaptureForecast?
   public var reversalCount: Int { law.memory.lateral.reversals }
   public var diagnostics: EntryDiagnostics { law.diagnostics }
+  var handoffForecast: EntryHandoffForecast? {law.memory.rangeReference?.handoffForecast}
   public var environment = EnvironmentCalibration()
   public init(configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine,
               aerodynamics: AerodynamicsEngine, permitsReplanning: Bool = true) {
@@ -61,7 +62,7 @@ public final class EntryGuidanceEngine {
   }
   /// Lateral aim planned backward from TAEM capture (deorbit selection).
   public func setCrossAim(_ value: Double) { law.memory.retargetCrossAim(value) }
-  public func setObjective(_ objective: EntryCaptureObjective?) { law.memory.objective = objective }
+  public func setObjective(_ objective: EntryCaptureObjective?) { law.memory.objective = objective; law.memory.rangeReference = nil }
   public var crossAim: Double { law.memory.crossAim }
   func captureObjective(at time: Double) -> EntryCaptureObjective {
     law.memory.objective ?? EntryCaptureObjective.seed(configuration: configuration,
@@ -94,7 +95,7 @@ public final class EntryGuidanceEngine {
     rangeMultiplier = proposal.rangeMultiplier
     bestPrediction = proposal.prediction; candidateCount = proposal.candidates
     captureForecast = proposal.capture
-    if let objective = proposal.capture?.objective { law.memory.objective = objective }
+    if let objective = proposal.capture?.objective { law.memory.objective = objective; law.memory.rangeReference = nil }
     if let aim = proposal.crossAim { law.memory.crossAim = aim }
     if let f = proposal.capture, f.feasible, let speed = f.track.last?[4],
       f.capture.envelope.availableTurnRate > 0 {

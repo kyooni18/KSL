@@ -34,7 +34,7 @@ final class TerminalRecoveryOwnershipTests: XCTestCase {
     XCTAssertLessThan(closing, opening)
   }
 
-  func testTAEMHandoffRequiresInterfaceRangeAndEnergyWithRecoveryDeadlines() throws {
+  func testTAEMHandoffUsesEnergyWithoutAProximityGateAndKeepsRecoveryDeadlines() throws {
     let c = MissionConfiguration()
     let atmosphere = try AtmosphericModelEngine()
     let physics = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere, aerodynamics: try AerodynamicsEngine())
@@ -58,12 +58,12 @@ final class TerminalRecoveryOwnershipTests: XCTestCase {
     XCTAssertFalse(LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,
       state: high, configuration: c), "Interface Mach alone must not hand off with excess energy")
     let interface = atMach(c.mm304DeliveryMach, altitude: c.mm304DeliveryAltitude - 1)
-    XCTAssertFalse(LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,
-      state: interface, configuration: c), "Interface energy far up-range is a delivery deficit")
+    XCTAssertTrue(LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,
+      state: interface, configuration: c), "A delivery deficit must not postpone the energy handoff")
     let arrived = state(along: -c.taemInterfaceRange, altitude: c.mm304DeliveryAltitude-1,
       speed: sqrt(interface.velocity.squaredLength-90*90))
     XCTAssertTrue(LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,
-      state: arrived, configuration: c), "Normal handoff requires both range and energy")
+      state: arrived, configuration: c), "Interface energy transfers regardless of distance to the delivery aim")
     let slow = atMach(c.mm304DeliveryMach - c.entrySettings.terminalMachHalfWidth - 0.01,
       altitude: c.mm304DeliveryAltitude + 5_000)
     XCTAssertTrue(LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,

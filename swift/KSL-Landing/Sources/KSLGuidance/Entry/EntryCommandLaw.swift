@@ -17,6 +17,15 @@ public struct EntryCaptureObjective: Codable, Sendable {
     return speed*speed/2-c.planet.gravitationalParameter/p.length
       - c.planet.angularVelocity.cross(p).squaredLength/2
   }
+  /// Common arrival residual in the configured capture-tolerance units.
+  public func arrivalResidual(along:Double,cross:Double,altitude:Double,speed:Double,
+    heading:Double,soundSpeed:Double,configuration c:MissionConfiguration)->Double {
+    let e=c.entrySettings
+    let horizontal=hypot(along-self.along,cross-self.cross)/e.handoffRadius
+    let height=(altitude-self.altitude)/(e.terminalMaximumAltitude-e.terminalMinimumAltitude)
+    let velocity=(speed-self.speed)/soundSpeed/e.terminalMachHalfWidth
+    return hypot(hypot(horizontal,height),hypot(velocity,heading/e.headingHalfWidth))
+  }
   static func seed(configuration c: MissionConfiguration, atmosphere: AtmosphericModelEngine,
                    frame: RunwayFrame, crossAim: Double, time: Double) -> Self {
     let e = c.entrySettings, cross = e.handoffCross + crossAim
@@ -53,6 +62,7 @@ struct EntryLawMemory: Sendable {
   mutating func retargetCrossAim(_ value: Double) {
     crossAim = value
     objective = nil
+    rangeReference = nil
   }
 }
 

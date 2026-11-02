@@ -1,0 +1,59 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 677]
+[Planning deferred tasks]
+[6 / 72] KSL-Landing_KSLPhysics
+[6 / 71]
+[18 / 46] CoreTests-product
+[33 / 82] GuidanceTests-product
+[36 / 82] CoreTests-product
+[39 / 82] IntegrationTests-product
+[43 / 82] IntegrationTests-product
+[44 / 82] IntegrationTests-product
+[47 / 84] SimulationTests-product
+[51 / 87] IntegrationTests-product
+[54 / 86] CoreTests-product
+[61 / 86] GuidanceTests-product
+[61 / 86] SimulationTests-product
+[69 / 87] GuidanceTests-product
+[71 / 87] GuidanceTests-product
+[71 / 87] CoreTests-product
+[77 / 89] PhysicsTests-product
+[80 / 91] CoreTests-product
+[83 / 92] GuidanceTests-product
+[85 / 92] ControlTests-product
+[87 / 94] IntegrationTests-product
+[91 / 95] GuidanceTests-product
+Build complete! (7.01초)
+Test Suite 'Selected tests' started at 2026-11-02 23:34:53.676.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 23:34:53.678.
+Test Suite 'EntryHandoffTimingTests' started at 2026-11-02 23:34:53.678.
+Test Case '-[GuidanceTests.EntryHandoffTimingTests testRecordedOpportunityTransfersBeforeTheLateMachDeadline]' started.
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/GuidanceTests/EntryHandoffTimingTests.swift:18: error: -[GuidanceTests.EntryHandoffTimingTests testRecordedOpportunityTransfersBeforeTheLateMachDeadline] : XCTAssertTrue failed - Do not wait through the response lead to closest approach
+Test Case '-[GuidanceTests.EntryHandoffTimingTests testRecordedOpportunityTransfersBeforeTheLateMachDeadline]' failed (0.298 seconds).
+Test Suite 'EntryHandoffTimingTests' failed at 2026-11-02 23:34:53.976.
+	 Executed 1 test, with 1 failure (0 unexpected) in 0.298 (0.298) seconds
+Test Suite 'RecordedRunway36RecoveryTests' started at 2026-11-02 23:34:53.977.
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testNoTrimSupportedTurnCannotCommitLongestOverheadAsFeasible]' started.
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testNoTrimSupportedTurnCannotCommitLongestOverheadAsFeasible]' passed (0.382 seconds).
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testUnbracketedReferencePricesTheCompleteArrival]' started.
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testUnbracketedReferencePricesTheCompleteArrival]' passed (0.012 seconds).
+Test Suite 'RecordedRunway36RecoveryTests' passed at 2026-11-02 23:34:54.371.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.394 (0.395) seconds
+Test Suite 'TerminalRecoveryOwnershipTests' started at 2026-11-02 23:34:54.371.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testTAEMHandoffUsesEnergyWithoutAProximityGateAndKeepsRecoveryDeadlines]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testTAEMHandoffUsesEnergyWithoutAProximityGateAndKeepsRecoveryDeadlines]' passed (0.005 seconds).
+Test Suite 'TerminalRecoveryOwnershipTests' passed at 2026-11-02 23:34:54.376.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.005 (0.005) seconds
+Test Suite 'GuidanceTests.xctest' failed at 2026-11-02 23:34:54.376.
+	 Executed 4 tests, with 1 failure (0 unexpected) in 0.697 (0.698) seconds
+Test Suite 'Selected tests' failed at 2026-11-02 23:34:54.376.
+	 Executed 4 tests, with 1 failure (0 unexpected) in 0.697 (0.700) seconds
+HANDOFF_OPPORTUNITY 216399.9723529034 EntryHandoffTiming(transferNow: false, reason: "before-terminal-window", energyMargin: Optional(209423.30785365961), responseEnergy: nil, secondsToClosestApproach: nil, currentArrivalResidual: nil, forecastArrivalResidual: nil)
+HANDOFF_OPPORTUNITY 216414.2923528959 EntryHandoffTiming(transferNow: false, reason: "entry-forecast-still-improves-inlet", energyMargin: Optional(83025.04234134965), responseEnergy: Optional(40881.94937581061), secondsToClosestApproach: Optional(12.881447059666925), currentArrivalResidual: Optional(30.40265543753226), forecastArrivalResidual: Optional(28.62784266073616))
+HANDOFF_OPPORTUNITY 216419.95235289293 EntryHandoffTiming(transferNow: false, reason: "entry-forecast-still-improves-inlet", energyMargin: Optional(45570.084453639574), responseEnergy: Optional(38871.31875239599), secondsToClosestApproach: Optional(7.749534017312846), currentArrivalResidual: Optional(29.212479459773633), forecastArrivalResidual: Optional(28.61988181309002))
+HANDOFF_OPPORTUNITY 216427.17235288915 EntryHandoffTiming(transferNow: true, reason: "interface-energy", energyMargin: Optional(-334.77085180580616), responseEnergy: nil, secondsToClosestApproach: nil, currentArrivalResidual: nil, forecastArrivalResidual: nil)
+RECORDED_RECOVERY_TAEM TAEMStatus(phase: KSLGuidance.TAEMPhase.acquisition, side: 1, remainingTurn: 3.150368522479819, range: 48921.97777284276, energyHeight: 52282.283253755195, nominalEnergy: 362589.06878241274, minimumEnergy: 201023.57470208625, referenceHeight: 25859.6581804625, referenceDynamicPressure: 2958.8444658018234, minimumDynamicPressure: 0.0, finalRadius: 4226.164936240855, growth: 0.07599088773175333, downmoded: false, attainableAcquisitionRadius: nil, acquisitionTurnAvailable: Optional(false), insufficientEnergy: true, descentPlanFits: false, descentCheckFailure: Optional("acquisitionTurnUnavailable"), predictedNEPEnergy: nil, referenceTracking: Optional(false)) target GuidanceTarget(angleOfAttack: 0.45445392755624564, bank: 0.0, desiredSpeed: 735.5099315810294, desiredHeight: 26680.6081804625, desiredFlightPath: -0.09873317204024666, gearDown: false, speedbrakeFraction: nil)
+RECORDED_RECOVERY_RANGE EntryRangeReference(createdAt: 216350.05094672475, blend: 1.0, cross: 96.88839729272058, headingError: 1.4813758461824587, captureResidual: 69.19324818198221, along: 34111.41855250991, altitude: 27113.996489198296, speed: 729.8305649874851, bracketed: false, reachedEnergy: true)
+Note: Some test targets reported failures:
+  - GuidanceTests (XCTest)

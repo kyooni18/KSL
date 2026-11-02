@@ -154,7 +154,14 @@ public final class EntryCaptureForecaster {
         // Search advisories can steer entry, but ownership ends at precisely
         // the live executive's boundary, independently of plan feasibility.
         if LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,
-          state: s, configuration: c, objective: objective) {
+          state:s,configuration:c,objective:objective,
+          responseSeconds:max(c.guidance.pathLookaheadTime,
+            law.memory.pitchResponseSeconds ?? 0,law.memory.rollResponseSeconds ?? 0),
+          forecast:law.memory.rangeReference?.handoffForecast,
+          maximumLiftAcceleration:EntryHandoffTiming.maximumLift(state:s,configuration:c,
+            aerodynamics:self.aerodynamics,
+            ceiling:RotationalDynamicsEngine(configuration:c.vehicle,planet:c.planet)
+              .supportedTrimAlpha(s,identifiedCeiling:law.memory.identifiedTrimCeiling))) {
           searched = true; handedOff = true
           capture = evaluateCapture(s)
           return true

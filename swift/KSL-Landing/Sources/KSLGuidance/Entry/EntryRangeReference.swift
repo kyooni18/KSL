@@ -20,6 +20,10 @@ struct EntryRangeReference: Sendable {
   var bracketed: Bool
   var reachedEnergy: Bool
 
+  var handoffForecast: EntryHandoffForecast {
+    .init(createdAt:createdAt,arrivalResidual:captureResidual)
+  }
+
   static func alpha(blend: Double, mach: Double, q: Double, ceiling: Double,
                     aero: AerodynamicsEngine) -> Double {
     let best = aero.bestGlideAlpha(mach: mach, maximumAlpha: ceiling, dynamicPressure: q)
@@ -102,12 +106,9 @@ struct EntryRangeReference: Sendable {
       // Equal error units are the operator's capture tolerances, not tuned
       // weights or a fixed-speed turn falsely held throughout recovery.
       // The propagated commands already price their coupled lift and drag.
-      let horizontalError=hypot(p.along-objective.along,p.cross-objective.cross)/c.entrySettings.handoffRadius
-      let altitudeError=(s.position.length-c.planet.radius-objective.altitude) /
-        (c.entrySettings.terminalMaximumAltitude-c.entrySettings.terminalMinimumAltitude)
-      let machError=(s.velocity.length-objective.speed)/air.speedOfSound/c.entrySettings.terminalMachHalfWidth
-      let headingError=heading/c.entrySettings.headingHalfWidth
-      let residual=hypot(hypot(horizontalError,altitudeError),hypot(machError,headingError))
+      let residual=objective.arrivalResidual(along:p.along,cross:p.cross,
+        altitude:s.position.length-c.planet.radius,speed:s.velocity.length,
+        heading:heading,soundSpeed:air.speedOfSound,configuration:c)
       return .init(createdAt:initial.time,blend:blend,cross:p.cross,headingError:heading,
         captureResidual:residual,along:p.along,
         altitude:s.position.length-c.planet.radius,speed:s.velocity.length,

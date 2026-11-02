@@ -48,6 +48,7 @@ public final class LandingMissionController {
   public private(set) var lastAdmission: MM305Admission?
   /// MM305's own physical verdict on the last searched state.
   public private(set) var lastCapture: TAEMCaptureAssessment?
+  public private(set) var handoffTiming: EntryHandoffTiming?
   private var publishedForecastEpoch: Double?
   private var publishedTerminalEpoch: Double?
   private var previousTime: Double?
@@ -99,37 +100,22 @@ public final class LandingMissionController {
   }
   private var terminalSearchArmed = false
   private var forcedTerminalOwnership = false
-  /// Shuttle TAEM is initiated on velocity (JSC-16522): on its drag profile
-  /// the orbiter reaches the interface velocity at the interface energy.
-  /// MM304 delivers that ENERGY (interface altitude at interface Mach); this
-  /// vehicle decelerates through Mach 2.5 above it, 60+ km out, so a bare
-  /// Mach gate hands over early. Hand over at the interface energy, at the
-  /// bottom of the configured Mach window, or at the altitude deadline.
-  /// Crossing an altitude far up-range is not a handoff.
+  /// Shared live/forecast ownership boundary. Interface energy always
+  /// transfers; the upper terminal window permits an earlier transfer to
+  /// preserve handover energy, heading work or the best available inlet.
+  /// Distance to the delivery aim and an infeasible plan never postpone it.
   public static func terminalHandoffDue(phase: MissionPhase, plan: TerminalPlan?,
     state: VehicleState, configuration c: MissionConfiguration,
-    objective: EntryCaptureObjective? = nil) -> Bool {
-    guard phase == .entry && plan == nil && state.verticalSpeed < 0 else { return false }
-    let altitude = state.position.length - c.planet.radius
-    if altitude <= c.mm304HandoffDeadlineAltitude { return true }
-    let a = state.aerodynamics
-    guard a.dynamicPressure > 0, a.mach > 0 else { return false }
-    if a.mach <= c.mm304DeliveryMach - c.entrySettings.terminalMachHalfWidth { return true }
-    // Use the same fixed interface state as MM304's reference, not a Mach
-    // speed recomputed using the atmosphere at the vehicle's current altitude.
-    guard let target = objective ?? (try? AtmosphericModelEngine(planet: c.planet)).map({
-      EntryCaptureObjective.seed(configuration: c, atmosphere: $0,
-        frame: RunwayFrame(runway: c.runway, planet: c.planet), crossAim: 0, time: state.time)
-    }) else { return false }
-    let energy = state.velocity.squaredLength / 2 - c.planet.gravitationalParameter / state.position.length
-      - c.planet.angularVelocity.cross(state.position).squaredLength / 2
-    let frame = RunwayFrame(runway: c.runway, planet: c.planet)
-    let targetPosition = frame.position(along: target.along, cross: target.cross, height: 0)
-    // Reaching interface energy up-range is a delivery deficit, not arrival.
-    // Keep the existing altitude/Mach deadlines above as recovery downmodes.
-    let reachedInterface = frame.distance(from: state.position, to: frame.origin)
-      <= frame.distance(from: targetPosition, to: frame.origin) + c.entrySettings.handoffRadius
-    return reachedInterface && energy <= target.specificEnergy(configuration: c)
+    objective: EntryCaptureObjective? = nil, responseSeconds:Double? = nil,
+    forecast:EntryHandoffForecast? = nil, maximumLiftAcceleration:Double? = nil) -> Bool {
+    guard phase == .entry && plan == nil else {return false}
+    guard let target=objective ?? (try? AtmosphericModelEngine(planet:c.planet)).map({
+      EntryCaptureObjective.seed(configuration:c,atmosphere:$0,
+        frame:RunwayFrame(runway:c.runway,planet:c.planet),crossAim:0,time:state.time)
+    }) else {return false}
+    return EntryHandoffTiming.assess(state:state,configuration:c,objective:target,
+      responseSeconds:responseSeconds ?? c.guidance.pathLookaheadTime,forecast:forecast,
+      maximumLiftAcceleration:maximumLiftAcceleration).transferNow
   }
   private func inTerminalSearchEnvelope(_ state: VehicleState) -> Bool {
     let cadence = configuration.guidance.terminalReplanInterval
@@ -347,8 +333,18 @@ public final class LandingMissionController {
       commandedAlpha: limiter.previous?.angleOfAttack, feedback: controlFeedback,
       fallbackResponseSeconds: configuration.guidance.pathLookaheadTime)
     let p = frame.coordinates(of: state.position)
-    if Self.terminalHandoffDue(phase: phase, plan: plan, state: state, configuration: configuration,
-      objective: entry.captureObjective(at: state.time)) {
+    if phase == .entry, plan == nil {
+      let objective=entry.captureObjective(at:state.time)
+      handoffTiming=EntryHandoffTiming.assess(state:state,configuration:configuration,objective:objective,
+        responseSeconds:max(configuration.guidance.pathLookaheadTime,
+          controlFeedback?.pitchResponseSeconds ?? 0,controlFeedback?.rollResponseSeconds ?? 0),
+        forecast:entry.handoffForecast,
+        maximumLiftAcceleration:EntryHandoffTiming.maximumLift(state:state,configuration:configuration,
+          aerodynamics:aerodynamics,ceiling:RotationalDynamicsEngine(configuration:configuration.vehicle,
+            planet:configuration.planet).supportedTrimAlpha(state,identifiedCeiling:attainableAlphaCeiling),
+          liftGain:authority.liftEffectiveness))
+    }
+    if phase == .entry, plan == nil, handoffTiming?.transferNow == true {
       phase = .acquisition
       taem.reset()
       forcedTerminalOwnership = true
@@ -495,6 +491,9 @@ public final class LandingMissionController {
           "Entry receding-horizon candidates=\(entry.candidateCount), reversals=\(entry.reversalCount)"
         raw.entry = entry.diagnostics
       }
+    }
+    if let timing=handoffTiming {
+      raw.diagnostic += "; "+timing.diagnostic
     }
     phase = raw.phase
     var requested = raw.target
