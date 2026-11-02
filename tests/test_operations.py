@@ -16,6 +16,18 @@ from ksl.plan_review import invalid_reason
 FAKE = Path(__file__).parent / "fakes" / "fake_backend.py"
 
 
+def test_tui_renders_failed_connection(tmp_path):
+    from ksl.runlog import MissionStatus
+    from ksl.tui import KSLApp
+
+    async def exercise():
+        app = KSLApp(runs_root=tmp_path)
+        async with app.run_test(size=(120, 45)):
+            app.render_dashboard(MissionStatus("test", "defaults", "live", connection="failed"))
+            assert app.query_one("#guidance-panel").styles.border.top[1].hex == "#FF0000"
+    asyncio.run(exercise())
+
+
 def test_tui_dessert_selection_reaches_backend_and_review(tmp_path):
     from ksl.tui import KSLApp
 

@@ -681,7 +681,7 @@ class KSLApp(App[int]):
             banner.update(Text(f"⚠ {status.warning}", style="yellow"))
         else:
             banner.update(Text(status.status_message or "", style="green" if not running else ""))
-        conn_style = {"connected": "green", "simulator": "green", "failed": "bold red"}.get(status.connection, "yellow")
+        conn_style = {"connected": "green", "simulator": "green", "failed": "red"}.get(status.connection, "yellow")
         mission.show("Watched run", [
             ("run", status.run_id), ("profile", f"{status.profile} ({status.mode})"),
             ("state", status.state.upper() + ("  (this TUI)" if local else "  (watching)")),
