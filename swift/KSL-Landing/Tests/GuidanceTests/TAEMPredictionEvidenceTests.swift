@@ -249,4 +249,42 @@ final class TAEMPredictionEvidenceTests: XCTestCase {
       maximumEvaluations: 2) { _, _ in nil })
   }
 
+  func testCommandRefinementPollChangesRequestsWithinRealBoundsWithoutResettingOrigin() throws {
+    let r = try recorded(), c = r.configuration
+    let atmosphere = try AtmosphericModelEngine(planet: c.planet)
+    let aero = try AerodynamicsEngine(referenceArea: c.vehicle.referenceArea)
+    let search = TAEMCommandSearch(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+    let seed = NativeCommandSeed(state: r.state, controls: nil, limiter: .init(previous: r.target))
+    var target = r.target
+    target.angleOfAttack = c.vehicle.maximumAngleOfAttack
+    target.bank = c.vehicle.maximumBank
+    target.speedbrakeFraction = 0.4
+    let center = TAEMCommandCandidate(id: "bounded-center", topology: .right, segments: [
+      .init(duration: c.guidance.controlInterval, command: .init(phase: .acquisition, target: target))])
+    let steps = TAEMCommandRefinementSteps(alphaRadians: c.guidance.alphaSlewRate*c.guidance.controlInterval,
+      bankRadians: c.guidance.bankSlewRate*c.guidance.controlInterval,
+      durationSeconds: c.guidance.controlInterval/2)
+    let poll = try search.refineOnce(center, from: seed, steps: steps, maximumEvaluations: 10) { _, _ in
+      XCTFail("Missing original moment support must not be repaired by a continuation"); return nil
+    }
+    // Positive alpha/bank neighbors clip back to the center and are omitted.
+    XCTAssertEqual(poll.end, .familyExhausted)
+    XCTAssertEqual(poll.trials.count, 5)
+    XCTAssertEqual(Set(poll.trials.map { $0.candidate.id }).count, 5)
+    XCTAssertNil(poll.incumbentTrial)
+    for trial in poll.trials {
+      let segment = try XCTUnwrap(trial.candidate.segments.first)
+      XCTAssertLessThanOrEqual(segment.command.target.angleOfAttack, c.vehicle.maximumAngleOfAttack)
+      XCTAssertLessThanOrEqual(abs(segment.command.target.bank), c.vehicle.maximumBank)
+      XCTAssertGreaterThan(segment.duration, 0)
+      XCTAssertEqual(segment.command.target.speedbrakeFraction, target.speedbrakeFraction)
+      XCTAssertEqual(trial.prefix.comparisonContext.originID, seed.originID)
+      XCTAssertEqual(trial.prefix.end, .unsupportedDynamics)
+      XCTAssertTrue(trial.prefix.steps.isEmpty)
+    }
+    let limited = try search.refineOnce(center, from: seed, steps: steps, maximumEvaluations: 1) { _, _ in nil }
+    XCTAssertEqual(limited.end, .candidateBudget)
+    XCTAssertEqual(limited.trials.count, 1)
+  }
+
 }
