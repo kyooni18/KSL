@@ -40,6 +40,18 @@ All local and remote-tracking branch tips were checked with
 remote push, save loading, or live flight was performed. Existing unrelated
 working-tree changes were preserved.
 
+## CLI/TUI rebuild and wiring
+
+Re-ran `make swift ascent` after checking no native flight executable was
+active. The release products are current (incremental build passed).
+Corrected `swift/KSL-Landing/bin/landing_backend`'s standalone fallback from
+`sts-taem.json` to `sts.json`; explicit per-run configuration is still preserved.
+`bin/ksl validate -p sts-kerbin --json` passed and its MM304 dry run selected
+this wrapper and the mainstream configuration. A headless Textual mount
+verified both quick-Landing and Console configuration fields and the entry
+operation's resolved Swift-backend request. Vessel probing was disabled for
+that check; no connection or flight was initiated.
+
 Flight readiness remains unproven: historical-state checks and a successful
 build do not establish a successful full-chain landing or runway stop. Final
 validation requires an explicitly authorized orbit-to-sustained-stop live run
