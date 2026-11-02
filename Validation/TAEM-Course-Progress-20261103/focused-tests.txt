@@ -1,0 +1,38 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 15] KSLKRPC
+[2 / 30] KSLGuidance
+[5 / 33] KSLGuidance
+[9 / 37] KSLGuidance
+[11 / 37] KSLGuidance
+[14 / 41] KSLRuntime
+[16 / 42] KSLRuntime
+[21 / 45] KSLSimulation
+[26 / 46] KSLSimulation
+[32 / 47] GuidanceTests-product
+[36 / 51] KSLLanding
+[42 / 55] IntegrationTests-product
+[47 / 60] SimulationTests-product
+[48 / 60] SimulationTests-product
+[56 / 66] GuidanceTests-product
+[58 / 69] IntegrationTests-product
+[62 / 70] GuidanceTests-product
+[64 / 68] KSLLanding
+[68 / 70] ksl-landing-product
+Build complete! (4.48초)
+Test Suite 'Selected tests' started at 2026-11-03 03:55:16.696.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-03 03:55:16.697.
+Test Suite 'TAEMCourseProgressTests' started at 2026-11-03 03:55:16.697.
+Test Case '-[GuidanceTests.TAEMCourseProgressTests testUnwrappedCourseRetainsWindingAndReversalAndRejectsLostCoverage]' started.
+Test Case '-[GuidanceTests.TAEMCourseProgressTests testUnwrappedCourseRetainsWindingAndReversalAndRejectsLostCoverage]' passed (0.003 seconds).
+Test Suite 'TAEMCourseProgressTests' passed at 2026-11-03 03:55:16.700.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.003 (0.003) seconds
+Test Suite 'TAEMPredictionEvidenceTests' started at 2026-11-03 03:55:16.700.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandSchedulePreservesHistoryAcrossSegmentsAndReturnsOnlyAPrefix]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandSchedulePreservesHistoryAcrossSegmentsAndReturnsOnlyAPrefix]' passed (0.007 seconds).
+Test Suite 'TAEMPredictionEvidenceTests' passed at 2026-11-03 03:55:16.707.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.007 (0.007) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-03 03:55:16.707.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.009 (0.010) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 03:55:16.707.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.009 (0.011) seconds

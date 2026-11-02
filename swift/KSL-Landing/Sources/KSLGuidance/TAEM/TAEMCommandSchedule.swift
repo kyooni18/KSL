@@ -23,6 +23,7 @@ public struct TAEMSchedulePrefix: Sendable {
   public let steps: [NativeCommandStep]
   public let seed: NativeCommandSeed
   public let comparisonContext: TerminalComparisonContext
+  public let courseProgress: TAEMCourseProgress
   public let accounting: NativeTrajectoryAccounting
   public let distance: Double
   public let momentSupport: NativeMomentSupport
@@ -62,10 +63,11 @@ public final class TAEMCommandScheduleEvaluator {
     let rollout = NativeCommandRollout(seed: seed, configuration: c,
       atmosphere: atmosphere, aerodynamics: aerodynamics)
     let context = TerminalComparisonContext(seed: seed, configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
+    var courseProgress = TAEMCourseProgress(frame: .init(runway: c.runway, planet: c.planet), state: rollout.state, maximumSampleInterval: c.guidance.maximumSnapshotSpan)
     var accounting = NativeTrajectoryAccounting()
     var steps: [NativeCommandStep] = [], distance = 0.0
     func result(_ end: TAEMScheduleEnd, diagnostic: String? = nil) -> TAEMSchedulePrefix {
-      .init(end: end, steps: steps, seed: rollout.seed, comparisonContext: context, accounting: accounting, distance: distance,
+      .init(end: end, steps: steps, seed: rollout.seed, comparisonContext: context, courseProgress: courseProgress, accounting: accounting, distance: distance,
         momentSupport: rollout.pitchMomentSupport, diagnostic: diagnostic)
     }
     guard rollout.modelConsistent else { return result(.unsupportedDynamics, diagnostic: "Continuation model/configuration changed") }
@@ -84,6 +86,7 @@ public final class TAEMCommandScheduleEvaluator {
           let step = try rollout.advance(segment.command, duration: dt)
           steps.append(step)
           accounting.include(step, configuration: c)
+          courseProgress.observe(step.after)
           distance += (step.after.position-step.before.position).length
           elapsed += dt; segmentElapsed += dt
         } catch {

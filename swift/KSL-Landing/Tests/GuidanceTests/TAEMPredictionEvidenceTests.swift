@@ -156,6 +156,11 @@ final class TAEMPredictionEvidenceTests: XCTestCase {
     XCTAssertEqual(together.seed.limiter, tail.seed.limiter)
     XCTAssertEqual(together.steps.last?.issued, tail.steps.last?.issued)
     XCTAssertEqual(together.distance, first.distance+tail.distance, accuracy: 1e-9)
+    XCTAssertEqual(together.courseProgress.status, .available)
+    XCTAssertEqual(together.courseProgress.signedChange,
+      first.courseProgress.signedChange+tail.courseProgress.signedChange, accuracy: 1e-12)
+    XCTAssertEqual(together.courseProgress.absoluteChange,
+      first.courseProgress.absoluteChange+tail.courseProgress.absoluteChange, accuracy: 1e-12)
     let unsupported = try evaluator.evaluate([.init(duration: dt, command: command)],
       from: .init(state: r.state, controls: nil, limiter: .init(previous: r.target)))
     XCTAssertEqual(unsupported.end, .unsupportedDynamics)
