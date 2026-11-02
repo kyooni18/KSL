@@ -438,10 +438,10 @@ final class TAEMGuidanceEngine {
       status.phase = .acquisition; lines = nil; captureTurn = nil; descent = nil; hacPolarAngle = nil; hacPosition = nil; descentCheck = nil
     }
 
-    // HAC size: final radius flies the NEP airspeed, the spiral grows so a
-    // full loop's entry radius flies the reference speed there, both at the
-    // uncertainty-reserved bank and never below the configured minimum.
-    prepareGeometry(nep: nep, gravity: g, adapt: status.phase != .headingAlignment)
+    // Flight commits geometry together with its tangent and descent. The
+    // legacy q-line may size an offline interface, but must not resize a
+    // latched flight path on the next tick (and invalidate its tangent).
+    prepareGeometry(nep: nep, gravity: g, adapt: false)
     var rf = geometry!.finalRadius
     let growth = geometry!.growth
 
@@ -790,13 +790,13 @@ final class TAEMGuidanceEngine {
     let cannotHoldReference = referenceUsable && vertical > attainableNormal && p.height < targetHeight
       && a.dynamicPressure < frontQ
     if !referenceUsable, a.dynamicPressure <= v.maximumDynamicPressure {
-      // Preserve range while no attainable descent has been found. Use the
-      // efficient lift vector, limited by structural/trim authority. A turn
-      // spends only lift left after vertical support; low-q flight unloads
-      // naturally rather than chasing the rejected altitude with max AoA.
+      // Preserve efficient total lift while allocating its direction to
+      // recovery steering. A descending turn may reduce upward support;
+      // constant-gamma support is not a prerequisite for banking. The bank
+      // envelope bounds that trade; q protection above retains priority.
       let efficientLift = min(maximumLift, max(0,
         a.dynamicPressure * aero.referenceArea * bestLift / state.mass))
-      let turnAllowance = sqrt(max(0, efficientLift*efficientLift-support*support))
+      let turnAllowance = efficientLift * sin(v.maximumBank)
       lateral = clamp(lateral, -turnAllowance, turnAllowance)
       vertical = sqrt(max(0, efficientLift*efficientLift-lateral*lateral))
     }
