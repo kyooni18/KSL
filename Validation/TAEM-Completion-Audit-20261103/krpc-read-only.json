@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-03",
+  "runID": 3,
+  "replacedRunningProgram": false,
+  "terminalStatus": "error",
+  "returnCode": 1,
+  "elapsedSeconds": 23.571,
+  "error": "ConnectionRefusedError",
+  "errno": 61,
+  "queryBodyExecuted": false,
+  "gameOrControlMutationRequested": false,
+  "newMeasurementsObtained": false
+}
