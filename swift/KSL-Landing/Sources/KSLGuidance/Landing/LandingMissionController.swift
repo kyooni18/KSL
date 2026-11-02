@@ -437,7 +437,7 @@ public final class LandingMissionController {
           }
           raw = .init(phase: s.phase == .headingAlignment ? .headingAlignment : .acquisition,
             target: target, violations: violations, pathRemaining: s.range,
-            diagnostic: "TAEM phase=\(s.phase.rawValue) side=\(s.side) hacTurn=\(degrees(s.remainingTurn)) deg rpred=\(s.range) m E=\(s.energyHeight) m EN=\(s.nominalEnergy) m EMIN=\(s.minimumEnergy) m href=\(s.referenceHeight) m qref=\(s.referenceDynamicPressure) Pa qmin=\(s.minimumDynamicPressure) Pa rf=\(s.finalRadius) m growth=\(s.growth) m/rad2 downmoded=\(s.downmoded) descentFits=\(s.descentPlanFits) descentCheck=\(s.descentCheckFailure ?? "necessaryChecksPassed")")
+            diagnostic: "TAEM phase=\(s.phase.rawValue) side=\(s.side) hacTurn=\(degrees(s.remainingTurn)) deg rpred=\(s.range) m E=\(s.energyHeight) m EN=\(s.nominalEnergy) m EMIN=\(s.minimumEnergy) m href=\(s.referenceHeight) m qref=\(s.referenceDynamicPressure) Pa qmin=\(s.minimumDynamicPressure) Pa rf=\(s.finalRadius) m growth=\(s.growth) m/rad2 downmoded=\(s.downmoded) descentFits=\(s.descentPlanFits) descentCheck=\(s.descentCheckFailure ?? "necessaryChecksPassed") referenceTracking=\(s.referenceTracking ?? false)")
         } else if approach.recoveryDue(state) {
           // Below the configured Final inlet height, keep a best-effort
           // landing owner even if normal NEP capture was not achieved.

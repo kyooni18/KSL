@@ -31,6 +31,7 @@ public struct TAEMStatus: Codable, Sendable {
   /// Necessary same-profile force check; not a flight certificate.
   public var descentCheckFailure: String?
   public var predictedNEPEnergy: Double?
+  public var referenceTracking: Bool?
 }
 
 /// TAEM recovery to the NEP, using JSC-16522 phase/energy-envelope concepts.
@@ -56,6 +57,7 @@ final class TAEMGuidanceEngine {
   private var lines: (time: Double, side: Int, turn: Double, nominal: TAEMEnergyLine, minimum: TAEMEnergyLine)?
   private var sTurnSign = 0.0
   private var hacPolarAngle: Double?
+  private var hacPosition: Vector2?
   private var captureTurn: Double?
   private var descent: TAEMDescentReference?
   private struct DescentCheck {
@@ -73,13 +75,16 @@ final class TAEMGuidanceEngine {
 
   func reset() {
     status = .init(); geometry = nil; geometryAdapted = false; lines = nil; sTurnSign = 0
-    captureTurn = nil; descent = nil; hacPolarAngle = nil; descentCheck = nil
+    captureTurn = nil; descent = nil; hacPolarAngle = nil; hacPosition = nil; descentCheck = nil
   }
 
   /// Ground position repeats every winding. Only measured angular progress
   /// can distinguish the overhead pass from the final pass at that position.
-  static func advanceTurn(_ remaining: Double, from previousPolar: Double, to polar: Double) -> Double {
-    max(0, remaining + wrapAngle(polar-previousPolar))
+  static func advanceTurn(_ remaining: Double, from previousPolar: Double, to polar: Double,
+                          maximumProgress: Double = .infinity) -> Double {
+    // Inside the HAC, polar angle can close much faster than distance flown.
+    // Reference station must not spend more arc than actual ground travel.
+    max(0, remaining + max(-maximumProgress, wrapAngle(polar-previousPolar)))
   }
 
   // MARK: Geometry (TGXHAC / GTP)
@@ -430,7 +435,7 @@ final class TAEMGuidanceEngine {
     if status.phase == .headingAlignment, p.along >= nepAlong, p.height > nep.height,
       status.remainingTurn*max(status.finalRadius,c.guidance.minimumHACRadius)
         <= vh*c.guidance.controlInterval {
-      status.phase = .acquisition; lines = nil; captureTurn = nil; descent = nil; hacPolarAngle = nil; descentCheck = nil
+      status.phase = .acquisition; lines = nil; captureTurn = nil; descent = nil; hacPolarAngle = nil; hacPosition = nil; descentCheck = nil
     }
 
     // HAC size: final radius flies the NEP airspeed, the spiral grows so a
@@ -505,10 +510,15 @@ final class TAEMGuidanceEngine {
     // On the HAC: follow the measured remaining angle on the latched spiral.
     if status.phase == .headingAlignment {
       let polar=atan2(nepAlong-point.x,rf-Double(status.side)*point.y)
-      if let previous=hacPolarAngle {
-        status.remainingTurn=Self.advanceTurn(status.remainingTurn,from:previous,to:polar)
+      if let previous=hacPolarAngle, let previousPosition=hacPosition {
+        let angle = status.remainingTurn
+        let arcPerRadian = hypot(rf + growth*angle*angle, 2*growth*angle)
+        let maximumProgress = (point-previousPosition).length / arcPerRadian
+        status.remainingTurn=Self.advanceTurn(status.remainingTurn,from:previous,to:polar,
+          maximumProgress:maximumProgress)
       }
       hacPolarAngle=polar
+      hacPosition=point
       if let latched = spiral(side: status.side, finalRadius: rf, growth: growth, turn: max(1e-6, status.remainingTurn)) {
         candidates = [.init(side: status.side, turn: status.remainingTurn,
           range: Self.spiralLength(latched, to: status.remainingTurn), tangent: point, hac: latched)]
@@ -584,7 +594,18 @@ final class TAEMGuidanceEngine {
     debug = candidates.map { "side \($0.side) turn \(degrees($0.turn)) range \($0.range) arc \($0.arc) EN \(lines!.nominal.sample($0.range).energy)" }.joined(separator: "; ") + " acqR \(acquisitionRadius)" // SCRATCH
     var t = selected!
     if descentCheck == nil || state.time - descentCheck!.time >= c.guidance.terminalReplanInterval {
-      let current = check(t, profile: descent ?? descentPlan(for: t))
+      var current = check(t, profile: descent ?? descentPlan(for: t))
+      // A rejected profile is not a control reference. Rebuild from the
+      // measured height/slope while preserving the selected ground track.
+      // Commit a replacement only after the same force/energy check passes.
+      if current.energy == nil || current.energy! < requiredNEPEnergy {
+        let regenerated = descentPlan(for: t)
+        let result = check(t, profile: regenerated)
+        if let delivered = result.energy, delivered >= requiredNEPEnergy {
+          descent = regenerated
+          current = result
+        }
+      }
       descentCheck = (state.time, current)
       // Both sides of a downmode must refer to the profile actually flown.
       // A failed force check means unknown delivery, not a fabricated energy
@@ -610,6 +631,9 @@ final class TAEMGuidanceEngine {
     if descent == nil {descent=descentPlan(for:t)}
     status.descentPlanFits=descent!.fits(maximumGlide:glideLimit)
     let planned=descent!.sample(t.range)
+    let referenceUsable = descentCheck?.result.failure == nil
+      && (descentCheck?.result.energy ?? -Double.infinity) >= requiredNEPEnergy
+    status.referenceTracking = referenceUsable
     let nominal = lines!.nominal.sample(t.range), minimum = lines!.minimum.sample(t.range)
     status.nominalEnergy = nominal.energy; status.minimumEnergy = minimum.energy
     status.insufficientEnergy = energy < minimum.energy
@@ -623,7 +647,7 @@ final class TAEMGuidanceEngine {
     let sTurnEnergy = nominal.energy + max(0, nominal.energy - minimum.energy)
     switch status.phase {
     case .sTurn:
-      if energy <= nominal.energy { status.phase = .acquisition }
+      if !referenceUsable || energy <= nominal.energy { status.phase = .acquisition }
     case .acquisition:
       // Roll onto the spiral one roll response before its tangent point. An
       // S-turn turns away, back across the track and realigns: a full
@@ -633,7 +657,8 @@ final class TAEMGuidanceEngine {
         let polar=atan2(nepAlong-point.x,rf-Double(t.side)*point.y)
         status.remainingTurn=max(0,t.turn+wrapAngle(polar-t.turn))
         hacPolarAngle=polar
-      } else if energy > sTurnEnergy, toTangent.length > 2 * .pi * acquisitionRadius + vh * rollTime {
+        hacPosition=point
+      } else if referenceUsable, energy > sTurnEnergy, toTangent.length > 2 * .pi * acquisitionRadius + vh * rollTime {
         status.phase = .sTurn
         sTurnSign = -Double(t.side)
         if sTurnSign * headingError < 0 && t.turn < .pi / 2 { sTurnSign = -sTurnSign }
@@ -703,7 +728,9 @@ final class TAEMGuidanceEngine {
     // A committed altitude plan is not permission to consume its last
     // kinetic energy chasing height. Retain enough q for attainable lift.
     let supportHeight=height(atDynamicPressure:frontQ)
-    let targetHeight = min(supportHeight,max(planned.height,height(atDynamicPressure:v.maximumDynamicPressure)))
+    let targetHeight = referenceUsable
+      ? min(supportHeight,max(planned.height,height(atDynamicPressure:v.maximumDynamicPressure)))
+      : p.height
     let targetDensity = atmosphere.sample(position: frame.position(along: p.along, cross: p.cross,
       height: targetHeight), time: state.time).density
     let targetPosition = frame.position(along: p.along, cross: p.cross, height: targetHeight)
@@ -719,11 +746,13 @@ final class TAEMGuidanceEngine {
           gear: state.systems.gearDown).drag * a.dynamicPressure * aero.referenceArea / max(1, state.mass)
     // Feedforward: HREF's own descent while tracking it (range closes at
     // the ground speed), else the steady glide at the present drag.
-    let tracksReference = targetHeight == planned.height
+    let tracksReference = referenceUsable && targetHeight == planned.height
     let feedforward = tracksReference ? -vh * planned.slope
       : -speed * clamp(dragAcceleration / g, 0, 1)
     let desiredRate = feedforward + (targetHeight - p.height) / (2 * tau)
-    let gamma = clamp(asin(clamp(desiredRate / speed, -1, 1)), -glide, glide)
+    let gamma = referenceUsable
+      ? clamp(asin(clamp(desiredRate / speed, -1, 1)), -glide, glide)
+      : state.flightPathAngle
     var vertical = (tracksReference ? normalReference : support) + speed * (gamma - state.flightPathAngle) / tau
     // Hard q bounds (QBMNNZ/QBMXNZ) for a state far off the target.
     // In still air qdot/q = V*gammaSin*dln(rho)/dh
@@ -758,13 +787,24 @@ final class TAEMGuidanceEngine {
     let maximumLift = min(v.maximumLoadFactor * 9.80665, aero.liftSolution(acceleration: 0, mass: state.mass,
       dynamicPressure: a.dynamicPressure, mach: a.mach, minimumAlpha: floorAlpha, maximumAlpha: ceiling,
       gear: state.systems.gearDown).maximumAcceleration * liftGain * (1 - v.aerodynamicUncertainty))
-    let cannotHoldReference = vertical > attainableNormal && p.height < targetHeight
+    let cannotHoldReference = referenceUsable && vertical > attainableNormal && p.height < targetHeight
       && a.dynamicPressure < frontQ
+    if !referenceUsable, a.dynamicPressure <= v.maximumDynamicPressure {
+      // Preserve range while no attainable descent has been found. Use the
+      // efficient lift vector, limited by structural/trim authority. A turn
+      // spends only lift left after vertical support; low-q flight unloads
+      // naturally rather than chasing the rejected altitude with max AoA.
+      let efficientLift = min(maximumLift, max(0,
+        a.dynamicPressure * aero.referenceArea * bestLift / state.mass))
+      let turnAllowance = sqrt(max(0, efficientLift*efficientLift-support*support))
+      lateral = clamp(lateral, -turnAllowance, turnAllowance)
+      vertical = sqrt(max(0, efficientLift*efficientLift-lateral*lateral))
+    }
     vertical = clamp(vertical, 0, maximumLift)
     // A nearly ballistic descent has little lift to tilt. Do not turn a
     // small lateral correction into a near-limit roll solely because the
     // planned vertical component is small; defer that correction instead.
-    if support > 0, vertical < support {lateral *= vertical/support}
+    if referenceUsable, support > 0, vertical < support {lateral *= vertical/support}
     let lateralLimit = min(sqrt(max(0, maximumLift * maximumLift - vertical * vertical)),
       vertical * tan(v.maximumBank))
     lateral = clamp(lateral, -lateralLimit, lateralLimit)

@@ -44,6 +44,15 @@ final class TAEMTransitionTests: XCTestCase {
     XCTAssertEqual(TAEMGuidanceEngine.advanceTurn(0.01,from:0.01,to:-0.01),0)
   }
 
+  func testInsideHACCannotSpendMoreReferenceArcThanGroundTravel() {
+    // Recorded 50–52 s geometry: roughly 1.15 km travel near a 3 km HAC
+    // closed 0.74 rad of polar angle. That is not 2.22 km of flown arc.
+    let travel = 1150.0, radius = 3000.0, turn = 6.626
+    let next = TAEMGuidanceEngine.advanceTurn(turn, from: 0.343, to: -0.398,
+      maximumProgress: travel/radius)
+    XCTAssertEqual((turn-next)*radius, travel, accuracy: 1e-8)
+  }
+
   func testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes() {
     let short=TAEMDescentReference(distance:33_360,startHeight:26_388,endHeight:962,
       startSlope:0.2,endSlope:tan(radians(24)))
