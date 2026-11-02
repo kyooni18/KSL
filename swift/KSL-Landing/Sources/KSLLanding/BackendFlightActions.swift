@@ -46,7 +46,7 @@ extension BackendServer {
   }
   func planningEnded(_ result: DeorbitPlan?, error: String?, generation epoch: UInt64) async {
     guard epoch == generation else { return }
-    planning = nil; preparing = false; planningProgress = nil
+    planning = nil; preparing = true; planningProgress = nil
     if let result {
       if result.configuration != configuration {
         // The selected runway is part of the immutable plan identity. The
@@ -55,6 +55,18 @@ extension BackendServer {
         if let old = io {
           io = nil; connection = "disconnected"
           await old.shutdown()
+        }
+        guard epoch == generation else { return }
+        do {
+          // Review and subsequent engagement need an adapter bound to the
+          // selected runway, not the one used to collect the initial state.
+          _ = try await connectIfNeeded()
+          guard epoch == generation else { return }
+        } catch {
+          guard epoch == generation else { return }
+          preparing = false; phase = "Fault"
+          lastError = "Unable to reconnect after runway selection: \(error)"
+          status = lastError!; publish(); return
         }
       }
       plan = result; phase = "Idle"
@@ -67,7 +79,7 @@ extension BackendServer {
         try encoder.encode(result).write(to: directory.appendingPathComponent("native-deorbit-\(result.identifier).json"), options: .withoutOverwriting)
       } catch { lastError = "Plan report persistence failed: \(error)"; status = lastError! }
     } else { phase = "Fault"; lastError = error ?? "No deorbit result"; status = lastError! }
-    publish()
+    preparing = false; publish()
   }
   func engageLanding(phase initialPhase: MissionPhase) throws {
     try requireIdle()

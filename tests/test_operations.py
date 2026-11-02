@@ -135,7 +135,7 @@ def review_run(tmp_path):
          mock.patch("ksl.krpc_link.probe", side_effect=lambda _: dict(info, observedAt=time.time())), \
          mock.patch("ksl.programs.probe_orbiter_integrity", return_value={"partNames": ["fake"]}), \
          mock.patch("ksl.programs.ensure_payload_bay_closed", return_value={"status": "closed"}), \
-         mock.patch.dict("os.environ", {"FAKE_BACKEND_REQUESTS": str(requests)}):
+         mock.patch.dict("os.environ", {"KSL_BACKEND": str(FAKE), "FAKE_BACKEND_REQUESTS": str(requests)}):
         controller = OperationRequest("deorbit", load_config(), "live").build(tmp_path)
         thread = controller.start_background()
         try:
