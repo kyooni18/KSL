@@ -152,6 +152,33 @@ final class TAEMPredictionEvidenceTests: XCTestCase {
     XCTAssertEqual(together.end, .scheduleExhausted)
     XCTAssertEqual(together.steps.count, 2)
     XCTAssertEqual(together.completedSegments, 2)
+    let reference = TAEMPropagatedReference(prefix: together)
+    XCTAssertEqual(reference.context, together.comparisonContext)
+    XCTAssertEqual(reference.end, together.end)
+    XCTAssertEqual(reference.joinState, together.seed.state)
+    XCTAssertEqual(reference.states.count, together.steps.count+1)
+    XCTAssertEqual(reference.stations.count, reference.states.count)
+    XCTAssertNil(reference.stations.first?.incomingCurvature)
+    XCTAssertTrue(reference.chartCoverageComplete)
+    XCTAssertEqual(reference.states[0], together.steps[0].before)
+    for index in together.steps.indices {
+      let step = together.steps[index]
+      XCTAssertEqual(reference.states[index+1], step.after)
+      XCTAssertEqual(reference.commands[index].target, step.requested.target)
+      XCTAssertEqual(reference.limitedTargets[index], step.limited)
+      XCTAssertEqual(reference.issuedControls[index], step.issued)
+    }
+    let decodedReference = try JSONDecoder().decode(TAEMPropagatedReference.self,
+      from: JSONEncoder().encode(reference))
+    XCTAssertEqual(decodedReference.joinState, together.seed.state)
+    let frame = RunwayFrame(runway: c.runway, planet: c.planet)
+    let startPoint = frame.coordinates(of: together.steps[0].before.position)
+    let endPoint = frame.coordinates(of: together.steps[0].after.position)
+    let chord = (endPoint.horizontal-startPoint.horizontal).length
+    XCTAssertEqual(try XCTUnwrap(reference.stations[1].incomingCurvature),
+      first.courseProgress.signedChange/chord, accuracy: 1e-12)
+    XCTAssertEqual(try XCTUnwrap(reference.stations[1].incomingSlope),
+      (endPoint.height-startPoint.height)/chord, accuracy: 1e-12)
     // Numerical event-bracketing check on this same one-tick native path;
     // no vehicle capability or actual flight state is perturbed.
     let firstTurn = first.courseProgress.signedChange
@@ -184,6 +211,11 @@ final class TAEMPredictionEvidenceTests: XCTestCase {
       from: .init(state: r.state, controls: nil, limiter: .init(previous: r.target)))
     XCTAssertEqual(unsupported.end, .unsupportedDynamics)
     XCTAssertTrue(unsupported.steps.isEmpty)
+    let unknownReference = TAEMPropagatedReference(prefix: unsupported)
+    XCTAssertEqual(unknownReference.end, .unsupportedDynamics)
+    XCTAssertEqual(unknownReference.states.count, 1)
+    XCTAssertTrue(unknownReference.commands.isEmpty)
+    XCTAssertNil(unknownReference.stations[0].incomingCurvature)
     let cancelled = try evaluator.evaluate([.init(duration: dt, command: command)], from: seed, cancelled: { true })
     XCTAssertEqual(cancelled.end, .cancelled)
     XCTAssertTrue(cancelled.steps.isEmpty)

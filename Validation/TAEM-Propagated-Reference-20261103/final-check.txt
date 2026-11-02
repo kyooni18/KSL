@@ -1,0 +1,19 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 1]
+[2 / 29] KSLGuidance
+[4 / 31] KSLGuidance
+[15 / 19] ksl-landing-product
+[17 / 20] IntegrationTests-product
+Build complete! (1.80초)
+Test Suite 'Selected tests' started at 2026-11-03 04:05:43.609.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-03 04:05:43.610.
+Test Suite 'TAEMPredictionEvidenceTests' started at 2026-11-03 04:05:43.610.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandSchedulePreservesHistoryAcrossSegmentsAndReturnsOnlyAPrefix]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandSchedulePreservesHistoryAcrossSegmentsAndReturnsOnlyAPrefix]' passed (0.011 seconds).
+Test Suite 'TAEMPredictionEvidenceTests' passed at 2026-11-03 04:05:43.622.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.011 (0.011) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-03 04:05:43.622.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.011 (0.011) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 04:05:43.622.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.011 (0.012) seconds

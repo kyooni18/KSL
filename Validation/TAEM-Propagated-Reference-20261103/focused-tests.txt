@@ -1,0 +1,44 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 21] ksl-landing-product
+[2 / 29] KSLGuidance
+[4 / 31] KSLGuidance
+[6 / 33] KSLGuidance
+[11 / 38] KSLGuidance
+[24 / 50]
+[27 / 51] KSLRuntime
+[30 / 54] KSLRuntime
+[43 / 72] KSLRuntime
+[46 / 72] KSLSimulation
+[52 / 75] KSLLanding
+[57 / 72] KSLRuntime-product
+[62 / 90] KSLLanding
+[70 / 106] IntegrationTests-product
+[74 / 108] KSLLanding
+[75 / 108] SimulationTests-product
+[81 / 110] SimulationTests-product
+[87 / 112] GuidanceTests-product
+[93 / 113] IntegrationTests-product
+[96 / 113] IntegrationTests-product
+[102 / 113] IntegrationTests-product
+[108 / 116] KSLLanding
+[110 / 115] IntegrationTests-product
+[114 / 117] GuidanceTests-product
+[114 / 116] IntegrationTests-product
+Build complete! (4.51초)
+Test Suite 'Selected tests' started at 2026-11-03 04:05:14.830.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-03 04:05:14.831.
+Test Suite 'TAEMCourseProgressTests' started at 2026-11-03 04:05:14.831.
+Test Case '-[GuidanceTests.TAEMCourseProgressTests testUnwrappedCourseRetainsWindingAndReversalAndRejectsLostCoverage]' started.
+Test Case '-[GuidanceTests.TAEMCourseProgressTests testUnwrappedCourseRetainsWindingAndReversalAndRejectsLostCoverage]' passed (0.004 seconds).
+Test Suite 'TAEMCourseProgressTests' passed at 2026-11-03 04:05:14.835.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'TAEMPredictionEvidenceTests' started at 2026-11-03 04:05:14.835.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandSchedulePreservesHistoryAcrossSegmentsAndReturnsOnlyAPrefix]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandSchedulePreservesHistoryAcrossSegmentsAndReturnsOnlyAPrefix]' passed (0.009 seconds).
+Test Suite 'TAEMPredictionEvidenceTests' passed at 2026-11-03 04:05:14.845.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.009 (0.009) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-03 04:05:14.845.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.013 (0.014) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 04:05:14.845.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.013 (0.015) seconds
