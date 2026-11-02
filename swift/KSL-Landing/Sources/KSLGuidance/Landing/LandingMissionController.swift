@@ -329,6 +329,8 @@ public final class LandingMissionController {
       }
       return .init(phase: phase, target: .init(gearDown: true), violations: advisories, planID: plan?.identifier)
     }
+    // A bounce breaks the required continuous ground-stop interval.
+    stoppedSince = nil
     wasAirborne = true
     if phase == .complete { return .init(phase: phase, target: .init()) }
     if phase == .abort { phase = .entry }
@@ -379,7 +381,10 @@ public final class LandingMissionController {
             "Last MM305 capture verdict: \($0.deficit.rawValue)")] } ?? [])
       }
     }
-    if [.approach, .preflare, .flare].contains(phase) || (plan == nil && approach.canCapture(state))
+    // Grounded states returned above. If contact is lost after touchdown
+    // or rollout, Final retains ownership; do not reopen MM304/MM305 search.
+    if [.approach, .preflare, .flare, .touchdown, .rollout].contains(phase)
+      || (plan == nil && approach.canCapture(state))
     {
       raw = approach.update(
         state, previousPhase: phase, liftEffectiveness: authority.liftEffectiveness, dragEffectiveness: authority.dragEffectiveness,
