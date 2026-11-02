@@ -26,6 +26,7 @@ public final class TrajectoryPropagationEngine {
     feedback: ((ControlDiagnostics) -> Void)? = nil,
     handoff: ((FlightControlSnapshot, GuidanceTarget?) -> Void)? = nil,
     limiterHandoff: ((GuidanceTargetLimiter) -> Void)? = nil,
+    nativeHandoff: ((NativeCommandSeed) -> Void)? = nil,
     terminalCondition: ((VehicleState) -> Bool)? = nil,
     law: (VehicleState) -> PredictionAttitude
   ) -> TrajectoryPrediction {
@@ -81,6 +82,7 @@ public final class TrajectoryPropagationEngine {
     // phase boundary; the entry seed snapshot is no longer the terminal state.
     handoff?(rollout.controlSnapshot, rollout.limiter.previous)
     limiterHandoff?(rollout.limiter)
+    nativeHandoff?(rollout.seed)
     return .init(samples: samples, terminalState: s, violations: violations,
       duration: s.time - initial.time, reachedTerminalRegion: reached)
   }

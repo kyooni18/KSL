@@ -106,6 +106,7 @@ public final class HACPlanningEngine {
   public func plan(from state: VehicleState, allowDirect: Bool = true, preview: Bool = false,
                    controlSnapshot: FlightControlSnapshot? = nil, previousTarget: GuidanceTarget? = nil,
                        targetLimiter: GuidanceTargetLimiter? = nil,
+                       nativeSeed: NativeCommandSeed? = nil,
                    context: HACFitContext? = nil)
     -> PlanningResult
   {
@@ -495,9 +496,11 @@ public final class HACPlanningEngine {
       var nominal: TerminalClosedLoopCase?
       for candidate in candidates where candidate.assessment.feasible && !Task.isCancelled {
         let result = trajectory.evaluate(plan: candidate, from: state,
-          controlSnapshot: controlSnapshot, previousTarget: previousTarget, targetLimiter: targetLimiter, lift: 1, drag: 1)
+          controlSnapshot: controlSnapshot, previousTarget: previousTarget, targetLimiter: targetLimiter, nativeSeed: nativeSeed, lift: 1, drag: 1)
         if nominal == nil || result.feasible { selected = candidate; nominal = result }
-        if result.feasible { break }
+        if result.qualified { break }
+        // A different drawing cannot supply the missing plant evidence.
+        if result.evaluation?.end == .unsupportedDynamics { break }
       }
       if let nominal, !Task.isCancelled {
         let cases = [nominal]

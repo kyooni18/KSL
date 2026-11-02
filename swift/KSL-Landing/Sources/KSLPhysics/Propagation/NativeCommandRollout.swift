@@ -8,8 +8,10 @@ public struct NativeCommandSeed: Sendable {
   public let state: VehicleState
   public let controls: FlightControlSnapshot?
   public let limiter: GuidanceTargetLimiter
-  public init(state: VehicleState, controls: FlightControlSnapshot?, limiter: GuidanceTargetLimiter) {
-    self.state = state; self.controls = controls; self.limiter = limiter
+  public let plant: ShuttlePhysicsSnapshot?
+  public init(state: VehicleState, controls: FlightControlSnapshot?, limiter: GuidanceTargetLimiter,
+              plant: ShuttlePhysicsSnapshot? = nil) {
+    self.state = state; self.controls = controls; self.limiter = limiter; self.plant = plant
   }
 }
 
@@ -29,21 +31,36 @@ public struct NativeCommandStep: Sendable {
 /// rollout is never implicitly a fully priced terminal continuation.
 public final class NativeCommandRollout {
   private let configuration: MissionConfiguration
+  public let modelConsistent: Bool
   private let controller: FlightController
   private let plant: ShuttlePhysicsEngine
   public private(set) var state: VehicleState
   public private(set) var limiter: GuidanceTargetLimiter
+  /// Measured actuator authority does not identify aerodynamic pitch moment.
+  /// A missing observed balance must not silently become zero restoring bias.
+  /// This necessary seed check does not certify extrapolated moment dynamics.
+  public var pitchMomentSupported: Bool {
+    let anchored = state.controlAuthority.map {
+      $0.isValid && [.measured, .identified].contains($0.evidence)
+    } ?? false
+    return !anchored || plant.snapshot.pitchBalancingInput != nil
+  }
   public var diagnostics: ControlDiagnostics { controller.diagnostics }
   public var controlSnapshot: FlightControlSnapshot { controller.snapshot }
+  public var seed: NativeCommandSeed {
+    .init(state: state, controls: controller.snapshot, limiter: limiter, plant: plant.snapshot)
+  }
   public var touchdown: TouchdownEvent? { plant.touchdown }
 
   public init(seed: NativeCommandSeed, configuration: MissionConfiguration,
               atmosphere: AtmosphericModelEngine, aerodynamics: AerodynamicsEngine) {
     self.configuration = configuration
+    modelConsistent = seed.plant?.matches(configuration: configuration,
+      atmosphere: atmosphere, aerodynamics: aerodynamics) ?? true
     controller = .init(configuration: configuration, snapshot: seed.controls)
     plant = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics,
       initialControls: seed.state.appliedControls ?? .init(), initialState: seed.state,
-      pitchBalancingInput: seed.controls?.predictionPitchTrim(state: seed.state))
+      pitchBalancingInput: seed.controls?.predictionPitchTrim(state: seed.state), snapshot: seed.plant)
     limiter = seed.limiter
     state = plant.observe(seed.state)
   }
@@ -52,6 +69,13 @@ public final class NativeCommandRollout {
   public func advance(_ requested: GuidanceSolution, duration: Double) throws -> NativeCommandStep {
     // Check before mutating limiter/controller history.
     guard duration.isFinite, duration > 0, duration <= 1 else { throw FlightError.staleTelemetry }
+    guard modelConsistent else {
+      throw FlightError.invalidConfiguration("Continuation model/configuration changed; rebase from measured history")
+    }
+    let rcs = requested.phase == .entry && configuration.vehicle.rcsAttitudeControl
+    guard plant.authoritySupports(rcs: rcs) else {
+      throw FlightError.invalidConfiguration("Prediction lacks authority for requested RCS transition")
+    }
     let before = state
     let target = limiter.update(requested.target, phase: requested.phase,
       configuration: configuration, dt: duration, dynamicPressure: state.aerodynamics.dynamicPressure,

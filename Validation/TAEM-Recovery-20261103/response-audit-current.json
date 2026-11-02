@@ -1,0 +1,52 @@
+{
+  "alphaError" : 2.8734583584008973,
+  "altitudeError" : -14.22391720151063,
+  "angularRateError" : {
+    "x" : -0.01604412325921152,
+    "y" : 0.9085689393325137,
+    "z" : 0.0027698874621283295
+  },
+  "bankError" : -3.1408571090247026,
+  "duration" : 6.019999996846309,
+  "dynamicsResets" : 3,
+  "evidence" : "recorded-limited-target-FCS-reconstruction-and-issued-command-plant-replay",
+  "firstCommandRCS" : false,
+  "intervals" : 59,
+  "limitations" : [
+    "Recorded targets are already limited; raw guidance and limiter rates are not reconstructed.",
+    "Applied axis telemetry is not individual surface-deflection measurement.",
+    "Frozen nominal resources are used; seed force residuals expose unmodeled calibration\/history.",
+    "The optional local residual is identified at the seed only; its time\/q\/Mach\/alpha dependence is unknown.",
+    "Same-snapshot RCS-excluded torque is applied at the command boundary; other authority evolution remains unvalidated.",
+    "No uncertainty-based acceptance tolerance is identified; residuals are evidence, not certification.",
+    "This is one recorded command interval, not alternative-turn validation or landing qualification."
+  ],
+  "localResidualPrediction" : {
+    "alphaError" : 0.4407513622418984,
+    "altitudeError" : 16.756389789981768,
+    "anchorInterval" : 0.11999999993713573,
+    "angularAccelerationBias" : {
+      "x" : 0.010008661703697151,
+      "y" : -0.1318036971245365,
+      "z" : -0.006449124214379786
+    },
+    "angularRateError" : {
+      "x" : 0.003689060238053328,
+      "y" : 0.1151730944087639,
+      "z" : 0.01381999465305392
+    },
+    "bankError" : 0.13581395668956506,
+    "energyChange" : -61624.09605036955,
+    "speedError" : -10.626217365061393
+  },
+  "maximumReplayCommandError" : 0,
+  "maximumWarmCommandError" : 2.9608260287972143e-14,
+  "measuredEnergyChange" : -53108.16363432631,
+  "predictedEnergyChange" : -67213.0251736585,
+  "seedDragResidual" : -1.8591960152660647,
+  "seedLiftResidual" : 0.20514768112331055,
+  "seedRCS" : true,
+  "seedTime" : 216406.03235290022,
+  "speedError" : -17.20984375706064,
+  "warmRecords" : 4781
+}

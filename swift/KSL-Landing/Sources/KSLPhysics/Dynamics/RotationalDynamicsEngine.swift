@@ -26,11 +26,15 @@ public final class RotationalDynamicsEngine: Sendable {
   public let configuration: VehicleConfiguration
   public let planet: PlanetConfiguration
   private let pitchBalancingInput: Double?
+  /// Explicit local measured residual, not additional actuator authority or a
+  /// fitted global moment law. Callers must retain its evidence/support limits.
+  private let localAngularAccelerationBias: Vector3
   public init(configuration: VehicleConfiguration, planet: PlanetConfiguration = .init(),
-              pitchBalancingInput: Double? = nil) {
+              pitchBalancingInput: Double? = nil, localAngularAccelerationBias: Vector3 = .zero) {
     self.configuration = configuration
     self.planet = planet
     self.pitchBalancingInput = pitchBalancingInput
+    self.localAngularAccelerationBias = localAngularAccelerationBias
   }
   public func angularAcceleration(state: VehicleState, surfaces: SurfaceActuatorState) -> Vector3 {
     let p = configuration.controlPlant
@@ -62,7 +66,7 @@ public final class RotationalDynamicsEngine: Sendable {
     // Euler's equation uses inertial angular velocity. The last term converts
     // its derivative back to body rates relative to the rotating planet.
     return (moment - inertialRate.cross(inertia.multiplied(componentwise: inertialRate))).divided(
-      componentwise: inertia) + w.cross(frameRate)
+      componentwise: inertia) + w.cross(frameRate) + localAngularAccelerationBias
   }
   public func maximumTrimAlpha(dynamicPressure: Double) -> Double {
     let p = configuration.controlPlant

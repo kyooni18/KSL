@@ -1,0 +1,33 @@
+{
+  "alphaError" : 2.8815507712114035,
+  "altitudeError" : -14.179576805792749,
+  "angularRateError" : {
+    "x" : -0.016100354305052498,
+    "y" : 0.9113096069339813,
+    "z" : 0.0025741731239978917
+  },
+  "bankError" : -3.14047369993527,
+  "duration" : 6.019999996846309,
+  "dynamicsResets" : 3,
+  "evidence" : "recorded-limited-target-FCS-reconstruction-and-issued-command-plant-replay",
+  "firstCommandRCS" : false,
+  "intervals" : 59,
+  "limitations" : [
+    "Recorded targets are already limited; raw guidance and limiter rates are not reconstructed.",
+    "Applied axis telemetry is not individual surface-deflection measurement.",
+    "Frozen nominal resources are used; seed force residuals expose unmodeled calibration\/history.",
+    "Seed total torque is held locally; RCS-off authority transition is not separately identified.",
+    "No uncertainty-based acceptance tolerance is identified; residuals are evidence, not certification.",
+    "This is one recorded command interval, not alternative-turn validation or landing qualification."
+  ],
+  "maximumReplayCommandError" : 0,
+  "maximumWarmCommandError" : 2.9608260287972143e-14,
+  "measuredEnergyChange" : -53108.16363432631,
+  "predictedEnergyChange" : -67014.38851585146,
+  "seedDragResidual" : -1.8591960152660647,
+  "seedLiftResidual" : 0.20514768112331055,
+  "seedRCS" : true,
+  "seedTime" : 216406.03235290022,
+  "speedError" : -16.963189139091355,
+  "warmRecords" : 4781
+}

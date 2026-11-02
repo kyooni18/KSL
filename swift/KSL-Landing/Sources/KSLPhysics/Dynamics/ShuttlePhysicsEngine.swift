@@ -1,6 +1,24 @@
 import Foundation
 import KSLCore
 
+/// Exact in-memory continuation of this native plant. This preserves actuator
+/// integration and authority provenance; it does not add empirical validity.
+public struct ShuttlePhysicsSnapshot: Sendable {
+  let configuration: MissionConfiguration
+  let atmosphere: AtmosphericModelEngine
+  let aerodynamics: AerodynamicsEngine
+  public func matches(configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine,
+                      aerodynamics: AerodynamicsEngine) -> Bool {
+    self.configuration == configuration && self.atmosphere === atmosphere && self.aerodynamics === aerodynamics
+  }
+  let surfaces: SurfaceActuatorState
+  let authorityAnchor: ControlAuthorityTelemetry?
+  let authorityAnchorRCS: Bool?
+  let touchdown: TouchdownEvent?
+  let pitchBalancingInput: Double?
+  let localAngularAccelerationBias: Vector3
+}
+
 /// One simulation owns one engine and actuator history. No callbacks or parent references.
 public final class ShuttlePhysicsEngine {
   public let configuration: MissionConfiguration
@@ -10,31 +28,54 @@ public final class ShuttlePhysicsEngine {
   public let rotation: RotationalDynamicsEngine
   private let ground: GroundDynamicsEngine
   private var surfaces = SurfaceActuatorState()
+  private var authorityAnchorRCS: Bool?
+  private let pitchBalancingInput: Double?
+  private let localAngularAccelerationBias: Vector3
   private var authorityAnchor: ControlAuthorityTelemetry?
   public private(set) var touchdown: TouchdownEvent?
   public init(
     configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine,
     aerodynamics: AerodynamicsEngine, initialControls: ControlCommand = .init(),
-    initialState: VehicleState? = nil, pitchBalancingInput: Double? = nil
+    initialState: VehicleState? = nil, pitchBalancingInput: Double? = nil,
+    snapshot: ShuttlePhysicsSnapshot? = nil, localAngularAccelerationBias: Vector3 = .zero
   ) {
     self.configuration = configuration
     self.atmosphere = atmosphere
     self.aerodynamics = aerodynamics
-    surfaces = .init(command: initialControls)
-    authorityAnchor = initialState?.controlAuthority.flatMap {
+    self.pitchBalancingInput = snapshot.map { $0.pitchBalancingInput } ?? pitchBalancingInput
+    self.localAngularAccelerationBias = snapshot?.localAngularAccelerationBias ?? localAngularAccelerationBias
+    surfaces = snapshot?.surfaces ?? .init(command: initialControls)
+    authorityAnchorRCS = snapshot?.authorityAnchorRCS ?? initialState?.systems.rcs
+    touchdown = snapshot?.touchdown
+    authorityAnchor = snapshot?.authorityAnchor ?? initialState?.controlAuthority.flatMap {
       $0.isValid && [.measured, .identified].contains($0.evidence) ? $0 : nil
     }
     translation = .init(
       planet: configuration.planet, atmosphere: atmosphere, aerodynamics: aerodynamics)
     rotation = .init(configuration: configuration.vehicle, planet: configuration.planet,
-      pitchBalancingInput: pitchBalancingInput)
+      pitchBalancingInput: self.pitchBalancingInput, localAngularAccelerationBias: self.localAngularAccelerationBias)
     ground = .init(configuration: configuration)
+  }
+  public var snapshot: ShuttlePhysicsSnapshot {
+    .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics,
+      surfaces: surfaces, authorityAnchor: authorityAnchor,
+      authorityAnchorRCS: authorityAnchorRCS, touchdown: touchdown, pitchBalancingInput: pitchBalancingInput,
+      localAngularAccelerationBias: localAngularAccelerationBias)
+  }
+  /// RCS-on total torque cannot be reused as RCS-off authority. The archived
+  /// same-snapshot exclusion is preferred; absent that decomposition, report
+  /// missing support instead of silently borrowing enabled-RCS torque.
+  public func authoritySupports(rcs: Bool) -> Bool {
+    guard let anchor = authorityAnchor, let anchorRCS = authorityAnchorRCS else { return true }
+    return rcs == anchorRCS || (anchorRCS && !rcs && anchor.excludingRCS != nil)
   }
   public func observe(_ state: VehicleState) -> VehicleState {
     // Refresh only from an external measurement, never from this engine's
     // extrapolated .identified output.
     if let report = state.controlAuthority,
-      report.isValid, report.evidence == .measured { authorityAnchor = report }
+      report.isValid, report.evidence == .measured {
+      authorityAnchor = report; authorityAnchorRCS = state.systems.rcs
+    }
     var s = state
     s.atmosphere = atmosphere.sample(position: s.position, time: s.time)
     s.aerodynamics = aerodynamics.evaluate(
@@ -51,6 +92,9 @@ public final class ShuttlePhysicsEngine {
     // mislabeled that prior as identified. Hold the measured local torque and
     // inertia instead; its extrapolation away from the seed remains unvalidated.
     if var anchor = authorityAnchor {
+      if authorityAnchorRCS == true, !s.systems.rcs, let excluded = anchor.excludingRCS {
+        anchor = excluded
+      }
       anchor.evidence = .identified
       anchor.actuatorSources = "measured/identified seed total torque and inertia held locally; q evolution unvalidated"
       s.controlAuthority = anchor
@@ -85,6 +129,9 @@ public final class ShuttlePhysicsEngine {
       left -= dt
       s.systems.gearDown = command.gearDown
       s.systems.rcs = command.rcsEnabled ?? false
+      // Refresh the active authority before the first rotational substep,
+      // including the RCS-off command at entry/TAEM ownership transfer.
+      s = observe(s)
       s.systems.brakes = command.wheelBrake > 0.5
       if s.contact.isGrounded {
         ground.step(state: &s, command: command, dt: dt)

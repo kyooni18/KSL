@@ -121,7 +121,7 @@ public final class EntryGuidanceEngine {
   /// A missing terminal-region assessment is NOT evidence of excess energy.
   /// Preserve neutral range reference until an explicit physical deficit exists.
   static func holdNeutralReference(for deficits: [TAEMCaptureDeficit]) -> Bool {
-    !deficits.isEmpty && deficits.allSatisfy { $0 == .terminalRegionNotReached }
+    !deficits.isEmpty && deficits.allSatisfy { $0 == .terminalRegionNotReached || $0 == .evaluationUnassessed }
   }
 
   /// A common, dimensionless runway residual for ranking unpriced failures.
@@ -145,7 +145,7 @@ public final class EntryGuidanceEngine {
     case .excessiveEnergy:
       // A shorter reference distance allows more energy dissipation.
       return valid.min()
-    case .terminalRegionNotReached:
+    case .terminalRegionNotReached, .evaluationUnassessed:
       // No physical energy verdict exists; do not invent one.
       return valid.min { abs($0 - 1) < abs($1 - 1) }
     default:

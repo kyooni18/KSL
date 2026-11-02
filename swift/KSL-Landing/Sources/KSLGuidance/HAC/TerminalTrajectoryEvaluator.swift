@@ -17,12 +17,14 @@ public final class TerminalTrajectoryEvaluator {
   public func evaluate(plan: TerminalPlan, from initial: VehicleState,
                        controlSnapshot: FlightControlSnapshot?, previousTarget: GuidanceTarget?,
                        targetLimiter: GuidanceTargetLimiter? = nil,
+                       nativeSeed: NativeCommandSeed? = nil,
                        lift: Double, drag: Double,
                        trace: ((VehicleState, PathStation, GuidanceTarget) -> Void)? = nil) -> TerminalClosedLoopCase {
     let c = configuration, dt = c.guidance.controlInterval
-    let rollout = NativeCommandRollout(seed: .init(state: initial, controls: controlSnapshot,
+    let rollout = NativeCommandRollout(seed: nativeSeed ?? .init(state: initial, controls: controlSnapshot,
       limiter: targetLimiter ?? GuidanceTargetLimiter(previous: previousTarget)),
-      configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics.scaled(lift: lift, drag: drag))
+      configuration: c, atmosphere: atmosphere,
+      aerodynamics: lift == 1 && drag == 1 ? aerodynamics : aerodynamics.scaled(lift: lift, drag: drag))
     let tracker = PathTrackingEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
     let approach = ApproachGuidanceEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
     let authority = AerodynamicAuthorityEstimator(model: aerodynamics)
@@ -32,18 +34,46 @@ public final class TerminalTrajectoryEvaluator {
     var failures: [ConstraintViolation] = [], maximumTrackingError = 0.0
     var finalCaptured = false, stoppedSince: Double?, success = false
     var lastReference: PathStation?
-    while state.time-initial.time < c.guidance.maximumPredictionDuration {
-      if Task.isCancelled { break }
-      if state.contact == .crashed {
-        failures.append(.init(.contactQuality, "Closed-loop route failed runway contact or containment")); break
+    var evaluationStatus = TerminalEvaluationStatus.incomplete
+    var end = TerminalEvaluationEnd.horizon
+    var work = 0.0, pressureIntegral = 0.0, loadIntegral = 0.0
+    var maximumPressureExcess = 0.0, maximumLoadExcess = 0.0
+    func add(_ violation: ConstraintViolation) {
+      if !failures.contains(where: { $0.kind == violation.kind }) { failures.append(violation) }
+    }
+    func energy(_ s: VehicleState) -> Double {
+      s.velocity.squaredLength/2-c.planet.gravitationalParameter/s.position.length
+        - c.planet.angularVelocity.cross(s.position).squaredLength/2
+    }
+    // As in entry propagation, discard only sub-resolution integration residue.
+    while c.guidance.maximumPredictionDuration-(state.time-initial.time) > dt*1e-6 {
+      if Task.isCancelled { end = .cancelled; break }
+      guard rollout.modelConsistent, nativeSeed.map({
+        $0.state.time == initial.time && $0.state.position == initial.position
+          && $0.state.velocity == initial.velocity && $0.state.attitude == initial.attitude
+          && $0.state.mass == initial.mass
+      }) ?? true else {
+        add(.init(.modelUncertainty, "Continuation seed/model does not match evaluation initial state"))
+        evaluationStatus = .invalid; end = .unsupportedDynamics; break
       }
-      failures += touchdown.observe(state)
-      if !failures.isEmpty { break }
+      if state.contact == .crashed {
+        add(.init(.contactQuality, "Closed-loop route failed runway contact or containment"))
+        evaluationStatus = .complete; end = .modeledCrash; break
+      }
+      if !state.contact.isGrounded && !rollout.pitchMomentSupported {
+        add(.init(.modelUncertainty, "Measured actuator torque does not identify pitch moment balance"))
+        evaluationStatus = .invalid; end = .unsupportedDynamics; break
+      }
+      for violation in touchdown.observe(state) { add(violation) }
+      let pressureExcess = max(0, state.aerodynamics.dynamicPressure-c.vehicle.maximumDynamicPressure)
+      let loadExcess = max(0, abs(state.aerodynamics.lift)/(state.mass*9.80665)-c.vehicle.maximumLoadFactor)
+      maximumPressureExcess = max(maximumPressureExcess, pressureExcess)
+      maximumLoadExcess = max(maximumLoadExcess, loadExcess)
       if state.aerodynamics.dynamicPressure > c.vehicle.maximumDynamicPressure {
-        failures.append(.init(.excessiveDynamicPressure, "Closed-loop terminal q envelope")); break
+        add(.init(.excessiveDynamicPressure, "Closed-loop terminal q envelope"))
       }
       if abs(state.aerodynamics.lift)/(state.mass*9.80665) > c.vehicle.maximumLoadFactor {
-        failures.append(.init(.excessiveLoad, "Closed-loop terminal load envelope")); break
+        add(.init(.excessiveLoad, "Closed-loop terminal load envelope"))
       }
       authority.observe(state)
       let trim = rollout.diagnostics.trimEvidence == .identified ? rollout.diagnostics.trimAlphaCeiling : nil
@@ -52,11 +82,14 @@ public final class TerminalTrajectoryEvaluator {
         phase = state.wheelContact?.noseGear == true ? .rollout : .touchdown
         let p = frame.coordinates(of: state.position)
         if !c.runway.contains(along: p.along, cross: p.cross) {
-          failures.append(.init(.runwayExcursion, "Closed-loop rollout left runway")); break
+          add(.init(.runwayExcursion, "Closed-loop rollout left runway"))
+          evaluationStatus = .invalid; end = .unsupportedDynamics; break
         }
         if state.horizontalSpeed < 0.5 && state.wheelContact?.noseGear == true {
           if stoppedSince == nil { stoppedSince = state.time }
-          if state.time-stoppedSince! >= c.guidance.stopConfirmationDuration { success = true; break }
+          if state.time-stoppedSince! >= c.guidance.stopConfirmationDuration {
+            success = true; evaluationStatus = .complete; end = .sustainedStop; break
+          }
         } else { stoppedSince = nil }
         raw = .init(phase: phase, target: .init(gearDown: true))
       } else if finalCaptured {
@@ -78,21 +111,38 @@ public final class TerminalTrajectoryEvaluator {
       }
       phase = raw.phase
       do {
-        let step = try rollout.advance(raw, duration: dt)
+        let duration = min(dt, c.guidance.maximumPredictionDuration-(state.time-initial.time))
+        let step = try rollout.advance(raw, duration: duration)
+        let actualDuration = step.after.time-step.before.time
+        work += actualDuration/2 * (
+          step.before.aerodynamics.force.dot(step.before.velocity)/step.before.mass
+          + step.after.aerodynamics.force.dot(step.after.velocity)/step.after.mass)
+        let nextPressure = max(0, step.after.aerodynamics.dynamicPressure-c.vehicle.maximumDynamicPressure)
+        let nextLoad = max(0, abs(step.after.aerodynamics.lift)/(step.after.mass*9.80665)-c.vehicle.maximumLoadFactor)
+        pressureIntegral += actualDuration*(pressureExcess+nextPressure)/2
+        loadIntegral += actualDuration*(loadExcess+nextLoad)/2
+        maximumPressureExcess = max(maximumPressureExcess, nextPressure)
+        maximumLoadExcess = max(maximumLoadExcess, nextLoad)
         if let reference = lastReference { trace?(step.before, reference, step.limited) }
         state = step.after
       } catch {
-        failures.append(.init(.actuatorAuthority, "Closed-loop terminal computation: \(error)")); break
+        add(.init(.actuatorAuthority, "Closed-loop terminal computation: \(error)"))
+        evaluationStatus = .invalid; end = .computationFailure; break
       }
     }
-    if !success && failures.isEmpty {
+    if evaluationStatus == .incomplete {
       failures.append(.init(.timeout, Task.isCancelled ? "Terminal qualification cancelled" : "Terminal qualification did not complete rollout"))
     }
     let event = rollout.touchdown
-    return .init(liftMultiplier: lift, dragMultiplier: drag, feasible: success && event?.acceptable == true,
+    return .init(liftMultiplier: lift, dragMultiplier: drag, feasible: success && event?.acceptable == true && failures.isEmpty,
       elapsed: state.time-initial.time, touchdownSpeed: event?.horizontalSpeed,
       touchdownSink: event?.verticalSpeed, touchdownPitch: event?.pitch,
       stoppedAlong: success ? frame.coordinates(of: state.position).along : nil,
-      maximumTrackingError: maximumTrackingError, violations: failures, evidence: "offline-native-control-model-only")
+      maximumTrackingError: maximumTrackingError, violations: failures, evidence: "offline-native-control-model-only",
+      evaluation: .init(status: evaluationStatus, end: end, state: state,
+        aerodynamicWork: work, energyChange: energy(state)-energy(initial),
+        heightChange: state.position.length-initial.position.length,
+        maximumPressureExcess: maximumPressureExcess, pressureExcessIntegral: pressureIntegral,
+        maximumLoadExcess: maximumLoadExcess, loadExcessIntegral: loadIntegral))
   }
 }

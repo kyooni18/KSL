@@ -1,0 +1,40 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 6] KSL-Landing_KSLPhysics
+[2 / 45] KSLPhysics
+[4 / 47] KSLPhysics
+[21 / 35] KSLLanding
+[25 / 39] GuidanceTests-product
+[27 / 41] ksl-landing-product
+[39 / 50] PhysicsTests-product
+[46 / 50] KSLLanding
+[48 / 50] ksl-landing-product
+[48 / 50] GuidanceTests-product
+Build complete! (2.02초)
+Test Suite 'Selected tests' started at 2026-11-03 02:04:22.464.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-03 02:04:22.465.
+Test Suite 'CaptureFailureRegressionTests' started at 2026-11-03 02:04:22.465.
+Test Case '-[GuidanceTests.CaptureFailureRegressionTests testEnvelopeCountsCandidatesInsteadOfRepeatedStationViolations]' started.
+Test Case '-[GuidanceTests.CaptureFailureRegressionTests testEnvelopeCountsCandidatesInsteadOfRepeatedStationViolations]' passed (0.001 seconds).
+Test Case '-[GuidanceTests.CaptureFailureRegressionTests testUniversalActuatorAndEnergyFailuresDoNotProveAnEnergyOnlyRemedy]' started.
+Test Case '-[GuidanceTests.CaptureFailureRegressionTests testUniversalActuatorAndEnergyFailuresDoNotProveAnEnergyOnlyRemedy]' passed (0.000 seconds).
+Test Case '-[GuidanceTests.CaptureFailureRegressionTests testVacuumEntryPreparesConfiguredAttitudeWithoutInventingLift]' started.
+Test Case '-[GuidanceTests.CaptureFailureRegressionTests testVacuumEntryPreparesConfiguredAttitudeWithoutInventingLift]' passed (0.074 seconds).
+Test Suite 'CaptureFailureRegressionTests' passed at 2026-11-03 02:04:22.541.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.075 (0.076) seconds
+Test Suite 'NativeCommandRolloutTests' started at 2026-11-03 02:04:22.541.
+Test Case '-[GuidanceTests.NativeCommandRolloutTests testSharedRolloutMatchesNativePipelineWithWarmControllerAndLimiter]' started.
+Test Case '-[GuidanceTests.NativeCommandRolloutTests testSharedRolloutMatchesNativePipelineWithWarmControllerAndLimiter]' passed (0.006 seconds).
+Test Suite 'NativeCommandRolloutTests' passed at 2026-11-03 02:04:22.547.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'TAEMPredictionEvidenceTests' started at 2026-11-03 02:04:22.547.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testRecordedRCSHandoffUsesExcludedTorqueAndRejectsMissingDecomposition]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testRecordedRCSHandoffUsesExcludedTorqueAndRejectsMissingDecomposition]' passed (0.003 seconds).
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testUnidentifiedPlantAndMissingSuffixNeverQualifyAsTerminalOutcomes]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testUnidentifiedPlantAndMissingSuffixNeverQualifyAsTerminalOutcomes]' passed (0.004 seconds).
+Test Suite 'TAEMPredictionEvidenceTests' passed at 2026-11-03 02:04:22.554.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.007 (0.007) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-03 02:04:22.554.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.088 (0.089) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 02:04:22.554.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.088 (0.090) seconds

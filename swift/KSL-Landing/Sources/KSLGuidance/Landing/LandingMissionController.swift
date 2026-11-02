@@ -555,7 +555,7 @@ public final class LandingMissionController {
     case .crossrangeBeyondTurningAuthority, .adverseHeading: return .invalidGeometry
     case .inadequateControlAuthority: return .actuatorAuthority
     case .envelopeViolation: return .excessiveDynamicPressure
-    case .closedLoopFailure, .none: return .modelUncertainty
+    case .closedLoopFailure, .evaluationUnassessed, .none: return .modelUncertainty
     }
   }
 

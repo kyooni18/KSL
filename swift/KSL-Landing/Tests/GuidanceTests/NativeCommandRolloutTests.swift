@@ -38,14 +38,29 @@ final class NativeCommandRolloutTests: XCTestCase {
     let seed = NativeCommandSeed(state: state, controls: controller.snapshot, limiter: limiter)
     let branch = NativeCommandRollout(seed: seed, configuration: c, atmosphere: atmosphere, aerodynamics: aero)
     let independent = NativeCommandRollout(seed: seed, configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+    let changedAtmosphere = try AtmosphericModelEngine(planet: c.planet)
+    let stale = NativeCommandRollout(seed: branch.seed, configuration: c,
+      atmosphere: changedAtmosphere, aerodynamics: aero)
+    XCTAssertFalse(stale.modelConsistent)
+    XCTAssertThrowsError(try stale.advance(request, duration: dt))
+    XCTAssertEqual(stale.state.time, branch.state.time)
     XCTAssertEqual(branch.diagnostics.rollResponseSeconds, controller.diagnostics.rollResponseSeconds)
     XCTAssertEqual(branch.diagnostics.pitchResponseSeconds, controller.diagnostics.pitchResponseSeconds)
+    var resumed: NativeCommandRollout?
     for _ in 0..<2 {
       let target = limited(controller)
       let command = try controller.command(state: state, solution: .init(phase: request.phase, target: target), dt: dt)
       state = try plant.advance(state, command: command, duration: dt)
       let step = try branch.advance(request, duration: dt)
       let other = try independent.advance(request, duration: dt)
+      if let resumed {
+        let restarted = try resumed.advance(request, duration: dt)
+        XCTAssertEqual(step.after.position, restarted.after.position)
+        XCTAssertEqual(step.after.angularVelocity, restarted.after.angularVelocity)
+        XCTAssertEqual(step.issued, restarted.issued)
+      }
+      resumed = NativeCommandRollout(seed: branch.seed, configuration: c,
+        atmosphere: atmosphere, aerodynamics: aero)
       XCTAssertEqual(step.limited, target)
       XCTAssertEqual(step.issued.pitch, command.pitch, accuracy: 1e-12)
       XCTAssertEqual(step.issued.roll, command.roll, accuracy: 1e-12)

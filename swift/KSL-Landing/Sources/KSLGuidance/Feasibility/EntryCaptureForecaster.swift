@@ -137,6 +137,7 @@ public final class EntryCaptureForecaster {
     }
     var terminalControls = controls, terminalTarget = previousTarget
     var terminalLimiter = targetLimiter
+    var terminalSeed: NativeCommandSeed?
     var capture = TAEMCaptureAssessment()
     var searched = false, handedOff = false, nextCapture = state.time
     let first = predictor.predict(from: state, duration: c.guidance.maximumPredictionDuration,
@@ -149,6 +150,7 @@ public final class EntryCaptureForecaster {
       },
       handoff: { terminalControls = $0; terminalTarget = $1 },
       limiterHandoff: { terminalLimiter = $0 },
+      nativeHandoff: { terminalSeed = $0 },
       terminalCondition: { s in
         let altitude = s.position.length-c.planet.radius
         let objective = law.memory.objective ?? EntryCaptureObjective.seed(configuration: c,
@@ -200,7 +202,7 @@ public final class EntryCaptureForecaster {
     let samples = first.samples, violations = first.violations, end = first.terminalState
     if handedOff && capture.feasible && certify {
       capture = evaluator.evaluate(end, certify: true, controlSnapshot: terminalControls,
-        previousTarget: terminalTarget, targetLimiter: terminalLimiter, context: captureContext())
+        previousTarget: terminalTarget, targetLimiter: terminalLimiter, nativeSeed: terminalSeed, context: captureContext())
     }
     let p = frame.coordinates(of: end.position)
     if !searched {

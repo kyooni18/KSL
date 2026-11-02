@@ -79,6 +79,11 @@ public struct TerminalClosedLoopCase: Codable, Sendable {
   public let maximumTrackingError: Double
   public let violations: [ConstraintViolation]
   public let evidence: String
+  /// Nil in legacy records; new forecasts expose unpriced and invalid tails.
+  public var evaluation: TerminalEvaluation? = nil
+  public var qualified: Bool {
+    feasible && (evaluation.map { $0.status == .complete && $0.end == .sustainedStop } ?? true)
+  }
 }
 
 public struct TerminalPlan: Codable, Sendable {
@@ -96,11 +101,11 @@ public struct TerminalPlan: Codable, Sendable {
   public var nominalQualified: Bool {
     assessment.feasible && closedLoopCases?.first(where: {
       abs($0.liftMultiplier-1) < 1e-12 && abs($0.dragMultiplier-1) < 1e-12
-    })?.feasible == true
+    })?.qualified == true
   }
   public var energyRobust: Bool { assessment.feasible && stressCases.count >= 2 && stressCases.allSatisfy(\.feasible) }
   public var isRobust: Bool {
-    energyRobust && (closedLoopCases?.count ?? 0) >= 3 && closedLoopCases!.allSatisfy(\.feasible)
+    energyRobust && (closedLoopCases?.count ?? 0) >= 3 && closedLoopCases!.allSatisfy(\.qualified)
   }
   public init(
     identifier: Int, createdAt: Double, spiral: SpiralHAC?, stations: [PathStation],

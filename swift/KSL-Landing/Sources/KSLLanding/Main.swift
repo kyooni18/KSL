@@ -162,6 +162,12 @@ struct LandingCLI {
       }
       try output(ScreenReport(evaluated: search.evaluated, horizon: search.horizon,
         rejections: search.rejections, candidates: search.candidates, preview: preview))
+    case "taem-response-audit":
+      guard let input = option("--input"), let path = option("--configuration") else {
+        throw FlightError.invalidConfiguration("taem-response-audit requires --input and --configuration")
+      }
+      let c = try JSONDecoder().decode(MissionConfiguration.self, from: Data(contentsOf: URL(fileURLWithPath: path)))
+      try output(await TAEMResponseAudit.run(input: input, configuration: c))
     case "pitch-balance-probe":
       guard let input = option("--input"), let path = option("--configuration") else {
         throw FlightError.invalidConfiguration("pitch-balance-probe requires --input and --configuration")
@@ -605,6 +611,7 @@ struct LandingCLI {
           configuration [--output configuration.json]
           deorbit-screen --input state.json --configuration configuration.json [--output screen.json]
           deorbit-trace --input plan.json --log offline-model.jsonl
+          taem-response-audit --input flight.jsonl --configuration config.json
           replay --input flight.jsonl [--configuration config.json] [--verify-commands]
           legacy-audit --input archive.jsonl [--skip-malformed] [--session id] [--states snapshots.jsonl]
           import-legacy --input archive.jsonl [--skip-malformed] [--session id]

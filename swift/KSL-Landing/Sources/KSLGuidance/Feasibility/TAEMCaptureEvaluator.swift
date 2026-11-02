@@ -25,6 +25,9 @@ public enum TAEMCaptureDeficit: String, Codable, Sendable {
   case terminalRegionNotReached
   /// Energy/geometry admissible, but the closed-loop vehicle failed to stop.
   case closedLoopFailure
+  /// Missing dynamics support or an unpriced terminal suffix is not a
+  /// physical runway failure and supplies no signed energy correction.
+  case evaluationUnassessed
 }
 
 /// Reachable envelope of the HAC family from one state, in physical units.
@@ -78,6 +81,7 @@ public struct TAEMCaptureAssessment: Codable, Sendable {
   public init() {}
   public var summary: String {
     feasible ? "capture \(certified ? "certified" : "feasible") margin=\(String(format: "%.0f", envelope.energyMargin))m"
+      : deficit == .evaluationUnassessed ? "capture unassessed: incomplete or unsupported evaluation"
       : "capture infeasible: \(deficit.rawValue)"
   }
 }
@@ -101,22 +105,23 @@ public final class TAEMCaptureEvaluator {
                        controlSnapshot: FlightControlSnapshot? = nil,
                        previousTarget: GuidanceTarget? = nil,
                        targetLimiter: GuidanceTargetLimiter? = nil,
+                       nativeSeed: NativeCommandSeed? = nil,
                        context: HACFitContext? = nil) -> TAEMCaptureAssessment {
     let c = configuration
     let preview = planner.plan(from: state, allowDirect: context?.onSpiral != true, preview: true,
-      controlSnapshot: controlSnapshot, previousTarget: previousTarget, targetLimiter: targetLimiter, context: context)
+      controlSnapshot: controlSnapshot, previousTarget: previousTarget, targetLimiter: targetLimiter, nativeSeed: nativeSeed, context: context)
     var a = Self.assess(preview, state: state, configuration: c)
     guard a.feasible, certify else { return a }
     let closed = planner.plan(from: state, allowDirect: context?.onSpiral != true,
-      controlSnapshot: controlSnapshot, previousTarget: previousTarget, targetLimiter: targetLimiter, context: context)
+      controlSnapshot: controlSnapshot, previousTarget: previousTarget, targetLimiter: targetLimiter, nativeSeed: nativeSeed, context: context)
     if let plan = closed.plan {
       a.certified = plan.nominalQualified; Self.describe(plan, into: &a)
       if !a.certified {
-        a.feasible = false; a.deficit = .closedLoopFailure
+        a.feasible = false; a.deficit = Self.hasUnassessed(plan.closedLoopCases) ? .evaluationUnassessed : .closedLoopFailure
         a.violations = plan.closedLoopCases?.flatMap(\.violations) ?? plan.assessment.violations
       }
     } else {
-      a.feasible = false; a.deficit = .closedLoopFailure
+      a.feasible = false; a.deficit = Self.hasUnassessed(closed.closedLoopAdvisories) ? .evaluationUnassessed : .closedLoopFailure
       a.violations = closed.closedLoopAdvisories?.flatMap(\.violations) ?? []
     }
     return a
@@ -174,7 +179,7 @@ public final class TAEMCaptureEvaluator {
       }
       if a.deficit == .none || summary.feasible > 0 {
         // Priced paths existed but none survived closed-loop flight.
-        a.deficit = .closedLoopFailure
+        a.deficit = Self.hasUnassessed(result.closedLoopAdvisories) ? .evaluationUnassessed : .closedLoopFailure
         a.violations = result.closedLoopAdvisories?.flatMap(\.violations) ?? a.violations
       }
       return a
@@ -183,8 +188,17 @@ public final class TAEMCaptureEvaluator {
     a.deficit = a.feasible ? .none : classify(summary, headingError: a.runwayHeadingError ?? a.headingError, envelope: a.envelope)
     a.violations = candidate.assessment.violations
     a.certified = candidate.nominalQualified
+    if let cases = candidate.closedLoopCases, !cases.isEmpty, !a.certified {
+      a.feasible = false
+      a.deficit = hasUnassessed(cases) ? .evaluationUnassessed : .closedLoopFailure
+      a.violations += cases.flatMap(\.violations)
+    }
     describe(candidate, into: &a)
     return a
+  }
+
+  private static func hasUnassessed(_ cases: [TerminalClosedLoopCase]?) -> Bool {
+    cases?.contains { $0.evaluation.map { $0.status != .complete } ?? false } ?? false
   }
 
   private static func describe(_ plan: TerminalPlan, into a: inout TAEMCaptureAssessment) {
