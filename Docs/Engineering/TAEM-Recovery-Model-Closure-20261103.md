@@ -136,3 +136,33 @@ ranking, measured-state rebasing and coherent tracking display remain outstandin
 The known zero-bank fallback remains unfixed. Landing readiness is unknown; this
 checkpoint must not be described as a successful recovery or a perfected landing
 system.
+
+## Follow-on prebranch identifiability check
+
+`identify_pitch_support.py` performs one local affine moment-residual fit using
+only the six-second prehandoff response window (60 samples). Its four features
+are dynamic-pressure-scaled constant, incidence, Mach and pitch-rate/airspeed.
+The measured body acceleration has the same native actuator/gyro terms removed;
+QR uses column normalization and reorthogonalization, without external packages.
+No coefficient is selected from held-out observations or installed in guidance.
+
+The design is numerically full-rank, but numerical rank is not physical support.
+Training residual RMS is 0.00106 rad/s²; held-out measured-state residual RMS is
+**0.05315 rad/s²**, worse than simply retaining the seed residual (0.02459 rad/s²).
+All 59 held-out Mach samples and 53 of 59 incidence samples lie outside the
+training interval. This directly rejects extrapolating that apparently good local
+fit across handoff. The check uses measured future states only as comparison
+inputs and is not a new trajectory rollout. It cannot establish surface-response
+identifiability from axis input telemetry.
+
+Evidence: `Validation/TAEM-Recovery-20261103/pitch-identifiability.json`. Reproduce:
+
+```
+python3 Validation/TAEM-Recovery-20261103/identify_pitch_support.py \
+  --input runs/20261102T152517Z-dessert-150ms-live/live.jsonl \
+  --configuration runs/20261102T152517Z-dessert-150ms-live/live.jsonl.configuration.json
+```
+
+This is an identified rejection, not evidence that all recorded data is
+insufficient. Investigate the recorded actuator-mode transition and wider genuine
+moment/deflection evidence before proposing another fitted production model.

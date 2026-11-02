@@ -1,0 +1,70 @@
+{
+  "coefficients": [
+    -0.13196233458975606,
+    -1.2825861411224955,
+    0.008213528278762344,
+    102.5886154965704
+  ],
+  "constantSeedResidualHeldOutRMS": 0.02459073505939488,
+  "evidence": "single-prehandoff-local-moment-regression-and-held-out-measured-state-residual-check",
+  "features": [
+    "q/q_seed",
+    "q/q_seed * delta_alpha_rad",
+    "q/q_seed * delta_mach",
+    "q/q_seed * delta_pitch_rate_over_airspeed"
+  ],
+  "heldOutResidualRMS": 0.05315005938572951,
+  "heldOutSamples": 59,
+  "limitations": [
+    "Residual target is rad/s^2; regression is a diagnostic, not a validated restoring-moment model.",
+    "Correlated alpha/Mach/time and finite-difference measurement noise limit identifiability.",
+    "Held-out measured states are comparison inputs, not simulated future states; this is not trajectory closure.",
+    "RCS changes across handoff; surface/wheel/RCS actual deflections and input response remain unresolved.",
+    "No fitted coefficient is enabled in production guidance or used for an alternative trajectory."
+  ],
+  "normalizedQRDiagonal": [
+    1.0,
+    0.9001580353682962,
+    0.2512207205537691,
+    0.6230891411609087
+  ],
+  "responseInterval": 6,
+  "seedTime": 216406.03235290022,
+  "support": {
+    "angleOfAttack": {
+      "heldOut": [
+        0.44459543033338067,
+        0.5145045156407425
+      ],
+      "heldOutOutsideTraining": 53,
+      "training": [
+        0.504914642857552,
+        0.5221047381802015
+      ]
+    },
+    "dynamicPressure": {
+      "heldOut": [
+        3473.648681640625,
+        3489.399169921875
+      ],
+      "heldOutOutsideTraining": 40,
+      "training": [
+        3481.96337890625,
+        3501.6845703125
+      ]
+    },
+    "mach": {
+      "heldOut": [
+        2.68217667447602,
+        2.8457417633245643
+      ],
+      "heldOutOutsideTraining": 59,
+      "training": [
+        2.84837918956155,
+        3.039369497727201
+      ]
+    }
+  },
+  "trainingResidualRMS": 0.001059561606475005,
+  "trainingSamples": 60
+}
