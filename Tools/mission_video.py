@@ -99,6 +99,20 @@ class Timeline:
             row['gForce'] = float(np.interp(u, self.lu, landing_g))
             rows.append(row)
         self.rows = increasing(sorted(rows, key=lambda r:r['time']), 'ut')
+        # The native UI's gForce is lift/(m*g), which omits drag, thrust and
+        # ground reaction. Recover sensed load from measured kinematics in the
+        # rotating frame. A 0.5 simulation-second display window suppresses
+        # differentiation noise; this does not modify any flight model.
+        observed=[r for r in self.rows if 'velocity' in r and r['ut']>=self.lu[0]]
+        nu=np.array([r['ut'] for r in observed])
+        nv=np.array([r['velocity'] for r in observed]);np_=np.array([r['position'] for r in observed])
+        lo=np.maximum(nu-.25,nu[0]);hi=np.minimum(nu+.25,nu[-1])
+        acceleration=np.column_stack([(np.interp(hi,nu,nv[:,j])-np.interp(lo,nu,nv[:,j]))/(hi-lo)
+                                      for j in range(3)])
+        omega=np.array([0.,0.,self.planet['rotationRate']])
+        proper=(acceleration+2*np.cross(omega,nv)+np.cross(omega,np.cross(omega,np_))
+                +self.planet['gravitationalParameter']*np_/np.linalg.norm(np_,axis=1)[:,None]**3)
+        for r,g in zip(observed,np.linalg.norm(proper,axis=1)/9.80665):r['gForce']=float(g)
         self.times = np.array([r['time'] for r in self.rows])
         self.uts = np.array([r['ut'] for r in self.rows])
         self.values = {k: np.array([r.get(k,float('nan')) for r in self.rows]) for k in
@@ -477,6 +491,7 @@ def main():
                'No trajectory segments bridge telemetry gaps; no future orbit is displayed.',
                'Clock uses paired epoch/UT samples; ~ marks sparse intervals, including rails warp handoff.',
                'Native attitude comes from measured FRD quaternion, not FPA+AoA.',
+               'Native G is specific acceleration from measured rotating-frame velocity, with gravity/Coriolis/centrifugal terms and a 0.5s display derivative window.',
                'HDR remains 10-bit BT.2020/PQ; HUD white follows source MaxCLL.',
                'No landing-success claim is implied by the recording or HUD.'])
     out.with_suffix('.json').write_text(json.dumps(manifest,indent=2)+'\n')
