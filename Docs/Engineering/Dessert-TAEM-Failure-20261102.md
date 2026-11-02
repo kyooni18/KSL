@@ -71,3 +71,20 @@ The entry law reached its lower Mach handoff deadline up-range. Its range refere
 4. Repair provenance recording so each native session binds to the executable and source/configuration actually used; eliminate the literal source revision. Separately correct the wrapper's engaged-state reporting after a running deorbit flight is aborted.
 
 No production guidance was changed in this investigation. The next engineering check should target the first repair with this recorded state/configuration and a narrow regression. Flight readiness remains unknown; a new live attempt is not needed to establish the demonstrated NEP/rollout coupling defect.
+
+
+## Repair — 2026-11-02
+
+The demonstrated NEP/rollout coupling is now separated in production guidance:
+
+- `EnergyManagementEngine` records `airborneFeasible` before downstream runway braking checks and preserves `rolloutViolations` separately. Its overall `feasible`, violation list, scoring, braking model, 100 m allowance and vehicle limits retain their existing meaning.
+- `NominalEnergyPointSolver` requires a complete, constraint-compliant **airborne** Final solution. It keeps the full Final/rollout assessment in the returned reference. Missing roots and airborne violations still return nil; a rollout failure alone no longer erases the reference.
+- `LandingMissionController` publishes the reference's rollout violations during TAEM and Final while continuing to run the existing TAEM law. The target limiter and force allocation remain responsible for attainable commands. Optional added evidence fields preserve decoding of historical records.
+
+A single new regression uses the exact Dessert handoff state and native configuration in `Tests/GuidanceTests/Fixtures/dessert-taem-20261102.json`. It verifies the solved inlet speed, retained braking deficit, false full-route feasibility, serialized assessment, normal TAEM diagnostic, nonzero bank request, and configured bank/AoA limits. At that recorded state, the mission controller now requests **15.428 degrees bank** and reports the **65.616 m braking deficit**, rather than taking the missing-NEP zero-bank branch. The normal TAEM law also reports `descentCheck=trimLift` and `referenceTracking=false`; the repair does not turn an unsupported descent into a qualified reference.
+
+Validation: the new regression and the existing recorded terminal glide-envelope regression pass (two selected tests). Two additional existing `TAEMReferenceRecoveryTests` fail with four assertions, identically on the unmodified pre-repair source and on the repaired source: the expected failure label is `negativeNormalLift` but actual is `bank`, and the expected incidence/bank values disagree. Those tests were not weakened or changed. Baseline and repaired outputs are retained as `baseline-existing-checks.log` and `fix-existing-checks.log`; final passing targeted checks are in `fix-final-checks.log`.
+
+This repair addresses the identified control-blocking dependency. It does not change entry delivery, replace the generic missing-root recovery law, remove stopping constraints, qualify the provisional Dessert runway survey, or claim that the recorded inlet can be landed. No live attempt was initiated. Entry-delivery and the existing TAEM recovery-test failures remain separate unresolved work.
+
+Release build succeeded (`swift build --package-path swift/KSL-Landing -c release`), after confirming no landing executable was running. The rebuilt mainstream binary is ready for the next explicitly authorized attempt; this is build validation, not flight validation. See `fix-release-build.log` and `fix-build-identity.json`.

@@ -53,6 +53,10 @@ public struct TerminalAssessment: Codable, Sendable {
   public var predictedThroughDistance: Double? = nil
   public var energyExhaustionDistance: Double? = nil
   public var unpricedDistance: Double? = nil
+  /// Airborne pricing through touchdown, before downstream rollout checks.
+  /// Absent in historical assessments; absence is not a positive verdict.
+  public var airborneFeasible: Bool? = nil
+  public var rolloutViolations: [ConstraintViolation]? = nil
 }
 
 public struct TerminalStressCase: Codable, Sendable {

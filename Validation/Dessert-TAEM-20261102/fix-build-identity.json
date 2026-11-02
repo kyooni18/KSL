@@ -1,0 +1,12 @@
+{
+  "baseRevision": "68ea70cf986581c19765aa70af0db2f81caa33de",
+  "executable": "swift/KSL-Landing/.build/release/ksl-landing",
+  "executableSHA256": "c2c586fd50966c13b43b212b545bd2dd031cc4a61407cc3c66057537cae7b8e6",
+  "sourceSHA256": {
+    "swift/KSL-Landing/Sources/KSLGuidance/Approach/NominalEnergyPoint.swift": "5a37ecc679380050776a0fae898c41fe00fbb29c6c62f2e42e9bde85eec08a7c",
+    "swift/KSL-Landing/Sources/KSLGuidance/Energy/EnergyManagementEngine.swift": "bd0d7bbb8f420f8e2fcbada7aeb50ed3aeb030b3ecbd2587a9af9a511eda96ab",
+    "swift/KSL-Landing/Sources/KSLGuidance/HAC/TerminalPlan.swift": "d92cafbd0ce53c89aad9108a78e0e1e5144a0b9bb3912d780dbdafc55d719e64",
+    "swift/KSL-Landing/Sources/KSLGuidance/Landing/LandingMissionController.swift": "c42aaed678bd35f35866ec7c4617b221a23ab74433fb521258696599cc23ce50"
+  },
+  "validation": "Two final selected checks passed; two additional existing TAEMReferenceRecoveryTests fail identically on baseline and repair. No live flight."
+}

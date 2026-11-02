@@ -179,20 +179,24 @@ public final class EnergyManagementEngine {
     var previousStationTime = initial.time
     var gearDown = initial.systems.gearDown
     var exhaustion: Double?
+    var rolloutViolations: [ConstraintViolation] = []
     let v = configuration.vehicle
     func finish(_ terminalSpeed: Double, complete: Bool = false) -> TerminalAssessment {
       let total = stations.last?.distance ?? 0
       let priced = result.last?.distance ?? 0
+      let allViolations = violations + rolloutViolations
       var assessment = TerminalAssessment(
-        feasible: complete && violations.isEmpty, violations: violations, touchdownSpeed: terminalSpeed,
+        feasible: complete && allViolations.isEmpty, violations: allViolations, touchdownSpeed: terminalSpeed,
         minimumLiftMargin: minLift.isFinite ? minLift : 0, maximumBank: maxBank, maximumQ: maxQ,
-        maximumLoad: maxLoad, score: Double(Set(violations.map { $0.kind.rawValue }).count) * 1e6
+        maximumLoad: maxLoad, score: Double(Set(allViolations.map { $0.kind.rawValue }).count) * 1e6
           + pow(terminalSpeed - v.landingSpeed, 2) + total * 0.0001,
         uncertaintyFraction: v.aerodynamicUncertainty)
       assessment.predictionComplete = complete
       assessment.predictedThroughDistance = priced
       assessment.energyExhaustionDistance = exhaustion
       assessment.unpricedDistance = max(0, total - priced)
+      assessment.airborneFeasible = complete && violations.isEmpty
+      assessment.rolloutViolations = rolloutViolations
       return assessment
     }
     guard stations.count >= 2, speed.isFinite, speed > 0 else {
@@ -345,7 +349,7 @@ public final class EnergyManagementEngine {
     }
     let stopDistance = speed * speed / (2 * v.brakeFriction * 9.80665)
     if configuration.guidance.touchdownAlong + stopDistance > configuration.runway.length - 100 {
-      violations.append(.init(.excessiveEnergy, "Insufficient runway braking distance",
+      rolloutViolations.append(.init(.excessiveEnergy, "Insufficient runway braking distance",
         value: stopDistance, limit: configuration.runway.length - configuration.guidance.touchdownAlong - 100))
     }
     return (result, finish(speed, complete: true))

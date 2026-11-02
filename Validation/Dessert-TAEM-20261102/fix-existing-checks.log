@@ -1,0 +1,29 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 31] KSLDiagnostics
+Build complete! (0.62초)
+Test Suite 'Selected tests' started at 2026-11-02 17:59:10.276.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 17:59:10.277.
+Test Suite 'TAEMReferenceRecoveryTests' started at 2026-11-02 17:59:10.277.
+Test Case '-[GuidanceTests.TAEMReferenceRecoveryTests testRecordedLiveJoinDoesNotMoveAfterCommitment]' started.
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/GuidanceTests/TAEMReferenceRecoveryTests.swift:48: error: -[GuidanceTests.TAEMReferenceRecoveryTests testRecordedLiveJoinDoesNotMoveAfterCommitment] : XCTAssertLessThan failed: ("0.0") is not less than ("0.0")
+Test Case '-[GuidanceTests.TAEMReferenceRecoveryTests testRecordedLiveJoinDoesNotMoveAfterCommitment]' failed (0.595 seconds).
+Test Case '-[GuidanceTests.TAEMReferenceRecoveryTests testRejectedRecordedReferenceCannotCommandBallisticDive]' started.
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/GuidanceTests/TAEMReferenceRecoveryTests.swift:19: error: -[GuidanceTests.TAEMReferenceRecoveryTests testRejectedRecordedReferenceCannotCommandBallisticDive] : XCTAssertEqual failed: ("Optional("bank")") is not equal to ("Optional("negativeNormalLift")")
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/GuidanceTests/TAEMReferenceRecoveryTests.swift:23: error: -[GuidanceTests.TAEMReferenceRecoveryTests testRejectedRecordedReferenceCannotCommandBallisticDive] : XCTAssertEqualWithAccuracy failed: ("0.4544539275433839") is not equal to ("0.20943951023931953") +/- ("1e-05")
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/GuidanceTests/TAEMReferenceRecoveryTests.swift:24: error: -[GuidanceTests.TAEMReferenceRecoveryTests testRejectedRecordedReferenceCannotCommandBallisticDive] : XCTAssertLessThan failed: ("0.0") is not less than ("0.0")
+Test Case '-[GuidanceTests.TAEMReferenceRecoveryTests testRejectedRecordedReferenceCannotCommandBallisticDive]' failed (0.339 seconds).
+Test Suite 'TAEMReferenceRecoveryTests' failed at 2026-11-02 17:59:11.212.
+	 Executed 2 tests, with 4 failures (0 unexpected) in 0.935 (0.935) seconds
+Test Suite 'TerminalFlightRegressionTests' started at 2026-11-02 17:59:11.212.
+Test Case '-[GuidanceTests.TerminalFlightRegressionTests testRecordedTAEMRecoveryDoesNotAuthorizeVerticalGlide]' started.
+Test Case '-[GuidanceTests.TerminalFlightRegressionTests testRecordedTAEMRecoveryDoesNotAuthorizeVerticalGlide]' passed (0.341 seconds).
+Test Suite 'TerminalFlightRegressionTests' passed at 2026-11-02 17:59:11.554.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.341 (0.341) seconds
+Test Suite 'GuidanceTests.xctest' failed at 2026-11-02 17:59:11.554.
+	 Executed 3 tests, with 4 failures (0 unexpected) in 1.276 (1.277) seconds
+Test Suite 'Selected tests' failed at 2026-11-02 17:59:11.554.
+	 Executed 3 tests, with 4 failures (0 unexpected) in 1.276 (1.278) seconds
+TAEM recorded handoff: planned range 73928.97769098848 m; glide -7.380402212525378 deg; force check bank
+Note: Some test targets reported failures:
+  - GuidanceTests (XCTest)

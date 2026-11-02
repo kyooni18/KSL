@@ -1,0 +1,60 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 1]
+[13 / 47] KSLGuidance
+[18 / 52] KSLGuidance
+[27 / 64] KSLGuidance
+[30 / 64] KSLGuidance
+[31 / 68] KSLGuidance
+[36 / 68] KSLGuidance
+[43 / 75] KSLRuntime
+[43 / 75] KSLGuidance
+[45 / 78] KSLSimulation
+[46 / 78] KSLGuidance
+[48 / 80] KSLGuidance
+[55 / 84] ksl-landing-product
+[57 / 88] KSLRuntime
+[69 / 100] KSLSimulation
+[71 / 113] KSLRuntime
+[75 / 114] KSLLanding
+[80 / 117] GuidanceTests-product
+[82 / 117] GuidanceTests-product
+[89 / 116] GuidanceTests-product
+[92 / 116] GuidanceTests-product
+[98 / 115] KSLLanding
+[98 / 115] GuidanceTests-product
+[101 / 119] IntegrationTests-product
+[105 / 122] SimulationTests-product
+[107 / 124] GuidanceTests-product
+[113 / 124] IntegrationTests-product
+[119 / 124] GuidanceTests-product
+[119 / 125] IntegrationTests-product
+[121 / 125] ksl-landing-product
+[125 / 127] KSLLanding
+[125 / 127] ksl-landing-product
+Build complete! (6.85초)
+Test Suite 'Selected tests' started at 2026-11-02 17:59:55.001.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 17:59:55.002.
+Test Suite 'TAEMReferenceRecoveryTests' started at 2026-11-02 17:59:55.002.
+Test Case '-[GuidanceTests.TAEMReferenceRecoveryTests testRecordedLiveJoinDoesNotMoveAfterCommitment]' started.
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/GuidanceTests/TAEMReferenceRecoveryTests.swift:48: error: -[GuidanceTests.TAEMReferenceRecoveryTests testRecordedLiveJoinDoesNotMoveAfterCommitment] : XCTAssertLessThan failed: ("0.0") is not less than ("0.0")
+Test Case '-[GuidanceTests.TAEMReferenceRecoveryTests testRecordedLiveJoinDoesNotMoveAfterCommitment]' failed (0.559 seconds).
+Test Case '-[GuidanceTests.TAEMReferenceRecoveryTests testRejectedRecordedReferenceCannotCommandBallisticDive]' started.
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/GuidanceTests/TAEMReferenceRecoveryTests.swift:19: error: -[GuidanceTests.TAEMReferenceRecoveryTests testRejectedRecordedReferenceCannotCommandBallisticDive] : XCTAssertEqual failed: ("Optional("bank")") is not equal to ("Optional("negativeNormalLift")")
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/GuidanceTests/TAEMReferenceRecoveryTests.swift:23: error: -[GuidanceTests.TAEMReferenceRecoveryTests testRejectedRecordedReferenceCannotCommandBallisticDive] : XCTAssertEqualWithAccuracy failed: ("0.4544539275433839") is not equal to ("0.20943951023931953") +/- ("1e-05")
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/GuidanceTests/TAEMReferenceRecoveryTests.swift:24: error: -[GuidanceTests.TAEMReferenceRecoveryTests testRejectedRecordedReferenceCannotCommandBallisticDive] : XCTAssertLessThan failed: ("0.0") is not less than ("0.0")
+Test Case '-[GuidanceTests.TAEMReferenceRecoveryTests testRejectedRecordedReferenceCannotCommandBallisticDive]' failed (0.337 seconds).
+Test Suite 'TAEMReferenceRecoveryTests' failed at 2026-11-02 17:59:55.898.
+	 Executed 2 tests, with 4 failures (0 unexpected) in 0.896 (0.896) seconds
+Test Suite 'TerminalFlightRegressionTests' started at 2026-11-02 17:59:55.898.
+Test Case '-[GuidanceTests.TerminalFlightRegressionTests testRecordedTAEMRecoveryDoesNotAuthorizeVerticalGlide]' started.
+Test Case '-[GuidanceTests.TerminalFlightRegressionTests testRecordedTAEMRecoveryDoesNotAuthorizeVerticalGlide]' passed (0.343 seconds).
+Test Suite 'TerminalFlightRegressionTests' passed at 2026-11-02 17:59:56.241.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.343 (0.343) seconds
+Test Suite 'GuidanceTests.xctest' failed at 2026-11-02 17:59:56.241.
+	 Executed 3 tests, with 4 failures (0 unexpected) in 1.239 (1.239) seconds
+Test Suite 'Selected tests' failed at 2026-11-02 17:59:56.241.
+	 Executed 3 tests, with 4 failures (0 unexpected) in 1.239 (1.240) seconds
+TAEM recorded handoff: planned range 73928.97769098848 m; glide -7.380402212525378 deg; force check bank
+Note: Some test targets reported failures:
+  - GuidanceTests (XCTest)

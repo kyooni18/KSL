@@ -1,0 +1,53 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 20] ksl-landing-product
+[13 / 47] KSLGuidance
+[18 / 52] KSLGuidance
+[27 / 64] KSLGuidance
+[35 / 68] KSLGuidance
+[36 / 68] KSLGuidance
+[36 / 68] KSLRuntime
+[43 / 75] KSLRuntime
+[43 / 75] KSLGuidance
+[43 / 75] KSLRuntime
+[46 / 78] KSLSimulation
+[53 / 82] GuidanceTests-product
+[57 / 88] KSLRuntime
+[57 / 88] KSLLanding
+[69 / 101] GuidanceTests-product
+[70 / 113] GuidanceTests-product
+[74 / 113] ksl-landing-product
+[80 / 115] KSLLanding
+[83 / 117] GuidanceTests-product
+[85 / 117] GuidanceTests-product
+[88 / 116] GuidanceTests-product
+[92 / 116] GuidanceTests-product
+[98 / 115] GuidanceTests-product
+[105 / 122] GuidanceTests-product
+[108 / 122] SimulationTests-product
+[109 / 124] SimulationTests-product
+[113 / 124] IntegrationTests-product
+[115 / 124] GuidanceTests-product
+[115 / 124] IntegrationTests-product
+[119 / 125] IntegrationTests-product
+[121 / 125] KSLLanding
+[125 / 127] ksl-landing-product
+Build complete! (6.45초)
+Test Suite 'Selected tests' started at 2026-11-02 18:00:18.733.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 18:00:18.734.
+Test Suite 'DessertTAEMRegressionTests' started at 2026-11-02 18:00:18.734.
+Test Case '-[GuidanceTests.DessertTAEMRegressionTests testRecordedBrakingDeficitDoesNotEraseAirborneTAEMReference]' started.
+Test Case '-[GuidanceTests.DessertTAEMRegressionTests testRecordedBrakingDeficitDoesNotEraseAirborneTAEMReference]' passed (0.535 seconds).
+Test Suite 'DessertTAEMRegressionTests' passed at 2026-11-02 18:00:19.270.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.535 (0.536) seconds
+Test Suite 'TerminalFlightRegressionTests' started at 2026-11-02 18:00:19.270.
+Test Case '-[GuidanceTests.TerminalFlightRegressionTests testRecordedTAEMRecoveryDoesNotAuthorizeVerticalGlide]' started.
+Test Case '-[GuidanceTests.TerminalFlightRegressionTests testRecordedTAEMRecoveryDoesNotAuthorizeVerticalGlide]' passed (0.346 seconds).
+Test Suite 'TerminalFlightRegressionTests' passed at 2026-11-02 18:00:19.616.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.346 (0.346) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 18:00:19.616.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.881 (0.882) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 18:00:19.616.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.881 (0.883) seconds
+Dessert recorded TAEM: TAEM phase=acquisition side=1 hacTurn=390.690535336292 deg rpred=86441.8890976955 m E=43579.402188364766 m EN=336761.9480328463 m EMIN=153695.62853097275 m href=23082.732601740816 m qref=3924.3360468167116 Pa qmin=3922.717529296875 Pa rf=3000.0 m growth=0.07599088773175333 m/rad2 downmoded=false descentFits=true descentCheck=trimLift referenceTracking=false; bank=15.42809984512422 deg; braking deficit=65.6163119886628 m
+TAEM recorded handoff: planned range 73928.97769098848 m; glide -7.380402212525378 deg; force check bank

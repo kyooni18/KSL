@@ -527,6 +527,10 @@ public final class LandingMissionController {
       phase: raw.phase, target: target, violations: raw.violations, planID: raw.planID,
       pathRemaining: raw.pathRemaining, diagnostic: raw.diagnostic)
     solution.violations += advisories
+    // The airborne NEP continues to steer TAEM even when the selected
+    // pavement cannot support its modeled rollout. Keep that deficit visible
+    // through Final without conflating recovery ownership with qualification.
+    solution.violations += nominalEnergyPoint?.point?.finalAssessment?.rolloutViolations ?? []
     solution.entry = raw.entry
     solution.approach = raw.approach
     if phase == .entry || phase == .acquisition || phase == .headingAlignment || phase == .abort {

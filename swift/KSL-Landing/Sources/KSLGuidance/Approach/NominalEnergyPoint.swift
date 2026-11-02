@@ -9,11 +9,15 @@ public struct NominalEnergyPoint: Codable, Sendable {
   public let flightPathAngle: Double
   public let airspeed: Double
   public let predictedTouchdownSpeed: Double
+  /// Full Final/rollout assessment. An airborne reference is not a landing
+  /// certificate; retain downstream advisories without erasing that reference.
+  public var finalAssessment: TerminalAssessment? = nil
 }
 
 /// Prices the existing outer-glide/flare geometry from the NEP to touchdown.
-/// A missing root or any model constraint violation is reported as nil rather
+/// A missing root or airborne constraint violation is reported as nil rather
 /// than silently replacing the answer with a configured nominal speed.
+/// Rollout constraints remain in finalAssessment and cannot veto steering.
 public struct NominalEnergyPointSolver {
   private let configuration: MissionConfiguration
   private let atmosphere: AtmosphericModelEngine
@@ -87,8 +91,8 @@ public struct NominalEnergyPointSolver {
       else { hi = mid }
     }
     let speed = (lo + hi) / 2, result = price(speed)
-    guard result.feasible else { return nil }
+    guard result.airborneFeasible == true else { return nil }
     return .init(along: along, height: reference.height, flightPathAngle: gamma,
-      airspeed: speed, predictedTouchdownSpeed: result.touchdownSpeed)
+      airspeed: speed, predictedTouchdownSpeed: result.touchdownSpeed, finalAssessment: result)
   }
 }
