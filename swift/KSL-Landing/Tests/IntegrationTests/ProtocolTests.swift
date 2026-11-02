@@ -27,6 +27,20 @@ private final class ScriptedTransport: RPCTransport {
 }
 
 struct ProtocolTests {
+  @Test func testAnchorOffsetIsBodyRelativeAndInvariantToWorldAttitude() {
+    let offset = Vector3(1, 2, 3)
+    let part = Quaternion.axisAngle(.init(0, 1, 0), angle: radians(15))
+    let vessel = Quaternion.axisAngle(.init(1, 0, 0), angle: radians(-20))
+    let world = Quaternion.axisAngle(.init(0, 0, 1), angle: radians(70))
+    let before = KRPCFrameConverter.anchorOffsetFRD(offset, partRotation: part, vesselRotation: vessel)
+    let after = KRPCFrameConverter.anchorOffsetFRD(offset,
+      partRotation: world*part, vesselRotation: world*vessel)
+    #expect((after-before).length < 1e-12)
+    #expect(abs(before.length-offset.length) < 1e-12)
+    #expect(KRPCFrameConverter.anchorOffsetFRD(offset, partRotation: .init(), vesselRotation: .init())
+      == .init(2, 1, 3))
+  }
+
   @Test func testSTSSurfaceRolesKeepPitchRollAndYawSeparate() {
     #expect(STSSurfaceAllocation.axes(partName: "benjee10.shuttle.elevon2") == [true, false, false])
     #expect(STSSurfaceAllocation.axes(partName: "benjee10_shuttle_elevon1") == [false, true, false])

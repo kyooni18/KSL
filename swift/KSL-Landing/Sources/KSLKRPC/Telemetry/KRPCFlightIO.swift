@@ -413,10 +413,14 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
     }
     let attitude = KRPCFrameConverter.attitude(raw: raw, at: position)
     let bodyQuaternion = try KRPCValue.decodeTuple(values[28], count: 4).map(KRPCValue.decodeDouble)
+    let vesselRotation = Quaternion(w: bodyQuaternion[3], x: bodyQuaternion[0],
+      y: bodyQuaternion[1], z: bodyQuaternion[2])
+    guard abs(vesselRotation.norm-1) < 0.01 else {
+      throw FlightError.invalidTelemetry("Invalid kRPC body-frame rotation")
+    }
     let rates = KRPCFrameConverter.bodyRate(
       rawAngularVelocity: try KRPCValue.decodeVector(values[27]),
-      rawBodyRotation: .init(w: bodyQuaternion[3], x: bodyQuaternion[0],
-                             y: bodyQuaternion[1], z: bodyQuaternion[2]))
+      rawBodyRotation: vesselRotation)
     let torque = try KRPCValue.decodeTuple(values[25], count: 2).map(KRPCValue.decodeVector)
     let inertia = try KRPCValue.decodeVector(values[26])
     func frd(_ v: Vector3) -> Vector3 { .init(v.y, v.x, v.z) }
@@ -537,9 +541,12 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
       centerOfMassEvidence: centerOfMass.isFinite ? .measured : .unavailable, measuredAt: t1)
     if centerOfMass.isFinite {
       let q = try KRPCValue.decodeTuple(values[anchorRotationIndex], count: 4).map(KRPCValue.decodeDouble)
-      let rotation = Quaternion(w: q[3], x: q[0], y: q[1], z: q[2]).normalized
-      let rawBody = rotation.rotate(centerOfMass)
-      physical.centerOfMassBodyFRD = Vector3(rawBody.y, rawBody.x, rawBody.z)
+      let rotation = Quaternion(w: q[3], x: q[0], y: q[1], z: q[2])
+      if abs(rotation.norm-1) < 0.01 {
+        physical.centerOfMassBodyFRD = KRPCFrameConverter.anchorOffsetFRD(centerOfMass,
+          partRotation: rotation.normalized, vesselRotation: vesselRotation)
+        physical.centerOfMassBodyFrame = .aircraftFRD
+      } else { telemetryIssues.append("Invalid anchor rotation; body-relative center of mass unavailable") }
     }
     if !centerOfMass.isFinite { telemetryIssues.append("Invalid center-of-mass report: \(centerOfMass)") }
     if let tensorIndex {

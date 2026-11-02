@@ -8,6 +8,14 @@ public enum KRPCFrameConverter {
     let rawBody = rawBodyRotation.conjugate.rotate(rawAngularVelocity)
     return .init(-rawBody.y, -rawBody.x, -rawBody.z)
   }
+  /// A part-relative CoM offset is a polar vector. Part_Rotation and
+  /// Vessel_Rotation must refer to the SAME external frame; remove the
+  /// vessel attitude before permuting its (right, forward, down) axes.
+  public static func anchorOffsetFRD(_ offset: Vector3, partRotation: Quaternion,
+                                    vesselRotation: Quaternion) -> Vector3 {
+    let body = vesselRotation.conjugate.rotate(partRotation.rotate(offset))
+    return .init(body.y, body.x, body.z)
+  }
   /// kRPC local surface coordinates are (up, north, east), a left-handed basis.
   public static func surfaceVector(_ raw: Vector3, at position: Vector3) -> Vector3 {
     let local = LocalFrame(position: position)

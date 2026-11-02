@@ -1,0 +1,92 @@
+Building for debugging...
+[Computing dependencies]
+[3 / 58]
+[4 / 59] KSLCore
+[6 / 61] KSLCore
+[14 / 69] KSLCore
+[21 / 77] KSLDiagnostics
+[33 / 90] KSLControl
+[43 / 98] KSLControl
+[53 / 111] KSLPhysics
+[54 / 111] KSLPhysics
+[57 / 117] KSLPhysics
+[62 / 117] KSLPhysics
+[72 / 123] KSLDiagnostics
+[72 / 123] CoreTests-product
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/CoreTests/RunwayApproachSelectorTests.swift:19:9: warning: variable 'c' was never mutated; consider changing to 'let' constant
+17 |   }
+18 |   func testAutomaticSelectionPrefersInboundDirectionAndIsSymmetric() {
+19 |     var c = MissionConfiguration()
+   |         `- warning: variable 'c' was never mutated; consider changing to 'let' constant
+20 |     let f = RunwayFrame(runway: c.runway, planet: c.planet)
+21 |     // A vessel west of KSC heading east toward 09, but opposite to 27.
+
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/CoreTests/RunwayApproachSelectorTests.swift:51:9: warning: variable 'c' was never mutated; consider changing to 'let' constant
+49 | 
+50 |   func testSelectedRunwayIsConsistentWithMeasuredVelocityFrames() {
+51 |     var c = MissionConfiguration()
+   |         `- warning: variable 'c' was never mutated; consider changing to 'let' constant
+52 |     let frame = RunwayFrame(runway: c.runway, planet: c.planet)
+53 |     let p = frame.position(along: -160_000, cross: 65_000, height: 35_000)
+[83 / 135] KSLKRPC
+[86 / 148] KSLPhysics
+[91 / 148] KSLKRPC
+[98 / 151] KSLKRPC
+[101 / 151] KSLGuidance
+[102 / 151] KSLGuidance
+[105 / 151] KSLGuidance
+[109 / 156] CoreTests-product
+[112 / 154] KSLPhysics-product
+[115 / 167] KSLRuntime
+[116 / 167] KSLRuntime
+[118 / 180] ControlTests-product
+[120 / 180] PhysicsTests-product
+[126 / 180] KSLRuntime
+[129 / 182] ControlTests-product
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Sources/KSLGuidance/Entry/EntryDragReference.swift:60:28: warning: immutable value 'e' was never used; consider replacing with '_' or removing it [#NoUsage]
+ 58 |                referenceRangeScale: Double = 1,
+ 59 |                objective: EntryCaptureObjective, maximumAlpha: Double) -> EntryDiagnostics {
+ 60 |     let c = configuration, e = c.entrySettings, a = s.aerodynamics
+    |                            `- warning: immutable value 'e' was never used; consider replacing with '_' or removing it [#NoUsage]
+ 61 |     let targetAltitude = objective.altitude, targetSpeed = objective.speed
+ 62 |     let speed = a.airspeed, height = s.position.length - c.planet.radius
+
+[#NoUsage]: <https://docs.swift.org/compiler/documentation/diagnostics/no-usage>
+[135 / 185] KSLRuntime
+[140 / 190] KSLSimulation
+[145 / 190] KSLSimulation
+[151 / 192] ControlTests-product
+[156 / 192] ControlTests-product
+[161 / 191] KSLSimulation
+[168 / 211] ksl-landing-product
+[169 / 211] ksl-landing-product
+[174 / 213] KSLLanding
+[175 / 227] KSLLanding
+[180 / 227] KSLRuntime
+[183 / 229] KSLLanding
+[189 / 229] GuidanceTests-product
+[192 / 229] GuidanceTests-product
+[194 / 229] GuidanceTests-product
+[198 / 229] CoreTests-product
+[204 / 227] KSLRuntime
+[209 / 226] PhysicsTests-product
+[209 / 227] GuidanceTests-product
+[215 / 232] ControlTests-product
+[222 / 243] SimulationTests-product
+[227 / 243] SimulationTests-product
+[231 / 245] GuidanceTests-product
+[234 / 245] SimulationTests-product
+[239 / 249] GuidanceTests-product
+[241 / 250] IntegrationTests-product
+[243 / 250] IntegrationTests-product
+[245 / 253] ksl-landing-product
+[249 / 253] KSLLanding
+Build complete! (8.94초)
+􀟈  Test run started.
+􀄵  Testing Library Version: 2067.1
+􀄵  Target Platform: arm64e-apple-macos14.0
+􀟈  Suite ProtocolTests started.
+􀟈  Test testAnchorOffsetIsBodyRelativeAndInvariantToWorldAttitude() started.
+􁁛  Test testAnchorOffsetIsBodyRelativeAndInvariantToWorldAttitude() passed after 0.001 seconds.
+􁁛  Suite ProtocolTests passed after 0.001 seconds.
+􁁛  Test run with 1 test in 1 suite passed after 0.001 seconds.
