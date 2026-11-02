@@ -104,15 +104,15 @@ extension TAEMCommandSearch {
       throw FlightError.invalidConfiguration("Command refinement requires explicit finite positive search steps")
     }
     let c = configuration
-    // Only search inside real configured attitude bounds and declared time
-    // coverage. Clipping a request is not allowed to produce duplicate polls.
+    // Only search inside real configured attitude bounds. Event durations are
+    // ceilings, not required flight times; propagation enforces time coverage.
     guard center.segments.allSatisfy({ segment in
       let t = segment.command.target
       return segment.duration.isFinite && segment.duration > 0
         && t.angleOfAttack >= c.vehicle.minimumAngleOfAttack && t.angleOfAttack <= c.vehicle.maximumAngleOfAttack
         && abs(t.bank) <= c.vehicle.maximumBank
-    }), center.segments.reduce(0, { $0+$1.duration }) <= c.guidance.maximumPredictionDuration else {
-      throw FlightError.invalidConfiguration("Refinement center lies outside configured command/search coverage")
+    }) else {
+      throw FlightError.invalidConfiguration("Refinement center has invalid duration or lies outside configured attitude bounds")
     }
     // Each candidate differs in precisely one search coordinate. Other
     // commands/device requests/phase metadata are inherited without reset.
@@ -136,7 +136,6 @@ extension TAEMCommandSearch {
           guard duration.isFinite, duration > 0,
             command.target != old.command.target || duration != old.duration else { continue }
           segments[index] = .init(duration: duration, command: command, untilCourseChange: old.untilCourseChange)
-          guard segments.reduce(0, { $0+$1.duration }) <= c.guidance.maximumPredictionDuration else { continue }
           let id = "\(center.id)/poll/\(index)/\(coordinate)/\(sign < 0 ? "minus" : "plus")"
           candidates.append(.init(id: id, topology: center.topology, segments: segments))
         }
