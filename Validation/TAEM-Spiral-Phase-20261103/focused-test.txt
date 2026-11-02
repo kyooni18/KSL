@@ -1,0 +1,30 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 677]
+[Planning deferred tasks]
+[6 / 72] KSL-Landing_KSLPhysics
+[6 / 70]
+[18 / 36] SimulationTests-product
+[31 / 65] GuidanceTests-product
+[34 / 65] SimulationTests-product
+[41 / 65] SimulationTests-product
+[44 / 65] GuidanceTests-product
+[45 / 65] IntegrationTests-product
+[49 / 65] GuidanceTests-product
+[58 / 67] IntegrationTests-product
+[60 / 69] GuidanceTests-product
+[62 / 69] GuidanceTests-product
+[64 / 69] IntegrationTests-product
+[66 / 70] GuidanceTests-product
+Build complete! (3.08초)
+Test Suite 'Selected tests' started at 2026-11-03 04:09:16.864.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-03 04:09:16.865.
+Test Suite 'SpiralPhaseHistoryTests' started at 2026-11-03 04:09:16.865.
+Test Case '-[GuidanceTests.SpiralPhaseHistoryTests testReprojectionPreservesMeasuredWorkAndExplicitWindingWithoutFreeSenseSwitch]' started.
+Test Case '-[GuidanceTests.SpiralPhaseHistoryTests testReprojectionPreservesMeasuredWorkAndExplicitWindingWithoutFreeSenseSwitch]' passed (0.001 seconds).
+Test Suite 'SpiralPhaseHistoryTests' passed at 2026-11-03 04:09:16.867.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-03 04:09:16.867.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 04:09:16.867.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
