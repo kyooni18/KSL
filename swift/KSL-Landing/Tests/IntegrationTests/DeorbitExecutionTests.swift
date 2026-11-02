@@ -89,7 +89,7 @@ final class DeorbitExecutionTests: XCTestCase {
     XCTAssertLessThan(nearTAEM, oldWindow)
     XCTAssertLessThan(nearTAEM, overspeed)
     XCTAssertLessThan(nearTAEM, unsafe)
-    XCTAssertEqual(nearTAEM.captureMiss, hypot(4_300, 11_200), accuracy: 1)
+    XCTAssertEqual(nearTAEM.captureMiss, hypot(-3_700-c.taemInterfaceAlong, 11_200), accuracy: 1)
     let crossingTooLow = rank(along: -8_000, cross: 0, height: 20_000)
     XCTAssertLessThan(nearTAEM, crossingTooLow)
   }

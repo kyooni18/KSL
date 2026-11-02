@@ -1,0 +1,64 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 35] KSLControl
+[8 / 38] CoreTests-product
+[8 / 36] KSLGuidance
+[12 / 40] KSLGuidance
+[17 / 45] KSLGuidance
+[23 / 51] KSLGuidance
+[26 / 54] KSLRuntime
+[30 / 53] KSLGuidance-product
+[35 / 55] KSLRuntime-product
+[37 / 57] GuidanceTests-product
+[51 / 66] PhysicsTests-product
+[51 / 66] GuidanceTests-product
+[51 / 66] KSLLanding
+[57 / 70] IntegrationTests-product
+[61 / 74] GuidanceTests-product
+[71 / 84] SimulationTests-product
+[76 / 86] IntegrationTests-product
+[78 / 87] IntegrationTests-product
+[81 / 86] ksl-landing-product
+[85 / 87] ksl-landing-product
+[85 / 87] IntegrationTests-product
+[89 / 89] ksl-landing-product
+Build complete! (5.39초)
+Test Suite 'Selected tests' started at 2026-11-02 22:57:16.021.
+Test Suite 'IntegrationTests.xctest' started at 2026-11-02 22:57:16.022.
+Test Suite 'DeorbitExecutionTests' started at 2026-11-02 22:57:16.022.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testFailedDeorbitCandidatesAreRankedByPhysicalMM305EntryNotSeventyKilometreMiss]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testFailedDeorbitCandidatesAreRankedByPhysicalMM305EntryNotSeventyKilometreMiss]' passed (0.001 seconds).
+Test Suite 'DeorbitExecutionTests' passed at 2026-11-02 22:57:16.023.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'IntegrationTests.xctest' passed at 2026-11-02 22:57:16.023.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 22:57:16.023.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'Selected tests' started at 2026-11-02 22:57:16.126.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 22:57:16.127.
+Test Suite 'EntryRangeTruthRegressionTests' started at 2026-11-02 22:57:16.127.
+Test Case '-[GuidanceTests.EntryRangeTruthRegressionTests testRecordedEntryReferenceSolvesInterfaceLocationBeforeSpendingEnergy]' started.
+Test Case '-[GuidanceTests.EntryRangeTruthRegressionTests testRecordedEntryReferenceSolvesInterfaceLocationBeforeSpendingEnergy]' passed (0.097 seconds).
+Test Suite 'EntryRangeTruthRegressionTests' passed at 2026-11-02 22:57:16.225.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.097 (0.097) seconds
+Test Suite 'GuidanceTests' started at 2026-11-02 22:57:16.225.
+Test Case '-[GuidanceTests.GuidanceTests testHighCloseCaptureObjectiveProducesAnAdmissibleHAC]' started.
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/GuidanceTests/GuidanceTests.swift:208: error: -[GuidanceTests.GuidanceTests testHighCloseCaptureObjectiveProducesAnAdmissibleHAC] : XCTUnwrap failed: expected non-nil value of type "MissionPlanningRequest"
+Test Case '-[GuidanceTests.GuidanceTests testHighCloseCaptureObjectiveProducesAnAdmissibleHAC]' failed (0.399 seconds).
+Test Suite 'GuidanceTests' failed at 2026-11-02 22:57:16.624.
+	 Executed 1 test, with 1 failure (0 unexpected) in 0.399 (0.399) seconds
+Test Suite 'RecordedRunway36RecoveryTests' started at 2026-11-02 22:57:16.624.
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testNoTrimSupportedTurnCannotCommitLongestOverheadAsFeasible]' started.
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testNoTrimSupportedTurnCannotCommitLongestOverheadAsFeasible]' passed (0.344 seconds).
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testUnbracketedReferencePricesTheCompleteArrival]' started.
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testUnbracketedReferencePricesTheCompleteArrival]' passed (0.009 seconds).
+Test Suite 'RecordedRunway36RecoveryTests' passed at 2026-11-02 22:57:16.977.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.353 (0.353) seconds
+Test Suite 'GuidanceTests.xctest' failed at 2026-11-02 22:57:16.977.
+	 Executed 4 tests, with 1 failure (0 unexpected) in 0.849 (0.850) seconds
+Test Suite 'Selected tests' failed at 2026-11-02 22:57:16.977.
+	 Executed 4 tests, with 1 failure (0 unexpected) in 0.849 (0.851) seconds
+RECORDED_RECOVERY_TAEM TAEMStatus(phase: KSLGuidance.TAEMPhase.acquisition, side: 1, remainingTurn: 3.150368522479819, range: 48921.97777284276, energyHeight: 52282.283253755195, nominalEnergy: 362589.06878241274, minimumEnergy: 201023.57470208625, referenceHeight: 25859.6581804625, referenceDynamicPressure: 2958.8444658018234, minimumDynamicPressure: 0.0, finalRadius: 4226.164936240855, growth: 0.07599088773175333, downmoded: false, attainableAcquisitionRadius: nil, acquisitionTurnAvailable: Optional(false), insufficientEnergy: true, descentPlanFits: false, descentCheckFailure: Optional("acquisitionTurnUnavailable"), predictedNEPEnergy: nil, referenceTracking: Optional(false)) target GuidanceTarget(angleOfAttack: 0.45445392755624564, bank: 0.0, desiredSpeed: 735.5099315810294, desiredHeight: 26680.6081804625, desiredFlightPath: -0.09873317204024666, gearDown: false, speedbrakeFraction: nil)
+RECORDED_RECOVERY_RANGE EntryRangeReference(createdAt: 216350.05094672475, blend: 1.0, cross: 96.88839729272058, headingError: 1.4813758461824587, captureResidual: 69.19324818198221, along: 34111.41855250991, altitude: 27113.996489198296, speed: 729.8305649874851, bracketed: false, reachedEnergy: true)
+Note: Some test targets reported failures:
+  - GuidanceTests (XCTest)

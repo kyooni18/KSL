@@ -40,8 +40,7 @@ public struct EntryConfiguration: Codable, Sendable, Equatable {
 // Deliver beside the compact HAC, rather than at the outer search radius.
 extension MissionConfiguration {
   public var terminalCaptureRange: Double {
-    min(entrySettings.captureRange, guidance.finalDistance
-      + 2*guidance.minimumHACRadius + entrySettings.handoffRadius)
+    entrySettings.captureRange
   }
   /// Runway distance of MM304's delivery: the configured TAEM interface
   /// (guidance.taemInterfaceRange). Shuttle TAEM starts there on Mach and
@@ -56,11 +55,11 @@ extension MissionConfiguration {
   /// MM304's irrevocable handoff deadline: the floor of its energy window.
   /// The nominal handoff is the TAEM interface Mach; this only bounds it.
   public var mm304HandoffDeadlineAltitude: Double { mm304DeliveryMinimumAltitude }
-  /// Runway-frame along coordinate of the TAEM interface on the configured
-  /// handoff crossrange. Single target for MM304, the deorbit window ranking
-  /// and runway selection.
+  /// Before-threshold delivery aim on the configured capture circle. This
+  /// is not the outer TAEM search radius and never restricts MM305 search.
+  /// Shared by MM304, deorbit window ranking and runway selection.
   public var taemInterfaceAlong: Double {
-    let r = taemInterfaceRange, cross = entrySettings.handoffCross
+    let r = terminalCaptureRange, cross = entrySettings.handoffCross
     return -sqrt(max(0, r*r - cross*cross))
   }
 }

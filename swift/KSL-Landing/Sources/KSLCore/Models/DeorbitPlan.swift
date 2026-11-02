@@ -59,6 +59,24 @@ public struct DeorbitStressCase: Codable, Sendable {
   }
 }
 
+/// Downstream MM304 evidence retained across runway comparisons. No landing certificate.
+public struct DeorbitEntryScreen: Codable, Sendable {
+  public let feasible: Bool
+  public let altitudeRejected: Bool
+  public let machRejected: Bool
+  public let captureMiss: Double
+  public let terminalAlong: Double
+  public let terminalCross: Double
+  public let terminalAltitude: Double
+  public let terminalMach: Double
+  public init(feasible: Bool, altitudeRejected: Bool, machRejected: Bool, captureMiss: Double,
+    terminalAlong: Double, terminalCross: Double, terminalAltitude: Double, terminalMach: Double) {
+    self.feasible=feasible;self.altitudeRejected=altitudeRejected;self.machRejected=machRejected
+    self.captureMiss=captureMiss;self.terminalAlong=terminalAlong;self.terminalCross=terminalCross
+    self.terminalAltitude=terminalAltitude;self.terminalMach=terminalMach
+  }
+}
+
 public struct DeorbitPlan: Codable, Sendable {
   public let identifier: String
   public let createdAt: Double
@@ -69,6 +87,7 @@ public struct DeorbitPlan: Codable, Sendable {
   public let cases: [DeorbitStressCase]
   public let modelLimitations: [String]
   public let evaluatedWindows: Int
+  public var entryScreen: DeorbitEntryScreen? = nil
   public var passedCases: Int { cases.filter(\.passed).count }
   public var unsafeCases: Int { cases.filter(\.hardUnsafe).count }
   public var nominalPassed: Bool { cases.first(where: { $0.index == 0 })?.passed == true }
@@ -91,10 +110,12 @@ public struct DeorbitPlan: Codable, Sendable {
   public var permitsExplicitReducedAssurance: Bool { hasExecutableEntryWindow }
   public init(identifier: String = UUID().uuidString, source: VehicleState,
     configuration: MissionConfiguration, propulsion: PropulsionTelemetry, window: DeorbitWindow,
-    cases: [DeorbitStressCase], modelLimitations: [String], evaluatedWindows: Int) {
+    cases: [DeorbitStressCase], modelLimitations: [String], evaluatedWindows: Int,
+    entryScreen: DeorbitEntryScreen? = nil) {
     self.identifier = identifier; createdAt = source.time; self.source = source
     self.configuration = configuration; self.propulsion = propulsion; self.window = window
     self.cases = cases; self.modelLimitations = modelLimitations; self.evaluatedWindows = evaluatedWindows
+    self.entryScreen = entryScreen
   }
   public func authorize(identifier: String, reducedAssurance: Bool) throws {
     guard identifier == self.identifier else { throw FlightError.invalidCommand("Plan identity differs from the reviewed plan") }

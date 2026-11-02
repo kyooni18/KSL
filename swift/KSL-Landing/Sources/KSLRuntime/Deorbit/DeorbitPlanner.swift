@@ -92,6 +92,12 @@ public actor DeorbitPlanner {
       if x.unsafeCases != y.unsafeCases { return x.unsafeCases < y.unsafeCases }
       if x.nominalPassed != y.nominalPassed { return x.nominalPassed }
       if x.passedCases != y.passedCases { return x.passedCases > y.passedCases }
+      if let a=x.entryScreen, let b=y.entryScreen {
+        if a.feasible != b.feasible {return a.feasible}
+        if a.altitudeRejected != b.altitudeRejected {return !a.altitudeRejected}
+        if a.machRejected != b.machRejected {return !a.machRejected}
+        if a.captureMiss != b.captureMiss {return a.captureMiss < b.captureMiss}
+      }
       let a = x.window.entryInterface.planetFixed(planet: x.configuration.planet,
         attitude: .init())
       let b = y.window.entryInterface.planetFixed(planet: y.configuration.planet,
@@ -318,6 +324,14 @@ public actor DeorbitPlanner {
     guard let window = selected else {
       throw FlightError.infeasible("No candidate completed native trajectory evaluation")
     }
+    let forecast=entryForecasts.first { $0.window.burnStart==window.burnStart
+      && $0.window.normalAngle==window.normalAngle && $0.window.normalDeltaV==window.normalDeltaV }!.forecast
+    let rank=Self.infeasibleApproachRank(track:forecast.track,hardUnsafe:false,
+      screenFeasible:forecast.feasible,violationCount:forecast.violations.count,entryMiss:window.miss,
+      configuration:configuration,terminalSpeed:screen.terminalSpeed(at:window.entryInterface.time))
+    let retained=DeorbitEntryScreen(feasible:forecast.feasible,altitudeRejected:rank.altitudeRejected,
+      machRejected:rank.machRejected,captureMiss:rank.captureMiss,terminalAlong:forecast.terminalAlong,
+      terminalCross:forecast.terminalCross,terminalAltitude:forecast.terminalAltitude,terminalMach:forecast.terminalMach)
     return .init(source: source, configuration: configuration, propulsion: propulsion, window: window,
       cases: selectedCases, modelLimitations: [
         "The inherited STS-N subsonic pitch fit does not validate STS entry moments.",
@@ -325,7 +339,7 @@ public actor DeorbitPlanner {
         "Ground gear/tyre dynamics are provisional; no native KSP rollout qualification has been recorded.",
         "Nominal continuation uses default MM304 feedback after its initial screened window; live asynchronous MM304 plan acceptance/freshness remains unvalidated.",
         "Offline terminal planning assumes completion at the requested simulation epoch."
-      ], evaluatedWindows: search.evaluated)
+      ], evaluatedWindows: search.evaluated, entryScreen:retained)
   }
   struct CaseRequest: Sendable {
     let window: DeorbitWindow

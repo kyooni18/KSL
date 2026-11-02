@@ -26,6 +26,10 @@ public struct TAEMStatus: Codable, Sendable {
   public var growth = 0.0
   /// Latched one-time low-energy downmode to the shorter HAC (OHALRT).
   public var downmoded = false
+  /// Current conservative support-preserving acquisition radius; nil means
+  /// no such turn exists at this q/trim state, not a clipped search radius.
+  public var attainableAcquisitionRadius: Double?
+  public var acquisitionTurnAvailable: Bool?
   public var insufficientEnergy = false
   public var descentPlanFits = false
   /// Necessary same-profile force check; not a flight certificate.
@@ -456,17 +460,32 @@ final class TAEMGuidanceEngine {
       /// Acquisition turn flown first, at the far end of the track, and its load.
       var arc = 0.0
       var arcLoad = 1.0
+      var acquisitionAvailable = true
     }
-    let acquisitionRadius = turnRadius(speed: vh, gravity: g)
+    let support = max(0, (g-state.horizontalSpeed*state.horizontalSpeed/state.position.length)
+      * cos(state.flightPathAngle))
+    let maximumLift = min(v.maximumLoadFactor*9.80665,
+      aero.liftSolution(acceleration:0,mass:state.mass,dynamicPressure:a.dynamicPressure,
+        mach:a.mach,minimumAlpha:max(0,v.minimumAngleOfAttack),maximumAlpha:ceiling,
+        gear:state.systems.gearDown).maximumAcceleration*liftGain*(1-v.aerodynamicUncertainty))
+    let lateralAuthority = NormalForceEnvelope(maximumLift:maximumLift,maximumBank:v.maximumBank)
+      .lateralAuthority(reserving:support)
+    let acquisitionRadius = lateralAuthority > 0 ? vh*vh/lateralAuthority : Double.infinity
+    status.attainableAcquisitionRadius = acquisitionRadius.isFinite ? acquisitionRadius:nil
     func track(side: Int, turn: Double) -> Track? {
       guard let hac = spiral(side: side, finalRadius: rf, growth: growth, turn: turn) else { return nil }
       let entry = hac.sample(remainingAngle: turn).position
       let offset = entry - point
       let bearing = atan2(velocity.cross(offset), velocity.dot(offset))
-      let leg = Self.acquisitionLeg(distance: offset.length, bearing: bearing, radius: acquisitionRadius,
-        speed: vh, gravity: g)
-      return .init(side: side, turn: turn, range: leg.length + Self.spiralLength(hac, to: turn),
-        tangent: entry, hac: hac, arc: leg.arc, arcLoad: leg.load)
+      // With no support-preserving turn, retain the straight-distance lower
+      // bound as an explicitly unqualified recovery. Infinity must not enter
+      // Dubins arithmetic, nor masquerade as a feasible zero-radius turn.
+      let leg = acquisitionRadius.isFinite
+        ? Self.acquisitionLeg(distance:offset.length,bearing:bearing,radius:acquisitionRadius,speed:vh,gravity:g)
+        : (length:offset.length,arc:0.0,load:1.0)
+      return .init(side:side,turn:turn,range:leg.length+Self.spiralLength(hac,to:turn),
+        tangent:entry,hac:hac,arc:leg.arc,arcLoad:leg.load,
+        acquisitionAvailable:acquisitionRadius.isFinite)
     }
     // Absent a separate mission descent envelope, continue the configured
     // Final glide envelope upstream. nil must not authorize a vertical HAC.
@@ -488,10 +507,13 @@ final class TAEMGuidanceEngine {
       for side in [1,-1] {
         guard let probe=spiral(side:side,finalRadius:rf,growth:growth,turn:maximumTurn) else {continue}
         for turn in Self.tangencies(of:probe,from:point,maximumTurn:maximumTurn) {
-          if let t=track(side:side,turn:turn),t.range<=c.guidance.maximumPathLength {result.append(t)}
+          if let t=track(side:side,turn:turn) {result.append(t)}
         }
       }
-      return result
+      let withinEnvelope=result.filter {$0.range<=c.guidance.maximumPathLength}
+      // A physically required radius may exceed the configured search
+      // envelope. Keep recovery geometry and report it; never clip the turn.
+      return withinEnvelope.isEmpty ? result:withinEnvelope
     }
     var candidates=tracks()
     if lines == nil, !candidates.contains(where:{descentPlan(for:$0).fits(maximumGlide:glideLimit)}) {
@@ -551,6 +573,12 @@ final class TAEMGuidanceEngine {
     }
 
     func check(_ candidate: Track, profile: TAEMDescentReference) -> DescentCheck {
+      guard candidate.acquisitionAvailable else {
+        return .init(energy:nil,failure:"acquisitionTurnUnavailable")
+      }
+      guard candidate.range<=c.guidance.maximumPathLength else {
+        return .init(energy:nil,failure:"acquisitionOutsideSearchEnvelope")
+      }
       let curvature = sqrt(max(0, candidate.arcLoad*candidate.arcLoad-1))*g/(vh*vh)
       return checkDescent(state: state, profile: profile, range: candidate.range,
         hac: candidate.hac, turn: candidate.turn, acquisitionArc: candidate.arc,
@@ -587,8 +615,14 @@ final class TAEMGuidanceEngine {
         }
       }
       // No admissible candidate is not permission to abandon control or
-      // claim a cheaper trajectory. Keep the overhead recovery unqualified.
-      if selected == nil { selected = options.first; descentCheck = nil }
+      // claim a cheaper feasible trajectory. Keep recovery unqualified.
+      if selected == nil {
+        // Every complete price failed. Compare all on the same geometric
+        // lower bound, rather than choosing the longest unpriced overhead
+        // and requiring a fully feasible alternative before shedding it.
+        selected = candidates.min {$0.range < $1.range}
+        descentCheck = nil
+      }
       captureTurn=selected!.turn
       descent=descentPlan(for:selected!)
       refreshLines(for: selected!)
@@ -635,6 +669,7 @@ final class TAEMGuidanceEngine {
     }
     status.descentCheckFailure = descentCheck?.result.failure
     status.predictedNEPEnergy = descentCheck?.result.energy
+    status.acquisitionTurnAvailable = t.acquisitionAvailable
     status.side = t.side; status.remainingTurn = t.turn; status.range = t.range
     status.finalRadius = rf; status.growth = growth
     if descent == nil {descent=descentPlan(for:t)}
@@ -679,8 +714,6 @@ final class TAEMGuidanceEngine {
     }
 
     // Lateral (TGPHIC), as lateral acceleration.
-    let support = max(0, (g - state.horizontalSpeed * state.horizontalSpeed / state.position.length)
-      * cos(state.flightPathAngle))
     var lateral: Double
     switch status.phase {
     case .sTurn:
@@ -822,9 +855,6 @@ final class TAEMGuidanceEngine {
 
     // One lift vector: vertical first, lateral from what remains.
     let floorAlpha = min(ceiling, max(0, v.minimumAngleOfAttack))
-    let maximumLift = min(v.maximumLoadFactor * 9.80665, aero.liftSolution(acceleration: 0, mass: state.mass,
-      dynamicPressure: a.dynamicPressure, mach: a.mach, minimumAlpha: floorAlpha, maximumAlpha: ceiling,
-      gear: state.systems.gearDown).maximumAcceleration * liftGain * (1 - v.aerodynamicUncertainty))
     let cannotHoldReference = referenceUsable && vertical > attainableNormal && p.height < targetHeight
       && a.dynamicPressure < frontQ
     // Recovery uses the same jointly attainable force cone as tracking.

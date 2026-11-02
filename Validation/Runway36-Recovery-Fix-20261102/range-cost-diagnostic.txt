@@ -1,0 +1,26 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 1]
+[2 / 27] KSLGuidance
+[4 / 29] KSLGuidance
+[15 / 19] ksl-landing-product
+[15 / 19] GuidanceTests-product
+[22 / 23] ksl-landing-product
+Build complete! (1.96초)
+Test Suite 'Selected tests' started at 2026-11-02 22:54:26.196.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 22:54:26.197.
+Test Suite 'RecordedRunway36RecoveryTests' started at 2026-11-02 22:54:26.197.
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testUnbracketedReferencePricesCrossrangeAndTurnWork]' started.
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/GuidanceTests/RecordedRunway36RecoveryTests.swift:30: error: -[GuidanceTests.RecordedRunway36RecoveryTests testUnbracketedReferencePricesCrossrangeAndTurnWork] : XCTAssertGreaterThan failed: ("0.0") is not greater than ("0.0") - Along-only fallback previously selected best glide
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/GuidanceTests/RecordedRunway36RecoveryTests.swift:31: error: -[GuidanceTests.RecordedRunway36RecoveryTests testUnbracketedReferencePricesCrossrangeAndTurnWork] : XCTAssertLessThan failed: ("37902.85201511519") is not less than ("37902.85201511519") - A 1.46 km along improvement must not discard 37.8 km of crossrange improvement
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testUnbracketedReferencePricesCrossrangeAndTurnWork]' failed (0.179 seconds).
+Test Suite 'RecordedRunway36RecoveryTests' failed at 2026-11-02 22:54:26.376.
+	 Executed 1 test, with 2 failures (0 unexpected) in 0.179 (0.179) seconds
+Test Suite 'GuidanceTests.xctest' failed at 2026-11-02 22:54:26.376.
+	 Executed 1 test, with 2 failures (0 unexpected) in 0.179 (0.179) seconds
+Test Suite 'Selected tests' failed at 2026-11-02 22:54:26.376.
+	 Executed 1 test, with 2 failures (0 unexpected) in 0.179 (0.180) seconds
+ENTRY_RANGE_ENDPOINTS EntryRangeReference(createdAt: 216350.05094672475, blend: 0.0, cross: 37902.85201511519, headingError: 1.607846202083966, recoveryDistance: 191029.46142332908, along: 32649.49382003457, altitude: 25361.163329996052, speed: 750.9993292890465, bracketed: false, reachedEnergy: true) EntryRangeReference(createdAt: 216350.05094672475, blend: 1.0, cross: 96.88839729272058, headingError: 1.4813758461824587, recoveryDistance: 208094.7749999931, along: 34111.41855250991, altitude: 27113.996489198296, speed: 729.8305649874851, bracketed: false, reachedEnergy: true)
+RECORDED_RECOVERY_RANGE EntryRangeReference(createdAt: 216350.05094672475, blend: 0.0, cross: 37902.85201511519, headingError: 1.607846202083966, recoveryDistance: 191029.46142332908, along: 32649.49382003457, altitude: 25361.163329996052, speed: 750.9993292890465, bracketed: false, reachedEnergy: true)
+Note: Some test targets reported failures:
+  - GuidanceTests (XCTest)

@@ -1,0 +1,39 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 1]
+[2 / 8] GuidanceTests-product
+[5 / 11] GuidanceTests-product
+[8 / 12] GuidanceTests-product
+[10 / 12] GuidanceTests-product
+Build complete! (1.95초)
+Test Suite 'Selected tests' started at 2026-11-02 22:58:24.554.
+Test Suite 'IntegrationTests.xctest' started at 2026-11-02 22:58:24.555.
+Test Suite 'DeorbitExecutionTests' started at 2026-11-02 22:58:24.555.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testFailedDeorbitCandidatesAreRankedByPhysicalMM305EntryNotSeventyKilometreMiss]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testFailedDeorbitCandidatesAreRankedByPhysicalMM305EntryNotSeventyKilometreMiss]' passed (0.004 seconds).
+Test Suite 'DeorbitExecutionTests' passed at 2026-11-02 22:58:24.559.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'IntegrationTests.xctest' passed at 2026-11-02 22:58:24.559.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 22:58:24.559.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.004 (0.005) seconds
+Test Suite 'Selected tests' started at 2026-11-02 22:58:24.660.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 22:58:24.661.
+Test Suite 'EntryRangeTruthRegressionTests' started at 2026-11-02 22:58:24.661.
+Test Case '-[GuidanceTests.EntryRangeTruthRegressionTests testRecordedEntryReferenceSolvesInterfaceLocationBeforeSpendingEnergy]' started.
+Test Case '-[GuidanceTests.EntryRangeTruthRegressionTests testRecordedEntryReferenceSolvesInterfaceLocationBeforeSpendingEnergy]' passed (0.097 seconds).
+Test Suite 'EntryRangeTruthRegressionTests' passed at 2026-11-02 22:58:24.759.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.097 (0.098) seconds
+Test Suite 'RecordedRunway36RecoveryTests' started at 2026-11-02 22:58:24.759.
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testNoTrimSupportedTurnCannotCommitLongestOverheadAsFeasible]' started.
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testNoTrimSupportedTurnCannotCommitLongestOverheadAsFeasible]' passed (0.341 seconds).
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testUnbracketedReferencePricesTheCompleteArrival]' started.
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testUnbracketedReferencePricesTheCompleteArrival]' passed (0.011 seconds).
+Test Suite 'RecordedRunway36RecoveryTests' passed at 2026-11-02 22:58:25.112.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.353 (0.353) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 22:58:25.112.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.450 (0.451) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 22:58:25.112.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.450 (0.452) seconds
+RECORDED_RECOVERY_TAEM TAEMStatus(phase: KSLGuidance.TAEMPhase.acquisition, side: 1, remainingTurn: 3.150368522479819, range: 48921.97777284276, energyHeight: 52282.283253755195, nominalEnergy: 362589.06878241274, minimumEnergy: 201023.57470208625, referenceHeight: 25859.6581804625, referenceDynamicPressure: 2958.8444658018234, minimumDynamicPressure: 0.0, finalRadius: 4226.164936240855, growth: 0.07599088773175333, downmoded: false, attainableAcquisitionRadius: nil, acquisitionTurnAvailable: Optional(false), insufficientEnergy: true, descentPlanFits: false, descentCheckFailure: Optional("acquisitionTurnUnavailable"), predictedNEPEnergy: nil, referenceTracking: Optional(false)) target GuidanceTarget(angleOfAttack: 0.45445392755624564, bank: 0.0, desiredSpeed: 735.5099315810294, desiredHeight: 26680.6081804625, desiredFlightPath: -0.09873317204024666, gearDown: false, speedbrakeFraction: nil)
+RECORDED_RECOVERY_RANGE EntryRangeReference(createdAt: 216350.05094672475, blend: 1.0, cross: 96.88839729272058, headingError: 1.4813758461824587, captureResidual: 69.19324818198221, along: 34111.41855250991, altitude: 27113.996489198296, speed: 729.8305649874851, bracketed: false, reachedEnergy: true)

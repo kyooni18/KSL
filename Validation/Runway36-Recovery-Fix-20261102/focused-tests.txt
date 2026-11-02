@@ -1,0 +1,178 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 677]
+[Planning deferred tasks]
+[1 / 39] GuidanceTests-product
+[10 / 86] KSLCore
+[12 / 88] KSLCore
+[20 / 98] KSLDiagnostics
+[32 / 111] KSLDiagnostics
+[40 / 116] KSLControl
+[43 / 116] KSLControl
+[52 / 129] KSLPhysics
+[54 / 129] KSLPhysics
+[57 / 135] CoreTests-product
+[62 / 135] CoreTests-product
+[64 / 135] KSLPhysics
+[67 / 139] KSLPhysics
+[72 / 143] KSLControl
+[72 / 143] KSLPhysics
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/CoreTests/RunwayApproachSelectorTests.swift:19:9: warning: variable 'c' was never mutated; consider changing to 'let' constant
+17 |   }
+18 |   func testAutomaticSelectionPrefersInboundDirectionAndIsSymmetric() {
+19 |     var c = MissionConfiguration()
+   |         `- warning: variable 'c' was never mutated; consider changing to 'let' constant
+20 |     let f = RunwayFrame(runway: c.runway, planet: c.planet)
+21 |     // A vessel west of KSC heading east toward 09, but opposite to 27.
+
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/CoreTests/RunwayApproachSelectorTests.swift:51:9: warning: variable 'c' was never mutated; consider changing to 'let' constant
+49 | 
+50 |   func testSelectedRunwayIsConsistentWithMeasuredVelocityFrames() {
+51 |     var c = MissionConfiguration()
+   |         `- warning: variable 'c' was never mutated; consider changing to 'let' constant
+52 |     let frame = RunwayFrame(runway: c.runway, planet: c.planet)
+53 |     let p = frame.position(along: -160_000, cross: 65_000, height: 35_000)
+[84 / 154] KSLKRPC
+[85 / 167] KSLGuidance
+[87 / 167] KSLGuidance
+[92 / 167] KSLKRPC
+[94 / 167] KSLGuidance
+[97 / 168] KSLGuidance
+[98 / 168] KSLGuidance
+[100 / 168] KSLGuidance
+[101 / 168] KSLGuidance
+[109 / 176] KSLRuntime
+[109 / 176] GuidanceTests-product
+[112 / 186] KSLRuntime
+[114 / 186] KSLRuntime
+[117 / 186] KSLRuntime
+[121 / 187] KSLRuntime
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Sources/KSLGuidance/Entry/EntryDragReference.swift:60:28: warning: immutable value 'e' was never used; consider replacing with '_' or removing it [#NoUsage]
+ 58 |                referenceRangeScale: Double = 1,
+ 59 |                objective: EntryCaptureObjective, maximumAlpha: Double) -> EntryDiagnostics {
+ 60 |     let c = configuration, e = c.entrySettings, a = s.aerodynamics
+    |                            `- warning: immutable value 'e' was never used; consider replacing with '_' or removing it [#NoUsage]
+ 61 |     let targetAltitude = objective.altitude, targetSpeed = objective.speed
+ 62 |     let speed = a.airspeed, height = s.position.length - c.planet.radius
+
+[#NoUsage]: <https://docs.swift.org/compiler/documentation/diagnostics/no-usage>
+[123 / 190] KSLGuidance
+[125 / 190] KSLPhysics
+[131 / 188] CoreTests-product
+[136 / 193] KSLSimulation
+[138 / 193] KSLSimulation
+[142 / 198] KSLSimulation
+[144 / 206] ControlTests-product
+[146 / 206] PhysicsTests-product
+[151 / 207] ControlTests-product
+[153 / 207] PhysicsTests-product
+[157 / 217] ksl-landing-product
+[161 / 226] KSLLanding
+[166 / 226] ksl-landing-product
+[171 / 226] KSLLanding
+[174 / 226] KSLLanding
+[175 / 226] KSLLanding
+[180 / 227] ksl-landing-product
+[184 / 229] KSLLanding
+[190 / 229] KSLRuntime
+[193 / 228] ControlTests-product
+[196 / 229] ControlTests-product
+[198 / 229] KSLLanding
+[206 / 247] SimulationTests-product
+[207 / 260] IntegrationTests-product
+[211 / 260] PhysicsTests-product
+[216 / 259] GuidanceTests-product
+[222 / 257] PhysicsTests-product
+[224 / 258] IntegrationTests-product
+[225 / 258] SimulationTests-product
+[228 / 258] IntegrationTests-product
+[234 / 258] IntegrationTests-product
+[237 / 258] GuidanceTests-product
+[238 / 258] IntegrationTests-product
+[240 / 258] SimulationTests-product
+[245 / 260] SimulationTests-product
+[246 / 260] GuidanceTests-product
+[246 / 260] IntegrationTests-product
+[246 / 260] GuidanceTests-product
+[248 / 260] GuidanceTests-product
+[250 / 260] IntegrationTests-product
+[252 / 260] GuidanceTests-product
+[256 / 260] KSLLanding
+[258 / 260] ksl-landing-product
+Build complete! (14.42초)
+Test Suite 'Selected tests' started at 2026-11-02 22:53:26.771.
+Test Suite 'IntegrationTests.xctest' started at 2026-11-02 22:53:26.772.
+Test Suite 'DeorbitExecutionTests' started at 2026-11-02 22:53:26.772.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testAuthorizationRequiresScreenedEntryAndPlanIdentity]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testAuthorizationRequiresScreenedEntryAndPlanIdentity]' passed (0.002 seconds).
+Test Case '-[IntegrationTests.DeorbitExecutionTests testBurnDoesNotAbortOnPredictedDurationWhileWaitingForMeasuredClosure]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testBurnDoesNotAbortOnPredictedDurationWhileWaitingForMeasuredClosure]' passed (0.022 seconds).
+Test Case '-[IntegrationTests.DeorbitExecutionTests testBurnGapKeepsMeasuredImpulseSeparateFromUncertaintyBound]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testBurnGapKeepsMeasuredImpulseSeparateFromUncertaintyBound]' passed (0.000 seconds).
+Test Case '-[IntegrationTests.DeorbitExecutionTests testCoastWarpStartsForShortOMSWaitWithoutCuttingNinetySecondSafetyHold]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testCoastWarpStartsForShortOMSWaitWithoutCuttingNinetySecondSafetyHold]' passed (0.000 seconds).
+Test Case '-[IntegrationTests.DeorbitExecutionTests testCPeriapsisTaperAndNoPrematureCutoff]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testCPeriapsisTaperAndNoPrematureCutoff]' passed (0.000 seconds).
+Test Case '-[IntegrationTests.DeorbitExecutionTests testFailedDeorbitCandidatesAreRankedByPhysicalMM305EntryNotSeventyKilometreMiss]' started.
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/IntegrationTests/DeorbitExecutionTests.swift:92: error: -[IntegrationTests.DeorbitExecutionTests testFailedDeorbitCandidatesAreRankedByPhysicalMM305EntryNotSeventyKilometreMiss] : XCTAssertEqualWithAccuracy failed: ("93473.41868146259") is not equal to ("11997.082978791135") +/- ("1.0")
+Test Case '-[IntegrationTests.DeorbitExecutionTests testFailedDeorbitCandidatesAreRankedByPhysicalMM305EntryNotSeventyKilometreMiss]' failed (0.283 seconds).
+Test Case '-[IntegrationTests.DeorbitExecutionTests testIncompleteTerminalRouteStillAuthorizesScreenedOrbitalEntry]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testIncompleteTerminalRouteStillAuthorizesScreenedOrbitalEntry]' passed (0.000 seconds).
+Test Case '-[IntegrationTests.DeorbitExecutionTests testLatePointingIsRecoveredWithoutThrustAndLostEngineStillTripsWatchdog]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testLatePointingIsRecoveredWithoutThrustAndLostEngineStillTripsWatchdog]' passed (0.000 seconds).
+Test Case '-[IntegrationTests.DeorbitExecutionTests testLoadedPlanRequiresFreshOrbitAndCurrentBurnWindow]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testLoadedPlanRequiresFreshOrbitAndCurrentBurnWindow]' passed (0.005 seconds).
+Test Case '-[IntegrationTests.DeorbitExecutionTests testLongRailsCoastPhaseDriftUsesTimingAllowanceWithoutWeakeningCrossTrack]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testLongRailsCoastPhaseDriftUsesTimingAllowanceWithoutWeakeningCrossTrack]' passed (0.038 seconds).
+Test Case '-[IntegrationTests.DeorbitExecutionTests testNativeOrbitalPointingStopsWithoutAttitudeTeleportation]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testNativeOrbitalPointingStopsWithoutAttitudeTeleportation]' passed (0.002 seconds).
+Test Case '-[IntegrationTests.DeorbitExecutionTests testOrbitalCoastRecoversFromTimeoutAndForwardGap]' started.
+deorbit: recovering from Transport deadline exceeded (fault 1)
+deorbit: link recovered after 1 fault(s)
+Test Case '-[IntegrationTests.DeorbitExecutionTests testOrbitalCoastRecoversFromTimeoutAndForwardGap]' passed (0.158 seconds).
+Test Suite 'DeorbitExecutionTests' failed at 2026-11-02 22:53:27.284.
+	 Executed 12 tests, with 1 failure (0 unexpected) in 0.511 (0.513) seconds
+Test Suite 'IntegrationTests.xctest' failed at 2026-11-02 22:53:27.284.
+	 Executed 12 tests, with 1 failure (0 unexpected) in 0.511 (0.513) seconds
+Test Suite 'Selected tests' failed at 2026-11-02 22:53:27.284.
+	 Executed 12 tests, with 1 failure (0 unexpected) in 0.511 (0.514) seconds
+Test Suite 'Selected tests' started at 2026-11-02 22:53:27.389.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 22:53:27.390.
+Test Suite 'EntryRangeTruthRegressionTests' started at 2026-11-02 22:53:27.390.
+Test Case '-[GuidanceTests.EntryRangeTruthRegressionTests testRecordedEntryReferenceSolvesInterfaceLocationBeforeSpendingEnergy]' started.
+Test Case '-[GuidanceTests.EntryRangeTruthRegressionTests testRecordedEntryReferenceSolvesInterfaceLocationBeforeSpendingEnergy]' passed (0.094 seconds).
+Test Suite 'EntryRangeTruthRegressionTests' passed at 2026-11-02 22:53:27.484.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.094 (0.094) seconds
+Test Suite 'RecordedRunway36RecoveryTests' started at 2026-11-02 22:53:27.484.
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testNoTrimSupportedTurnCannotCommitLongestOverheadAsFeasible]' started.
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testNoTrimSupportedTurnCannotCommitLongestOverheadAsFeasible]' passed (0.341 seconds).
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testUnbracketedReferencePricesCrossrangeAndTurnWork]' started.
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/GuidanceTests/RecordedRunway36RecoveryTests.swift:30: error: -[GuidanceTests.RecordedRunway36RecoveryTests testUnbracketedReferencePricesCrossrangeAndTurnWork] : XCTAssertGreaterThan failed: ("0.0") is not greater than ("0.0") - Along-only fallback previously selected best glide
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/GuidanceTests/RecordedRunway36RecoveryTests.swift:31: error: -[GuidanceTests.RecordedRunway36RecoveryTests testUnbracketedReferencePricesCrossrangeAndTurnWork] : XCTAssertLessThan failed: ("37902.85201511519") is not less than ("37902.85201511519") - A 1.46 km along improvement must not discard 37.8 km of crossrange improvement
+Test Case '-[GuidanceTests.RecordedRunway36RecoveryTests testUnbracketedReferencePricesCrossrangeAndTurnWork]' failed (0.171 seconds).
+Test Suite 'RecordedRunway36RecoveryTests' failed at 2026-11-02 22:53:27.997.
+	 Executed 2 tests, with 2 failures (0 unexpected) in 0.512 (0.512) seconds
+Test Suite 'TAEMTransitionTests' started at 2026-11-02 22:53:27.997.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' passed (0.000 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' passed (0.003 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testInsideHACCannotSpendMoreReferenceArcThanGroundTravel]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testInsideHACCannotSpendMoreReferenceArcThanGroundTravel]' passed (0.000 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary]' passed (0.000 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testRecordedShortDownmodeRequiresImpossiblePushOver]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testRecordedShortDownmodeRequiresImpossiblePushOver]' passed (0.000 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testSteepDescentRejoinPreservesMeasuredFlightPath]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testSteepDescentRejoinPreservesMeasuredFlightPath]' passed (0.000 seconds).
+Test Suite 'TAEMTransitionTests' passed at 2026-11-02 22:53:28.001.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'GuidanceTests.xctest' failed at 2026-11-02 22:53:28.001.
+	 Executed 9 tests, with 2 failures (0 unexpected) in 0.610 (0.611) seconds
+Test Suite 'Selected tests' failed at 2026-11-02 22:53:28.001.
+	 Executed 9 tests, with 2 failures (0 unexpected) in 0.610 (0.612) seconds
+RECORDED_RECOVERY_TAEM TAEMStatus(phase: KSLGuidance.TAEMPhase.acquisition, side: 1, remainingTurn: 3.150368522479819, range: 48921.97777284276, energyHeight: 52282.283253755195, nominalEnergy: 362589.06878241274, minimumEnergy: 201023.57470208625, referenceHeight: 25859.6581804625, referenceDynamicPressure: 2958.8444658018234, minimumDynamicPressure: 0.0, finalRadius: 4226.164936240855, growth: 0.07599088773175333, downmoded: false, attainableAcquisitionRadius: nil, acquisitionTurnAvailable: Optional(false), insufficientEnergy: true, descentPlanFits: false, descentCheckFailure: Optional("acquisitionTurnUnavailable"), predictedNEPEnergy: nil, referenceTracking: Optional(false)) target GuidanceTarget(angleOfAttack: 0.45445392755624564, bank: 0.0, desiredSpeed: 735.5099315810294, desiredHeight: 26680.6081804625, desiredFlightPath: -0.09873317204024666, gearDown: false, speedbrakeFraction: nil)
+RECORDED_RECOVERY_RANGE EntryRangeReference(createdAt: 216350.05094672475, blend: 0.0, cross: 37902.85201511519, headingError: 1.607846202083966, recoveryDistance: 191029.46142332908, along: 32649.49382003457, altitude: 25361.163329996052, speed: 750.9993292890465, bracketed: false, reachedEnergy: true)
+Note: Some test targets reported failures:
+  - IntegrationTests (XCTest)
+  - GuidanceTests (XCTest)

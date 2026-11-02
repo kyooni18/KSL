@@ -31,7 +31,7 @@ final class EntryCaptureObjectivePlanner {
     let physics = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
     // MM304 delivers to the configured TAEM interface (Shuttle: Mach 2.5 at
     // its range-to-go). TAEM's own ground track dissipates what remains.
-    func preferredRange(_ altitude: Double) -> Double { c.taemInterfaceRange }
+    func preferredRange(_ altitude: Double) -> Double { c.terminalCaptureRange }
     var best: (EntryCaptureObjective, Double)?
     for altitude in [c.mm304DeliveryAltitude] {
       let height = altitude-c.runway.elevation

@@ -10,6 +10,10 @@ import KSLPhysics
 struct EntryRangeReference: Sendable {
   var createdAt: Double
   var blend: Double
+  var cross: Double
+  var headingError: Double
+  /// Full arrival error in configured capture-tolerance units; advisory only.
+  var captureResidual: Double
   var along: Double
   var altitude: Double
   var speed: Double
@@ -91,27 +95,54 @@ struct EntryRangeReference: Sendable {
           s.time=before.time+dt*fraction;reached=true;break
         }
       }
-      return .init(createdAt:initial.time,blend:blend,along:frame.coordinates(of:s.position).along,
+      let p = frame.coordinates(of:s.position)
+      let v = frame.coordinateVelocity(at:s.position,velocity:s.velocity)
+      let heading = abs(atan2(v.y,v.x))
+      let air = atmosphere.sample(position:s.position,time:s.time)
+      // Equal error units are the operator's capture tolerances, not tuned
+      // weights or a fixed-speed turn falsely held throughout recovery.
+      // The propagated commands already price their coupled lift and drag.
+      let horizontalError=hypot(p.along-objective.along,p.cross-objective.cross)/c.entrySettings.handoffRadius
+      let altitudeError=(s.position.length-c.planet.radius-objective.altitude) /
+        (c.entrySettings.terminalMaximumAltitude-c.entrySettings.terminalMinimumAltitude)
+      let machError=(s.velocity.length-objective.speed)/air.speedOfSound/c.entrySettings.terminalMachHalfWidth
+      let headingError=heading/c.entrySettings.headingHalfWidth
+      let residual=hypot(hypot(horizontalError,altitudeError),hypot(machError,headingError))
+      return .init(createdAt:initial.time,blend:blend,cross:p.cross,headingError:heading,
+        captureResidual:residual,along:p.along,
         altitude:s.position.length-c.planet.radius,speed:s.velocity.length,
         bracketed:false,reachedEnergy:reached)
     }
-    var low=trial(0),high=trial(1)
-    func residual(_ v: Self) -> Double {v.along-objective.along}
-    var best=abs(residual(low))<abs(residual(high)) ? low:high
-    if low.reachedEnergy != high.reachedEnergy {best=low.reachedEnergy ? low:high}
-    guard low.reachedEnergy, high.reachedEnergy, residual(low)*residual(high)<=0 else {return best}
-    // Bisection stops on configured arrival tolerance or floating resolution.
-    // Bracket signs, not an assumed monotonic direction, determine each step.
-    for _ in 0...Double.significandBitCount {
-      let blend=(low.blend+high.blend)/2
-      if blend==low.blend || blend==high.blend {break}
-      var mid=trial(blend)
-      guard mid.reachedEnergy else {break}
-      mid.bracketed=true
-      if abs(residual(mid))<abs(residual(best)) {best=mid}
-      if abs(residual(mid))<=c.entrySettings.handoffRadius {return mid}
-      if residual(low)*residual(mid)<=0 {high=mid} else {low=mid}
+    let low=trial(0), high=trial(1)
+    func better(_ a: Self, _ b: Self) -> Bool {
+      if a.reachedEnergy != b.reachedEnergy { return a.reachedEnergy }
+      return a.captureResidual < b.captureResidual
     }
+    var best = better(low,high) ? low:high
+    // A scalar along root does not solve the spatial/heading arrival. Search
+    // the same propagated incidence family on the complete arrival residual.
+    // Golden-section refinement retains the endpoints and stops when trial
+    // endpoints differ by less than the configured capture resolution.
+    let ratio = (sqrt(5.0)-1)/2
+    var a=0.0, b=1.0
+    var left=trial(b-ratio*(b-a)), right=trial(a+ratio*(b-a))
+    for _ in 0...Double.significandBitCount {
+      if better(left,best) {best=left}
+      if better(right,best) {best=right}
+      let separation = hypot(hypot(left.along-right.along,left.cross-right.cross),left.altitude-right.altitude)
+      if max(separation,abs(left.captureResidual-right.captureResidual)*c.entrySettings.handoffRadius)
+        <= c.entrySettings.handoffRadius || a.nextUp >= b {break}
+      if better(left,right) {
+        b=right.blend; right=left; left=trial(b-ratio*(b-a))
+      } else {
+        a=left.blend; left=right; right=trial(a+ratio*(b-a))
+      }
+    }
+    // Preserve the diagnostic meaning: only a returned endpoint inside the
+    // actual along tolerance with an along bracket may call itself bracketed.
+    best.bracketed = low.reachedEnergy && high.reachedEnergy
+      && (low.along-objective.along)*(high.along-objective.along)<=0
+      && abs(best.along-objective.along)<=c.entrySettings.handoffRadius
     return best
   }
 }
