@@ -1,0 +1,39 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 677]
+[Planning deferred tasks]
+[15 / 79] KSLCore
+[16 / 79] KSLCore
+[18 / 80] KSLCore
+[24 / 86] KSLDiagnostics
+[28 / 88] KSLControl
+[33 / 85] KSLPhysics
+[35 / 86] KSLPhysics
+[43 / 90] KSLKRPC
+[47 / 92] KSLKRPC
+[49 / 86] KSLGuidance
+[54 / 83] KSLRuntime
+[56 / 84] GuidanceTests-product
+[58 / 86] KSLRuntime
+[61 / 87] KSLSimulation
+[67 / 87] KSLSimulation
+[77 / 86] ksl-landing-product
+[81 / 90] ksl-landing-product
+[87 / 93] GuidanceTests-product
+[91 / 93] KSLLanding
+[91 / 93] ksl-landing-product
+Build complete! (5.10초)
+Test Suite 'Selected tests' started at 2026-11-02 17:31:56.203.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 17:31:56.206.
+Test Suite 'DessertInvestigationProbe' started at 2026-11-02 17:31:56.206.
+Test Case '-[GuidanceTests.DessertInvestigationProbe testRecordedNEPDiagnostic]' started.
+Test Case '-[GuidanceTests.DessertInvestigationProbe testRecordedNEPDiagnostic]' passed (0.036 seconds).
+Test Suite 'DessertInvestigationProbe' passed at 2026-11-02 17:31:56.242.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.036 (0.036) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 17:31:56.242.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.036 (0.036) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 17:31:56.242.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.036 (0.039) seconds
+ENDPOINTS height 961.5108126231888 lower 85.0 TerminalAssessment(feasible: false, violations: [KSLCore.ConstraintViolation(kind: KSLCore.FailureClassification.insufficientEnergy, message: "Touchdown speed below design envelope", value: 65.8888136802076, limit: 69.7)], touchdownSpeed: 65.8888136802076, minimumLiftMargin: 5.807768476124224, maximumBank: 0.0, maximumQ: 4752.717348068747, maximumLoad: 1.4762953662406606, score: 1000365.5060425497, uncertaintyFraction: 0.2, predictionComplete: Optional(true), predictedThroughDistance: Optional(2686.0), energyExhaustionDistance: nil, unpricedDistance: Optional(0.0)) upper 160.0 TerminalAssessment(feasible: false, violations: [KSLCore.ConstraintViolation(kind: KSLCore.FailureClassification.excessiveEnergy, message: "Insufficient runway braking distance", value: 2095.6124870577446, limit: 1250.0)], touchdownSpeed: 107.27779541859866, minimumLiftMargin: 23.411980942468603, maximumBank: 0.0, maximumQ: 11668.389814563669, maximumLoad: 2.0318649208538977, score: 1000496.5687687129, uncertaintyFraction: 0.2, predictionComplete: Optional(true), predictedThroughDistance: Optional(2686.0), energyExhaustionDistance: nil, unpricedDistance: Optional(0.0))
+ROOT 119.16987657546997 TerminalAssessment(feasible: false, violations: [KSLCore.ConstraintViolation(kind: KSLCore.FailureClassification.excessiveEnergy, message: "Insufficient runway braking distance", value: 1315.6163119886628, limit: 1250.0)], touchdownSpeed: 85.00000985493841, minimumLiftMargin: 16.02666916426293, maximumBank: 0.0, maximumQ: 6916.2429599592815, maximumLoad: 1.6968800071440497, score: 1000000.2686000001, uncertaintyFraction: 0.2, predictionComplete: Optional(true), predictedThroughDistance: Optional(2686.0), energyExhaustionDistance: nil, unpricedDistance: Optional(0.0))
+SOLVED nil

@@ -1,0 +1,92 @@
+{
+  "run": "runs/native-swift-B090715F-7F7C-4F5E-AE19-05E4FC473E85",
+  "phases": {
+    "orbitalCoast": 834,
+    "burnSetup": 117,
+    "deorbitBurn": 512,
+    "entryCoast": 4193,
+    "entry": 5876,
+    "acquisition": 2513
+  },
+  "firstTAEM": {
+    "ut": 219045.19353362496,
+    "phase": "acquisition",
+    "heightAboveRunway": 23082.732601740816,
+    "speed": 648.4876098632812,
+    "verticalSpeed": -106.3767372709796,
+    "along": -57153.011044016,
+    "cross": 32047.77143845062,
+    "range": 65525.00534581118,
+    "aoaDeg": 28.850494961116926,
+    "bankDeg": 6.857917869567859,
+    "targetAoADeg": 31.718412838871835,
+    "targetBankDeg": 8.311729421614153,
+    "measuredLiftAcceleration": 8.840757313402456,
+    "measuredDragAcceleration": 13.975965929389984,
+    "partCount": 26,
+    "rcs": true
+  },
+  "lastTAEM": {
+    "ut": 219249.23353351807,
+    "phase": "acquisition",
+    "heightAboveRunway": 7630.527512194775,
+    "speed": 108.55780029296875,
+    "verticalSpeed": -30.65409810385307,
+    "along": -53385.36100800312,
+    "cross": -13422.500933305797,
+    "range": 55046.891840134034,
+    "aoaDeg": 9.924181468496652,
+    "bankDeg": 0.624139936654072,
+    "targetAoADeg": 10.0,
+    "targetBankDeg": 1.6122241128344958e-14,
+    "measuredLiftAcceleration": 9.137717660883773,
+    "measuredDragAcceleration": 2.9491560507570895,
+    "partCount": 26,
+    "rcs": false
+  },
+  "closest": {
+    "ut": 219184.41353355203,
+    "phase": "acquisition",
+    "heightAboveRunway": 9620.617779561388,
+    "speed": 159.2393798828125,
+    "verticalSpeed": -42.53997633578949,
+    "along": -54366.66289232028,
+    "cross": -5708.921802327152,
+    "range": 54665.581696276495,
+    "aoaDeg": 9.982177503633597,
+    "bankDeg": 0.8872216940836269,
+    "targetAoADeg": 10.0,
+    "targetBankDeg": 8.544242354257751e-10,
+    "measuredLiftAcceleration": 9.640198491978735,
+    "measuredDragAcceleration": 3.856044294894159,
+    "partCount": 26,
+    "rcs": false
+  },
+  "centerlineCrossing": {
+    "ut": 219149.83353357014,
+    "phase": "acquisition",
+    "heightAboveRunway": 11405.316619657748,
+    "speed": 195.3153076171875,
+    "verticalSpeed": -57.65520917603503,
+    "along": -54909.11951880738,
+    "cross": -3.2610729191200107,
+    "range": 54909.119615645526,
+    "aoaDeg": 12.438590911628356,
+    "bankDeg": 0.3166626920236214,
+    "targetAoADeg": 10.0,
+    "targetBankDeg": 2.6452958006482244e-07,
+    "measuredLiftAcceleration": 9.555559936989573,
+    "measuredDragAcceleration": 4.530872502739138,
+    "partCount": 26,
+    "rcs": false
+  },
+  "taemAdmissionCounts": {
+    "False": 2513
+  },
+  "taemViolationCounts": {
+    "No solved NEP; retaining TAEM best-glide recovery": 2513,
+    "Runway exceeds even the optimistic still-air modeled range": 910,
+    "Last MM305 capture verdict: inadequateControlAuthority": 910
+  },
+  "taemBankTrackingRMSDeg": 0.9256593352907596
+}

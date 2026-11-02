@@ -1,0 +1,14 @@
+{
+  "observedHEAD": "224ff98b54f620b71ee85da0b451f8d149b0ead8",
+  "recordedSourceReference": "f1eebdc0e6f8bb7e8b8a354b42eb2d829cdc3cda",
+  "recordedSourceReferenceIsHardcoded": true,
+  "executable": "/Users/kyooni18/Code/KSL/swift/KSL-Landing/.build/out/Products/Release/ksl-landing",
+  "executableSHA256": "262b1c7543317d7842d07bded200aea54d0fc2af7880dec89c68f2a4f91d584c",
+  "executableMtime": 1793606530.2526755,
+  "note": "Hash taken after flight; no per-flight executable hash or source.patch was recorded. Swift Sources have no current uncommitted changes. Manifest sourceReference is a literal in SessionTelemetryRecorder, not reliable build provenance.",
+  "files": {
+    "runs/native-swift-B090715F-7F7C-4F5E-AE19-05E4FC473E85/configuration.json": "39bd0ef88e2fa37094885b3b11902b5ac07ba3801601fdd773e13297dc08ce58",
+    "runs/native-swift-B090715F-7F7C-4F5E-AE19-05E4FC473E85/flight.jsonl": "8fedaf1147c893ddd379e6f63ed98e866cbbb558d2e0efd4f4a2e0724c9fcee8",
+    "runs/20261102T080307Z-deorbit/backend-configuration.json": "a0904492648c66d991b5dc5616ddc27f3c10211b720824876ed081fd95784b65"
+  }
+}
