@@ -35,6 +35,8 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
     parts: UInt64 = 0, autopilot: UInt64 = 0, bodyFrame: UInt64 = 0
   private var wheels = KRPCWheelInventory()
   private var surfaceActuators = STSSurfaceActuators()
+  private var surfaceTelemetry: KRPCSurfaceTelemetry?
+  private var surfaceTelemetryProperties: [KRPCSurfaceTelemetry.Property] = []
   private var armed = false, busy = false
   private var landingRecoveryPending = false
   private var orbitalRecoveryPending = false
@@ -92,6 +94,7 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
     do {
       try await session.connect()
       let services = try await session.call([.init(service: "KRPC", procedure: "GetServices")])[0]
+      surfaceTelemetryProperties = KRPCSurfaceTelemetry.supportedProperties(services: services)
       supportsInertiaTensor = services.range(of: Data("Vessel_get_InertiaTensor".utf8)) != nil
       supportsActuatorBreakdown = services.range(of: Data("Vessel_get_AvailableControlSurfaceTorque".utf8)) != nil
         && services.range(of: Data("Vessel_get_AvailableReactionWheelTorque".utf8)) != nil
@@ -160,6 +163,8 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
       anchorFrame = try KRPCValue.decodeUInt(try await session.call([objectCall("Part_get_ReferenceFrame", anchorPart)])[0])
       wheels = try await KRPCWheelInventory.discover(session: session, parts: allParts)
       surfaceActuators = try await STSSurfaceActuators.discover(session: session, parts: allParts)
+      surfaceTelemetry = try await KRPCSurfaceTelemetry.discover(session: session,
+        parts: parts, properties: surfaceTelemetryProperties)
       guard initialPartCount > 0 else {
         throw FlightError.invalidTelemetry("Active vessel has no parts")
       }
@@ -305,6 +310,8 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
         throw FlightError.rearmRequired("Vessel topology changed during bound deorbit execution")
       }
       wheels = try await KRPCWheelInventory.discover(session: session, parts: currentParts)
+      surfaceTelemetry = try await KRPCSurfaceTelemetry.discover(session: session,
+        parts: parts, properties: surfaceTelemetryProperties)
       if !currentIdentifiers.contains(anchorPart) {
         anchorPart = try KRPCValue.decodeUInt(try await session.call([objectCall("Parts_get_Root", parts)])[0])
         anchorFrame = try KRPCValue.decodeUInt(try await session.call([objectCall("Part_get_ReferenceFrame", anchorPart)])[0])
@@ -366,6 +373,9 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
         objectCall("Vessel_get_AvailableReactionWheelTorque", vessel)]
       if supportsRCSTorque { calls.append(objectCall("Vessel_get_AvailableRCSTorque", vessel)) }
     }
+    let surfaceMotionStart = calls.count
+    calls += surfaceTelemetry?.calls ?? []
+    let surfaceMotionEnd = calls.count
     calls.append(.init(procedure: "get_UT"))
     let started = ContinuousClock.now
     let values = try await session.call(calls)
@@ -540,6 +550,11 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
       } else {
         telemetryIssues.append("Invalid inertia tensor: \(raw)")
       }
+    }
+    if let surfaceTelemetry {
+      let motion = surfaceTelemetry.decode(values[surfaceMotionStart..<surfaceMotionEnd], time: t1)
+      state.controlSurfaces = motion.observations
+      telemetryIssues += motion.issues
     }
     state.vesselConfiguration = physical
     state.telemetryIssues = telemetryIssues.isEmpty ? nil : telemetryIssues

@@ -123,6 +123,9 @@ public final class ShuttlePhysicsEngine {
     }
     try command.validate(grounded: state.contact.isGrounded)
     var s = observe(state)
+    // This plant has aggregate actuator coordinates, not a per-part deflection
+    // model. Never carry actual surface samples into a modeled future epoch.
+    s.controlSurfaces = nil
     var left = duration
     while left > 1e-9 && s.contact != .crashed {
       let dt = min(maximumStep, left)

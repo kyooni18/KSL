@@ -6,7 +6,7 @@ import Foundation
 /// available roll/pitch acceleration at the current dynamic pressure), with
 /// deceleration ahead of the goal, so the vehicle is never asked to change
 /// attitude rate instantaneously.
-public struct GuidanceTargetLimiter: Sendable {
+public struct GuidanceTargetLimiter: Codable, Sendable, Equatable {
   /// Fraction of rated attitude response guidance may demand.
   public static let responseReserve = 0.85
   public private(set) var previous: GuidanceTarget?

@@ -52,6 +52,19 @@ public struct GuidanceTarget: Codable, Sendable, Equatable {
   }
 }
 
+/// Actual reference-computer history at one command boundary. The request is
+/// after device allocation and before slew limiting; neither is achieved attitude.
+/// Together with the record's phase/state/configuration and preceding FCS
+/// diagnostics this permits exact limiter replay, including internal rates.
+public struct GuidanceCommandTrace: Codable, Sendable, Equatable {
+  public let requested: GuidanceTarget
+  public let before: GuidanceTargetLimiter
+  public let after: GuidanceTargetLimiter
+  public init(requested: GuidanceTarget, before: GuidanceTargetLimiter, after: GuidanceTargetLimiter) {
+    self.requested = requested; self.before = before; self.after = after
+  }
+}
+
 public struct GuidanceSolution: Codable, Sendable {
   public let phase: MissionPhase
   public let target: GuidanceTarget
@@ -59,6 +72,8 @@ public struct GuidanceSolution: Codable, Sendable {
   public let planID: Int?
   public let pathRemaining: Double
   public var diagnostic: String
+  /// Absent in legacy records and commands that bypass the airborne limiter.
+  public var targetHistory: GuidanceCommandTrace?
   public var entry: EntryDiagnostics?
   public var approach: ApproachDiagnostics?
   public var admission: TerminalAdmissionDiagnostics?

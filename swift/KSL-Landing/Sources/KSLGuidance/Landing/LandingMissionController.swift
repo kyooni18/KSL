@@ -517,6 +517,7 @@ public final class LandingMissionController {
         responseSeconds: max(configuration.guidance.pathLookaheadTime, controlFeedback?.pitchResponseSeconds ?? 0),
         availableLiftAcceleration: brakeLift)
     }
+    let limiterBefore = limiter
     let target = limiter.update(requested, phase: raw.phase, configuration: configuration, dt: dt,
       dynamicPressure: state.aerodynamics.dynamicPressure,
       rollResponseSeconds: controlFeedback?.rollResponseSeconds,
@@ -525,6 +526,7 @@ public final class LandingMissionController {
     var solution = GuidanceSolution(
       phase: raw.phase, target: target, violations: raw.violations, planID: raw.planID,
       pathRemaining: raw.pathRemaining, diagnostic: raw.diagnostic)
+    solution.targetHistory = .init(requested: requested, before: limiterBefore, after: limiter)
     solution.violations += advisories
     // The airborne NEP continues to steer TAEM even when the selected
     // pavement cannot support its modeled rollout. Keep that deficit visible

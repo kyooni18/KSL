@@ -38,6 +38,10 @@ final class DessertTAEMRegressionTests: XCTestCase {
     let mission = LandingMissionController(configuration: c, atmosphere: atmosphere,
       aerodynamics: aero, externalPlanning: true, initialPhase: .acquisition)
     let solution = try mission.update(state)
+    let trace = try XCTUnwrap(solution.targetHistory)
+    XCTAssertEqual(trace.after.previous, solution.target)
+    XCTAssertEqual(try JSONDecoder().decode(GuidanceCommandTrace.self,
+      from: JSONEncoder().encode(trace)), trace)
     XCTAssertTrue(solution.diagnostic.hasPrefix("TAEM phase="),
       "The recorded missing-NEP fallback must now reach the normal TAEM law")
     XCTAssertFalse(solution.violations.contains { $0.message.hasPrefix("No solved NEP") })

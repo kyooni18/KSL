@@ -1,0 +1,210 @@
+{
+  "conventions": {
+    "intervals": 59,
+    "limitation": "Right-endpoint versus midpoint body-coordinate transport and snapshot timing add local residual; no moment law is inferred.",
+    "method": "Shortest quaternion log increment compared to adjacent endpoint-mean body rates.",
+    "oppositeSignResidualRMS_rad_per_second_FRD": [
+      0.008856040373750733,
+      0.03315803733431274,
+      0.0024177242104615427
+    ],
+    "rateResidualRMS_rad_per_second_FRD": [
+      0.0005258196602253995,
+      0.00022570728500685285,
+      0.00010384519914563707
+    ]
+  },
+  "decision": "Rate signs agree with measured rotation. Selected independent RCS-off flights do not cover seed Mach 2.85. Broader archives are not declared exhausted.",
+  "evidence": "recorded-state-convention-and-existing-source-coverage-audit",
+  "independentSources": [
+    {
+      "RCSOffTAEMSamples": 4297,
+      "first": {
+        "alpha": 0.5904658311994879,
+        "mach": 2.404040175883176,
+        "mass": 25361.20703125,
+        "q": 2951.376708984375,
+        "time": 216422.25094668692,
+        "vesselConfiguration": {
+          "anchorPart": 16962,
+          "centerOfMassBodyFRD": {
+            "x": 0.15843157470226288,
+            "y": -1.197592370840571,
+            "z": 9.891709042968715
+          },
+          "centerOfMassEvidence": "measured",
+          "centerOfMassFromAnchor": {
+            "x": -0.000110771604897697,
+            "y": -9.96062441058988,
+            "z": 0.30198870872588657
+          },
+          "inertiaTensorFRD": [
+            84764.2421875,
+            -29.953655242919922,
+            -1523.7623291015625,
+            -29.95342445373535,
+            911192.875,
+            48.952545166015625,
+            -1523.76220703125,
+            48.95209884643555,
+            946067
+          ],
+          "measuredAt": 216422.25094668692,
+          "partCount": 26,
+          "revision": 1
+        }
+      },
+      "limitation": "Marginal ranges do not prove joint coverage or compatible control-surface history.",
+      "marginalRanges": {
+        "angleOfAttack": [
+          0.02847449697418924,
+          0.5904658311994879
+        ],
+        "dynamicPressure": [
+          2499.299560546875,
+          5386.93310546875
+        ],
+        "mach": [
+          0.21495998369265681,
+          2.404040175883176
+        ]
+      },
+      "path": "runs/20261102T122809Z-dessert-normal-oms-restart/live.jsonl",
+      "sha256": "1e4689fd548733292dda694684b5f9704c21fb43cc0345c6e6acf7453448c916"
+    },
+    {
+      "RCSOffTAEMSamples": 0,
+      "first": null,
+      "limitation": "Marginal ranges do not prove joint coverage or compatible control-surface history.",
+      "marginalRanges": null,
+      "path": "runs/20261102T144457Z-dessert-handoff-live/live.jsonl",
+      "sha256": "c7845f405d56c91da8868acaa9492aec6840aecb2fdf6518e3392089ad445372"
+    },
+    {
+      "RCSOffTAEMSamples": 3430,
+      "first": {
+        "alpha": 0.5363623529777836,
+        "mach": 2.1441594422282537,
+        "mass": 25321.943359375,
+        "q": 3233.7421875,
+        "time": 216440.65235288208,
+        "vesselConfiguration": {
+          "anchorPart": 16962,
+          "centerOfMassBodyFRD": {
+            "x": -0.34150922764092506,
+            "y": -2.2660862118722984,
+            "z": 9.698061294598931
+          },
+          "centerOfMassEvidence": "measured",
+          "centerOfMassFromAnchor": {
+            "x": -0.00019174916363534633,
+            "y": -9.960555968739966,
+            "z": 0.3024779377582201
+          },
+          "inertiaTensorFRD": [
+            84689.9140625,
+            -37.03635787963867,
+            -1499.046630859375,
+            -37.03588104248047,
+            909376.125,
+            48.950984954833984,
+            -1499.0474853515625,
+            48.95122528076172,
+            944243.8125
+          ],
+          "measuredAt": 216440.65235288208,
+          "partCount": 26,
+          "revision": 1
+        }
+      },
+      "limitation": "Marginal ranges do not prove joint coverage or compatible control-surface history.",
+      "marginalRanges": {
+        "angleOfAttack": [
+          0.0715279287088067,
+          0.5373275160298492
+        ],
+        "dynamicPressure": [
+          1910.7462158203125,
+          5228.28662109375
+        ],
+        "mach": [
+          0.2883569121765914,
+          2.1441594422282537
+        ]
+      },
+      "path": "runs/20261102T140105Z-dessert-recovery-fix-live/live.jsonl",
+      "sha256": "241e5e6db592c51e5f6bf6adae12e3d06800ee13a6e6cef484bea27b2090dcd4"
+    },
+    {
+      "RCSOffTAEMSamples": 2914,
+      "first": {
+        "alpha": 0.4420002743411158,
+        "mach": 2.449352744268986,
+        "mass": 24729.048828125,
+        "q": 3522.741455078125,
+        "time": 210212.15256598126,
+        "vesselConfiguration": {
+          "anchorPart": 14506,
+          "centerOfMassBodyFRD": {
+            "x": -3.661657750606537,
+            "y": -9.032720974791456,
+            "z": 1.53660660752495
+          },
+          "centerOfMassEvidence": "measured",
+          "centerOfMassFromAnchor": {
+            "x": 0.0001037742697418409,
+            "y": -9.862214896491277,
+            "z": 0.3092941673556435
+          },
+          "inertiaTensorFRD": [
+            83671.9296875,
+            -45.360450744628906,
+            2587.235595703125,
+            -45.360687255859375,
+            899558.875,
+            89.89247131347656,
+            2587.235595703125,
+            89.8925552368164,
+            932104.125
+          ],
+          "measuredAt": 210212.15256598126,
+          "partCount": 26,
+          "revision": 1
+        }
+      },
+      "limitation": "Marginal ranges do not prove joint coverage or compatible control-surface history.",
+      "marginalRanges": {
+        "angleOfAttack": [
+          -0.001045178389485456,
+          0.4420002743411158
+        ],
+        "dynamicPressure": [
+          3469.028564453125,
+          11346.1650390625
+        ],
+        "mach": [
+          0.3426366672682924,
+          2.449352744268986
+        ]
+      },
+      "path": "runs/20261102T031333-taem-live-72km/live-sts-flight.jsonl",
+      "sha256": "6be82b529f728f3c3b9906150cc50f4255ab6554ebc5f3a6414b28c11ee6591a"
+    }
+  ],
+  "oldStaticGrid": {
+    "decision": "Different topology and hypothetical shadow kinematics; no substitution as current measured moment model.",
+    "partCount": 22,
+    "path": "Docs/Experiments/STS-Entry-20261009/live-aero-mimo-envelope-grid.json",
+    "qualification": {
+      "flightControlOrActuation": false,
+      "landingOrRolloutEvidence": false,
+      "measuredAerodynamicEvidence": false,
+      "note": "All cells are hypothetical Flight.simulate_aerodynamic_wrench_at results. Their reference kinematics come from an ENTRY_TRACE shadow prediction, not measured atmospheric flight.",
+      "qualified": false,
+      "shadowGateEvidence": false
+    }
+  },
+  "primary": "runs/20261102T152517Z-dessert-150ms-live/live.jsonl",
+  "primaryPartCount": 26,
+  "seedTime": 216406.03235290022
+}

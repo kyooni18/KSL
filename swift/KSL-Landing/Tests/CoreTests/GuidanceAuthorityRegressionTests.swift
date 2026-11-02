@@ -45,7 +45,7 @@ final class GuidanceAuthorityRegressionTests: XCTestCase {
     XCTAssertLessThanOrEqual(reversed.0, 0)
     XCTAssertGreaterThanOrEqual(reversed.0, -0.001)
   }
-  func testPredictionCopyPreservesSlewMomentumWithoutOvershoot() {
+  func testPredictionCopyPreservesSlewMomentumWithoutOvershoot() throws {
     let c = MissionConfiguration()
     let request = GuidanceTarget(angleOfAttack: radians(18), bank: radians(20))
     var live = GuidanceTargetLimiter(previous: .init())
@@ -53,7 +53,7 @@ final class GuidanceAuthorityRegressionTests: XCTestCase {
       _ = live.update(request, phase: .acquisition, configuration: c, dt: 0.1,
         dynamicPressure: 3000, controlAuthority: authority)
     }
-    var branch = live
+    var branch = try JSONDecoder().decode(GuidanceTargetLimiter.self, from: JSONEncoder().encode(live))
     var cold = GuidanceTargetLimiter(previous: live.previous)
     let expected = live.update(request, phase: .acquisition, configuration: c, dt: 0.1,
       dynamicPressure: 3000, controlAuthority: authority)

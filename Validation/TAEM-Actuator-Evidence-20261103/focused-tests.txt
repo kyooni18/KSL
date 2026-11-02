@@ -1,0 +1,116 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 27] KSLSimulation
+[2 / 57] KSLCore
+[5 / 60] KSLCore
+[15 / 71] KSLDiagnostics
+[26 / 84] KSLControl
+[34 / 91] KSLCore
+[37 / 93] KSLDiagnostics
+[50 / 106] KSLPhysics
+[52 / 107] CoreTests-product
+[53 / 112] CoreTests-product
+[61 / 118] KSLGuidance
+[68 / 120] CoreTests-product
+[76 / 132] KSLPhysics
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/CoreTests/RunwayApproachSelectorTests.swift:19:9: warning: variable 'c' was never mutated; consider changing to 'let' constant
+17 |   }
+18 |   func testAutomaticSelectionPrefersInboundDirectionAndIsSymmetric() {
+19 |     var c = MissionConfiguration()
+   |         `- warning: variable 'c' was never mutated; consider changing to 'let' constant
+20 |     let f = RunwayFrame(runway: c.runway, planet: c.planet)
+21 |     // A vessel west of KSC heading east toward 09, but opposite to 27.
+
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/CoreTests/RunwayApproachSelectorTests.swift:51:9: warning: variable 'c' was never mutated; consider changing to 'let' constant
+49 | 
+50 |   func testSelectedRunwayIsConsistentWithMeasuredVelocityFrames() {
+51 |     var c = MissionConfiguration()
+   |         `- warning: variable 'c' was never mutated; consider changing to 'let' constant
+52 |     let frame = RunwayFrame(runway: c.runway, planet: c.planet)
+53 |     let p = frame.position(along: -160_000, cross: 65_000, height: 35_000)
+[82 / 145] KSLKRPC
+[85 / 145] KSLKRPC
+[92 / 146] KSLGuidance
+[95 / 146] KSLGuidance
+[97 / 146] KSLGuidance
+[98 / 146] KSLGuidance
+[104 / 152] KSLRuntime
+[107 / 150] KSLKRPC
+[113 / 162] PhysicsTests-product
+[118 / 175] PhysicsTests-product
+[122 / 175] KSLRuntime
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Sources/KSLGuidance/Entry/EntryDragReference.swift:60:28: warning: immutable value 'e' was never used; consider replacing with '_' or removing it [#NoUsage]
+ 58 |                referenceRangeScale: Double = 1,
+ 59 |                objective: EntryCaptureObjective, maximumAlpha: Double) -> EntryDiagnostics {
+ 60 |     let c = configuration, e = c.entrySettings, a = s.aerodynamics
+    |                            `- warning: immutable value 'e' was never used; consider replacing with '_' or removing it [#NoUsage]
+ 61 |     let targetAltitude = objective.altitude, targetSpeed = objective.speed
+ 62 |     let speed = a.airspeed, height = s.position.length - c.planet.radius
+
+[#NoUsage]: <https://docs.swift.org/compiler/documentation/diagnostics/no-usage>
+[131 / 177] KSLGuidance
+[138 / 180] ControlTests-product
+[140 / 180] KSLRuntime
+[145 / 185] KSLSimulation
+[148 / 185] KSLSimulation
+[161 / 186] KSLSimulation
+[166 / 195] ksl-landing-product
+[167 / 204] KSLLanding
+[171 / 218] ControlTests-product
+[177 / 220] KSLLanding
+[187 / 223] GuidanceTests-product
+[191 / 223] GuidanceTests-product
+[195 / 223] GuidanceTests-product
+[197 / 223] GuidanceTests-product
+[205 / 224] KSLRuntime-product
+[207 / 223] KSLLanding
+[207 / 223] SimulationTests-product
+[217 / 239] IntegrationTests-product
+[218 / 239] IntegrationTests-product
+[224 / 241] GuidanceTests-product
+[232 / 245] IntegrationTests-product
+[235 / 246] IntegrationTests-product
+[239 / 246] IntegrationTests-product
+[241 / 249] IntegrationTests-product
+[243 / 247] ksl-landing-product
+[245 / 249] KSLLanding
+Build complete! (8.23초)
+Test Suite 'Selected tests' started at 2026-11-03 02:20:21.397.
+Test Suite 'IntegrationTests.xctest' started at 2026-11-03 02:20:21.398.
+Test Suite 'ControlSurfaceTelemetryTests' started at 2026-11-03 02:20:21.398.
+Test Case '-[IntegrationTests.ControlSurfaceTelemetryTests testOnlyActualAngleCapabilityEnablesReadOnlyObservationAndUnitsRemainExplicit]' started.
+Test Case '-[IntegrationTests.ControlSurfaceTelemetryTests testOnlyActualAngleCapabilityEnablesReadOnlyObservationAndUnitsRemainExplicit]' passed (0.001 seconds).
+Test Suite 'ControlSurfaceTelemetryTests' passed at 2026-11-03 02:20:21.399.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'IntegrationTests.xctest' passed at 2026-11-03 02:20:21.399.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 02:20:21.399.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.003) seconds
+Test Suite 'Selected tests' started at 2026-11-03 02:20:21.497.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-03 02:20:21.498.
+Test Suite 'DessertTAEMRegressionTests' started at 2026-11-03 02:20:21.498.
+Test Case '-[GuidanceTests.DessertTAEMRegressionTests testRecordedBrakingDeficitDoesNotEraseAirborneTAEMReference]' started.
+Test Case '-[GuidanceTests.DessertTAEMRegressionTests testRecordedBrakingDeficitDoesNotEraseAirborneTAEMReference]' passed (0.517 seconds).
+Test Suite 'DessertTAEMRegressionTests' passed at 2026-11-03 02:20:22.016.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.517 (0.518) seconds
+Test Suite 'NativeCommandRolloutTests' started at 2026-11-03 02:20:22.016.
+Test Case '-[GuidanceTests.NativeCommandRolloutTests testSharedRolloutMatchesNativePipelineWithWarmControllerAndLimiter]' started.
+Test Case '-[GuidanceTests.NativeCommandRolloutTests testSharedRolloutMatchesNativePipelineWithWarmControllerAndLimiter]' passed (0.005 seconds).
+Test Suite 'NativeCommandRolloutTests' passed at 2026-11-03 02:20:22.021.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.005 (0.006) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-03 02:20:22.021.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.523 (0.523) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 02:20:22.021.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.523 (0.524) seconds
+Dessert recorded TAEM: TAEM phase=acquisition side=1 hacTurn=30.6690752562963 deg rpred=75096.9906069805 m E=43579.402188364766 m EN=180555.69194099845 m EMIN=135015.611078791 m href=23082.732601740816 m qref=3924.3360468167116 Pa qmin=3922.717529296875 Pa rf=3000.0 m growth=0.07599088773175333 m/rad2 downmoded=false descentFits=true descentCheck=trimLift referenceTracking=false; bank=15.42809984512422 deg; braking deficit=65.6163119886628 m
+Test Suite 'Selected tests' started at 2026-11-03 02:20:22.119.
+Test Suite 'CoreTests.xctest' started at 2026-11-03 02:20:22.120.
+Test Suite 'GuidanceAuthorityRegressionTests' started at 2026-11-03 02:20:22.120.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testPredictionCopyPreservesSlewMomentumWithoutOvershoot]' started.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testPredictionCopyPreservesSlewMomentumWithoutOvershoot]' passed (0.001 seconds).
+Test Suite 'GuidanceAuthorityRegressionTests' passed at 2026-11-03 02:20:22.121.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'CoreTests.xctest' passed at 2026-11-03 02:20:22.121.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 02:20:22.121.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.002) seconds

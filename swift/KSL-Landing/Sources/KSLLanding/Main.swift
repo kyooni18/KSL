@@ -391,6 +391,7 @@ struct LandingCLI {
         if phases.last != r.guidance.phase.rawValue { phases.append(r.guidance.phase.rawValue) }
         if r.command != record.command || r.guidance.target != record.guidance.target
           || r.guidance.phase != record.guidance.phase || r.orbitalCommand != record.orbitalCommand
+          || (record.guidance.targetHistory != nil && r.guidance.targetHistory != record.guidance.targetHistory)
         {
           mismatches += 1
         }

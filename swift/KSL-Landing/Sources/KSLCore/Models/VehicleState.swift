@@ -48,7 +48,7 @@ public struct SystemState: Codable, Sendable, Equatable {
   public var sas = false
   public var rcs = false
   public var airbrakes = false
-  /// Measured split-rudder deployment, normalized to each surface's range.
+  /// Split-rudder deployment request/readback, normalized to each surface's range.
   /// nil means unavailable; the legacy action-group flag is not this signal.
   public var speedbrakeFraction: Double?
   public var brakes = false
@@ -74,7 +74,11 @@ public struct VehicleState: Codable, Sendable, Equatable {
   public var snapshotSpan: Double
   public var controlAuthority: ControlAuthorityTelemetry?
   public var wheelContact: WheelContactTelemetry?
+  /// Vessel control-axis readback, not a measurement of surface deflection.
   public var appliedControls: ControlCommand?
+  /// Actual per-surface motion, where the server supports standard angle
+  /// telemetry. nil means unavailable, including historical records.
+  public var controlSurfaces: [ControlSurfaceObservation]?
   public var propulsion: PropulsionTelemetry?
   /// Additive topology and CoM evidence; absent in archived FlightRecords.
   public var vesselConfiguration: VesselConfigurationTelemetry?
@@ -137,7 +141,8 @@ public struct VehicleState: Codable, Sendable, Equatable {
       atmosphere.wind.isFinite,
       systems.throttle >= 0, systems.throttle <= 1, systems.thrust >= 0,
       (systems.speedbrakeFraction ?? 0).isFinite, (0...1).contains(systems.speedbrakeFraction ?? 0),
-      vesselConfiguration?.isCoherent ?? true
+      (vesselConfiguration?.isCoherent ?? true),
+      (controlSurfaces?.allSatisfy(\.isCoherent) ?? true)
     else {
       throw FlightError.invalidTelemetry("Nonfinite, incoherent, or nonphysical flight snapshot")
     }
