@@ -1,4 +1,5 @@
 #!/bin/sh
-# Drop-in for CLanding/build/landing_backend: set KSL_BACKEND to this file to fly with the Swift engine.
+# Supported NDJSON landing backend used by ksl land.
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+export KSL_SWIFT_OPERATOR_CONFIGURATION="${KSL_SWIFT_OPERATOR_CONFIGURATION:-$ROOT/../../Configuration/sts-taem.json}"
 exec "$ROOT/.build/release/ksl-landing" backend "$@"

@@ -10,6 +10,6 @@
     ]
   },
   "orbit": {"trim": true, "minBurnDeltaV": 0.1},
-  "landing": {"backendConfiguration": "Configuration/sts-live.json", "modelProfile": "sts-live-20261029"},
+  "landing": {"engine": "swift-backend", "backendConfiguration": "Configuration/sts-taem.json", "modelProfile": "sts-taem"},
   "checkpoints": {"kspSaveOnPhases": ["orbit", "mm305"]}
 }

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import signal
 import sys
 import time
@@ -304,8 +305,12 @@ def cmd_validate(args: argparse.Namespace) -> int:
     checks: list[tuple[str, bool, str]] = []
     problems = config.validate()
     checks.append(("profile", not problems, "; ".join(problems) or f"{config.name} ({config.source})"))
-    checks.append(("landing backend", BACKEND.is_file(), str(BACKEND) if BACKEND.is_file() else
-                   f"missing {BACKEND} — run `make backend`"))
+    engine = config["landing"]["engine"]
+    use_swift = engine == "swift" or (engine == "swift-backend" and not os.environ.get("KSL_BACKEND"))
+    binary = SWIFT_BINARY if use_swift else BACKEND
+    build = "make swift" if use_swift else "make backend"
+    checks.append(("landing backend", binary.is_file(), str(binary) if binary.is_file() else
+                   f"missing {binary} — run `{build}`"))
     try:
         import krpc  # noqa: F401
         checks.append(("krpc package", True, "importable"))

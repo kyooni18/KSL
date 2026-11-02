@@ -87,32 +87,24 @@ extension BackendServer {
     let sessionID = UUID().uuidString
     let (value, state, aero) = try await resolveHistoryAndRunway(sessionID: sessionID)
     let atmosphere = try AtmosphericModelEngine(planet: configuration.planet)
-    var terminalPlan: TerminalPlan?
     if initialPhase == .approach {
       let approach = ApproachGuidanceEngine(configuration: configuration, atmosphere: atmosphere, aerodynamics: aero)
       guard approach.canCapture(state) else { throw FlightError.infeasible("Final engage fails measured alignment, energy or capture geometry") }
     } else if initialPhase == .acquisition {
-      let worker = MissionPlanningWorker(configuration: configuration, atmosphere: atmosphere, aerodynamics: aero)
-      let result = await worker.planTerminal(from: state)
-      guard let candidate = result.plan else { throw FlightError.infeasible("No complete robust MM305 route: \(result.advisoryCounts)") }
-      let fresh = try await value.readState()
-      let trim = RotationalDynamicsEngine(configuration: configuration.vehicle, planet: configuration.planet)
-        .supportedTrimAlpha(fresh)
-      let available = aero.liftSolution(acceleration: 0, mass: fresh.mass,
-        dynamicPressure: fresh.aerodynamics.dynamicPressure, mach: fresh.aerodynamics.mach,
-        minimumAlpha: configuration.vehicle.minimumAngleOfAttack, maximumAlpha: trim,
-        beta: fresh.aerodynamics.sideslip, gear: fresh.systems.gearDown).maximumAcceleration
-      let admission = MM305Admission.evaluate(fresh, plan: candidate, configuration: configuration,
-        availableLift: available)
-      guard admission.accepted else { throw FlightError.infeasible("MM305 admission rejected: \(admission.violations.map(\.message))") }
-      terminalPlan = candidate
+      // The production TAEM engine constructs and flies its own recovery
+      // reference. A legacy HAC preview is advisory, not an engagement veto.
+      // Keep the physical phase boundary and all IO/flight envelope checks.
+      guard state.contact == .airborne,
+        state.position.length-configuration.planet.radius <= configuration.planet.atmosphereTop else {
+        throw FlightError.invalidCommand("TAEM takeover requires an airborne atmospheric state; use MM304 for entry")
+      }
     }
     try Task.checkCancellation()
     guard epoch == generation else { throw FlightError.rearmRequired("Preparation was superseded") }
     let recorder = try recorder(phase: initialPhase, aero: aero, sessionID: sessionID)
     do {
       let runtime = try FlightRuntime(io: value, recorder: recorder, configuration: configuration,
-        aerodynamics: aero, initialPhase: initialPhase, initialPlan: terminalPlan)
+        aerodynamics: aero, initialPhase: initialPhase)
       try await value.arm()
       try Task.checkCancellation()
       preparing = false; engaged = true; phase = Self.backendPhase(initialPhase)

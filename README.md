@@ -9,10 +9,10 @@ Prelaunch → Launch → Ascent → Orbit → Deorbit → MM304 Entry → MM305 
 
 It combines two former projects that now share one repository and history:
 
-- **Lander** (this repository, formerly KSPShuttleLander). A native Rust backend
-  (`rust/landing`) owns deorbit planning, entry (MM304), TAEM (MM305), final
-  approach, flare, touchdown and rollout guidance, plus the atmospheric
-  flight-control system. It speaks kRPC directly through the C-Nano protocol client.
+- **Lander** (this repository, formerly KSPShuttleLander). The Swift backend
+  (`swift/KSL-Landing`) owns deorbit planning, MM304 entry, TAEM, Final,
+  touchdown and rollout, including the flight-control system and native kRPC
+  connection. `ksl land` and the TUI use this backend by default.
 - **Launcher** (formerly KSPShuttleLauncher, imported with full history). Python
   kRPC programs own the STS ascent and OMS orbit trim. Roll handoff and the
   gravity-turn pitch envelope and attitude control law run in a Rust library
@@ -58,6 +58,33 @@ bin/ksl continue latest                            # resume the last run from it
 bin/ksl continue latest --use-save                 # …after loading the checkpoint's KSP save
 bin/ksl status --watch                             # follow a running mission from another shell
 ```
+
+The standard STS mission profiles use `Configuration/sts-taem.json`. This is
+normal landing configuration, not a run-directory override: it carries the
+35,023 m TAEM interface objective, 2,286 m Final inlet, 24° outer glide,
+18 m flare height, and 400 m touchdown aim used by the successful checkpoint
+run. `Configuration/sts-taem-native.json` is the equivalent native SI profile
+for direct engine use:
+
+```sh
+make swift
+bin/ksl land --from mm304 --dry-run     # review configuration and commands; no KSP control
+bin/ksl land --from mm304              # take over the current atmospheric flight
+# Developer/direct engine equivalent:
+bin/ksl swift fly --configuration Configuration/sts-taem-native.json --vessel STS
+```
+
+`ksl land` records configuration, telemetry, status and checkpoints through the
+normal mission interface; no scratch launch script is needed. The default model
+is the shipped STS polar. An explicit `physicsArchive` configuration or
+`KSL_SWIFT_PHYSICS_ARCHIVE` selects historical aero. The ordinary CLI no longer
+silently substitutes an archive for the model used by direct flights.
+
+The 2026-11-02 runway 09 run demonstrated touchdown and a continuous full stop
+with all 26 parts from the recorded 72 km entry checkpoint. This does not certify
+every orbit, runway orientation or deorbit window. Actual capture/energy and
+reduced-assurance warnings remain visible; they are not removed by promoting the
+configuration. Do not start another controller while one owns the vessel.
 
 Entry phases are `prelaunch`, `orbit`, `deorbit`, `mm304`, `mm305` and
 `final-approach` (`ksl phases`). A live mission can hold at `prelaunch`

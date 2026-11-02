@@ -5,7 +5,7 @@ import KSLCore
 public struct OperatorConnectionSettings: Codable, Sendable, Equatable {
   public var host = "127.0.0.1"
   public var port: UInt16 = 50000
-  public var timeout = 4.0
+  public var timeout = 10.0
   public var clientName = "KSL Native Swift"
   public init() {}
 }
@@ -154,6 +154,10 @@ public enum OperatorConfigurationMapper {
     }
     if let interval = try number("guidance.predictionInterval") {
       c.guidance.entryReplanInterval = interval; c.guidance.terminalReplanInterval = interval
+      c.guidance.approachPredictionInterval = interval
+    }
+    if let interval = try number("guidance.approachPredictionInterval") {
+      guard interval > 0 else { throw FlightError.invalidConfiguration("approachPredictionInterval must be positive") }
       c.guidance.approachPredictionInterval = interval
     }
     if let enabled = try boolean("guidance.taemEnergyLaw"), !enabled {

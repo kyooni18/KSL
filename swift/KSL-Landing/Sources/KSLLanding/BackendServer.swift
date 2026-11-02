@@ -28,7 +28,7 @@ actor BackendServer {
 
   init(configuration: MissionConfiguration, vessel: String, airbrakeGroup: UInt32) throws {
     self.vessel = vessel
-    let path = ProcessInfo.processInfo.environment["KSL_SWIFT_OPERATOR_CONFIGURATION"] ?? "Configuration/sts.json"
+    let path = ProcessInfo.processInfo.environment["KSL_SWIFT_OPERATOR_CONFIGURATION"] ?? "Configuration/sts-taem.json"
     let data = FileManager.default.fileExists(atPath: path) ? try Data(contentsOf: URL(fileURLWithPath: path)) : Data("{}".utf8)
     settings = try OperatorConfigurationMapper.map(data, base: configuration, baseAirbrakeGroup: airbrakeGroup)
     self.configuration = settings.mission
@@ -47,6 +47,7 @@ actor BackendServer {
   func publish() { emit(["type": "snapshot", "snapshot": snapshot()]) }
   func ready() {
     emit(["type": "ready", "protocolVersion": 1,
+      "missionConfiguration": (try? object(configuration)) ?? [:],
       "configuration": (try? JSONSerialization.jsonObject(with: settings.effectiveOperatorJSON)) ?? [:], "snapshot": snapshot()])
   }
   func applyConfiguration(_ input: Any?) async throws {
@@ -80,9 +81,14 @@ actor BackendServer {
   func resolveHistoryAndRunway(sessionID: String? = nil) async throws -> (KRPCFlightIO, VehicleState, AerodynamicsEngine) {
     let previous = configuration
     let variant = ProcessInfo.processInfo.environment["KSP_LANDER_PHYSICS_VARIANT"]
-    configuration = try await PhysicsModelLoader.resolvingDefaultArchive(configuration,
-      path: ProcessInfo.processInfo.environment["KSL_SWIFT_PHYSICS_ARCHIVE"] ?? "Runtime/Physics/observations.sqlite3",
-      variant: variant)
+    // Match the direct-flight model: the shipped polar is the default.
+    // Historical aero is an explicit configuration/installation choice, not
+    // an implicit substitution when the same flight is launched through ksl.
+    if configuration.physicsArchive == nil,
+      let archive = ProcessInfo.processInfo.environment["KSL_SWIFT_PHYSICS_ARCHIVE"] {
+      configuration = try await PhysicsModelLoader.resolvingDefaultArchive(configuration,
+        path: archive, variant: variant)
+    }
     if let sessionID {
       configuration.physicsArchive?.excludedSession = sessionID
       configuration.physicsArchive?.excludedFlight = sessionID

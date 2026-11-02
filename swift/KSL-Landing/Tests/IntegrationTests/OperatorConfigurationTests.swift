@@ -25,6 +25,34 @@ final class OperatorConfigurationTests: XCTestCase {
     XCTAssertEqual(mapped.mission.deorbitSettings.pointingUncertainty, radians(2))
     XCTAssertTrue(mapped.allowReciprocal)
   }
+  func testSupportedSTSProfilePreservesFlownEntryAndLandingSettings() throws {
+    var root = URL(fileURLWithPath: #filePath)
+    for _ in 0..<5 { root.deleteLastPathComponent() }
+    let mapped = try OperatorConfigurationMapper.map(Data(contentsOf:
+      root.appendingPathComponent("Configuration/sts-taem.json")))
+    let flown = try JSONDecoder().decode(MissionConfiguration.self, from: Data(contentsOf:
+      root.appendingPathComponent("Configuration/sts-taem-native.json")))
+    XCTAssertEqual(mapped.mission.entrySettings, flown.entrySettings)
+    XCTAssertEqual(mapped.mission.guidance.finalDistance, flown.guidance.finalDistance)
+    XCTAssertEqual(mapped.mission.guidance.outerGlideAngle, flown.guidance.outerGlideAngle)
+    XCTAssertEqual(mapped.mission.guidance.flareHeight, flown.guidance.flareHeight)
+    XCTAssertEqual(mapped.mission.guidance.touchdownAlong, flown.guidance.touchdownAlong)
+    XCTAssertEqual(mapped.mission.guidance.finalSpeed, flown.guidance.finalSpeed)
+    XCTAssertEqual(mapped.mission.guidance.terminalReplanInterval, flown.guidance.terminalReplanInterval)
+    XCTAssertEqual(mapped.mission.guidance.approachPredictionInterval ?? 1.5, flown.guidance.approachPredictionInterval ?? 1.5)
+    XCTAssertEqual(mapped.mission.vehicle.maximumAngleOfAttack, flown.vehicle.maximumAngleOfAttack)
+    XCTAssertEqual(mapped.mission.vehicle.maximumBank, flown.vehicle.maximumBank)
+    XCTAssertEqual(mapped.mission.vehicle.landingSpeed, flown.vehicle.landingSpeed)
+    XCTAssertEqual(mapped.mission.runway.elevation, flown.runway.elevation)
+    XCTAssertEqual(mapped.mission.runway.latitude, flown.runway.latitude, accuracy: 1e-12)
+    XCTAssertEqual(mapped.mission.runway.longitude, flown.runway.longitude, accuracy: 1e-12)
+    XCTAssertNil(mapped.mission.guidance.taemGlideAngle)
+    XCTAssertNil(mapped.mission.guidance.finalAlignmentSpeed)
+    XCTAssertNil(mapped.mission.vehicle.speedbrakeFullDeploymentDragArea)
+    XCTAssertNil(mapped.mission.physicsArchive)
+    XCTAssertEqual(mapped.connection.timeout, 10)
+  }
+
   func testUnknownFieldsWrongTypesAndForbiddenPropulsionAreRejected() {
     for json in [#"{"guidance":{"guidanceRate":true}}"#,
       #"{"vehicle":{"allowPoweredApproach":1}}"#,

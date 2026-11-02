@@ -2,5 +2,6 @@
   "description": "STS to a 90 km parking orbit in the orbital plane of Minmus (launch window), ready for a Minmus transfer.",
   "ascent": {"targetAltitudeKm": 90, "inclinationDeg": 6},
   "profile": {"kind": "plane", "planeTarget": "Minmus", "launchWindow": true},
-  "checkpoints": {"kspSaveOnPhases": ["orbit"]}
+  "checkpoints": {"kspSaveOnPhases": ["orbit"]},
+  "landing": {"engine": "swift-backend", "backendConfiguration": "Configuration/sts-taem.json", "modelProfile": "sts-taem"}
 }
