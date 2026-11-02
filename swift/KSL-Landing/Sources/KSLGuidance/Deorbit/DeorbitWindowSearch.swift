@@ -61,6 +61,8 @@ public final class DeorbitWindowSearch {
     let dv = try normalDeltaV.map { try solveRetrogradeDeltaV(coast: coast,
       propulsion: propulsion, normalDeltaV: $0) }
       ?? solveDeltaV(coast: coast, propulsion: propulsion, normal: normal)
+    let impulse=normalDeltaV.map {abs($0)+abs(dv)} ?? (abs(dv)/cos(normal))
+    guard impulse<=c.burnDeltaVLimit else {throw FlightError.infeasible("Deorbit maneuver exceeds mission total delta-v limit")}
     let result = try burn.propagate(from: coast, deltaV: dv, propulsion: propulsion,
       settings: c, normalAngle: normal, normalDeltaV: normalDeltaV)
     guard result.complete else { throw FlightError.infeasible("Finite burn incomplete") }
@@ -101,7 +103,7 @@ public final class DeorbitWindowSearch {
   public func solveRetrogradeDeltaV(coast: OrbitalState, propulsion: PropulsionTelemetry,
                                     normalDeltaV: Double) throws -> Double {
     let settings = configuration.deorbitSettings
-    let available = propulsion.specificImpulse * 9.80665 * log(coast.mass/propulsion.dryMass)
+    let available = min(settings.burnDeltaVLimit,propulsion.specificImpulse * 9.80665 * log(coast.mass/propulsion.dryMass))
     guard normalDeltaV.isFinite, abs(normalDeltaV) < available else {
       throw FlightError.infeasible("Normal correction exceeds measured propellant budget")
     }
@@ -144,7 +146,7 @@ public final class DeorbitWindowSearch {
     guard let period else { throw FlightError.infeasible("Normal correction requires a bound orbit") }
     let earliest = initial.time+settings.minimumPlanningLeadTime
     let latest = latestStart ?? initial.time+period*settings.minimumSearchOrbits
-    let available = propulsion.specificImpulse*9.80665*log(initial.mass/propulsion.dryMass)
+    let available = min(settings.burnDeltaVLimit,propulsion.specificImpulse*9.80665*log(initial.mass/propulsion.dryMass))
     let timeResolution = settings.timingUncertainty
     let impulseResolution = BurnThrottleLaw.terminalDeltaVTolerance
     // Finite differencing must resolve the finite-burn solve's numerical
@@ -301,7 +303,9 @@ public final class DeorbitWindowSearch {
           let candidate = rankings[ranking][indices[ranking]]
           indices[ranking] += 1
           guard candidate.closing else { continue }
-          if seeds.allSatisfy({ abs($0.burnStart-candidate.burnStart) > separation }) {
+          let revolution=Int(floor((candidate.burnStart-start)/period))
+          if seeds.allSatisfy({abs($0.burnStart-candidate.burnStart)>separation
+            && Int(floor(($0.burnStart-start)/period)) != revolution}) {
             seeds.append(candidate)
             added = true
             break
@@ -310,7 +314,7 @@ public final class DeorbitWindowSearch {
       }
       if !added { break }
     }
-    func refine(_ original: DeorbitWindow) throws -> DeorbitWindow {
+    func refine(_ original: DeorbitWindow, allowNormal:Bool=true) throws -> DeorbitWindow {
       var selected = original
       var increment = step
       for _ in 0..<9 {
@@ -324,6 +328,7 @@ public final class DeorbitWindowSearch {
         }
         increment /= 2
       }
+      guard allowNormal else {return selected}
       var angleStep = radians(45)
       for _ in 0..<12 {
         let center = selected.normalAngle
@@ -336,18 +341,34 @@ public final class DeorbitWindowSearch {
       }
       return selected
     }
-    let refined = try seeds.map { try refine($0) }.sorted { $0.miss < $1.miss }
-    var windows: [DeorbitWindow] = []
-    // A local time offset can change the entry state materially; include it,
-    // but not at the expense of a different viable orbital passage.
-    for candidate in refined where windows.count < c.candidateBudget {
-      windows.append(candidate)
-      if includeNormalCorrections && windows.count < c.candidateBudget {
-        do { windows.append(try normalCorrection(initial: initial, seed: candidate,
-          propulsion: propulsion, latestStart: start+horizon, onEvaluation: { count += 1 })) }
-        catch is CancellationError { throw CancellationError() }
-        catch { rejected[String(describing: error), default: 0] += 1 }
+    // Give every distinct later passage a low-cost retrograde-only window
+    // before spending any candidate budget on plane changes.
+    let coastWindows=try seeds.map {try refine($0,allowNormal:false)}
+    let refined=try coastWindows.map {try refine($0)}
+    var windows=Array(coastWindows.prefix(c.candidateBudget))
+    var corrections=refined
+    if includeNormalCorrections {
+      for candidate in coastWindows {
+        do {
+          let corrected=try normalCorrection(initial:initial,seed:candidate,propulsion:propulsion,
+            latestStart:start+horizon,onEvaluation:{count += 1})
+          // An unresolved Newton iterate is diagnostic evidence, not a reason
+          // to replace a waiting opportunity with a near-fuel-exhaustion burn.
+          if corrected.closing && corrected.miss<=c.captureRadius {corrections.append(corrected)}
+          else {rejected["Independent normal solve did not resolve orbital capture",default:0] += 1}
+        } catch is CancellationError {throw CancellationError()}
+        catch {rejected[String(describing:error),default:0] += 1}
       }
+    }
+    corrections.sort {
+      let a=$0.miss<=c.captureRadius,b=$1.miss<=c.captureRadius
+      if a != b {return a}
+      if $0.propulsiveDeltaV != $1.propulsiveDeltaV {return $0.propulsiveDeltaV<$1.propulsiveDeltaV}
+      return $0.burnStart<$1.burnStart
+    }
+    for option in corrections where windows.count<c.candidateBudget {
+      if !windows.contains(where:{$0.burnStart==option.burnStart
+        && $0.normalAngle==option.normalAngle && $0.normalDeltaV==option.normalDeltaV}) {windows.append(option)}
     }
     // Sample both sides of each local minimum before expanding the offset
     // magnitude or moving to another pair. A budget which expires after only

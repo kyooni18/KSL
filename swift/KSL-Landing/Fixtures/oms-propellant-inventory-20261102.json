@@ -1,0 +1,40 @@
+{
+  "UT": 216755.85774382477,
+  "mass": 25631.59765625,
+  "dryMass": 19965.501953125,
+  "throttle": 0.0,
+  "engines": [
+    [
+      {
+        "name": "LiquidFuel",
+        "ratio": 0.8999999761581421,
+        "available": 366.78868857187376,
+        "density": 5.0,
+        "ignore": false
+      },
+      {
+        "name": "Oxidizer",
+        "ratio": 1.100000023841858,
+        "available": 448.29728591380024,
+        "density": 5.0,
+        "ignore": false
+      }
+    ],
+    [
+      {
+        "name": "LiquidFuel",
+        "ratio": 0.8999999761581421,
+        "available": 366.78867597187354,
+        "density": 5.0,
+        "ignore": false
+      },
+      {
+        "name": "Oxidizer",
+        "ratio": 1.100000023841858,
+        "available": 448.2972705138002,
+        "density": 5.0,
+        "ignore": false
+      }
+    ]
+  ]
+}

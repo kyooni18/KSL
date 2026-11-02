@@ -10,6 +10,8 @@ public final class DeorbitBurnController {
   private var started: Double?
   private var previousAcceleration = 0.0
   private var previousNormalAcceleration = 0.0
+  private var previousTotalAcceleration=0.0
+  public private(set) var deliveredTotalDeltaV=0.0
   public private(set) var deliveredNormalDeltaV = 0.0
   private var normalCorrectionComplete = false
   private var lossSeconds = 0.0
@@ -36,6 +38,7 @@ public final class DeorbitBurnController {
         unobservedDeltaVUpperBound += thrust * plan.configuration.deorbitSettings.maximumThrottle / state.mass * gap
       }
     }
+    previousTotalAcceleration=0
     previousTime = nil; previousAcceleration = 0; previousNormalAcceleration = 0; lossSeconds = 0
     pointing = OrbitalAttitudeController()
   }
@@ -51,6 +54,13 @@ public final class DeorbitBurnController {
       throw FlightError.rearmRequired("Burn telemetry clock or orbital state discontinuity")
     }
     previousTime = state.time
+    let totalAcceleration=max(0,state.systems.thrust/state.mass)
+    if started != nil {deliveredTotalDeltaV += (previousTotalAcceleration+totalAcceleration)*dt/2}
+    previousTotalAcceleration=totalAcceleration
+    if started != nil && !complete && settings.burnDeltaVLimit-deliveredTotalDeltaV-unobservedDeltaVUpperBound
+      <= BurnThrottleLaw.terminalDeltaVTolerance {
+      throw FlightError.infeasible("Total deorbit impulse reached mission limit; burn stopped without claiming completion")
+    }
     let orbital = OrbitalState(fixed: state, planet: c.planet)
     if let normalTarget = plan.window.normalDeltaV {
       return try updateComponents(state, orbital: orbital, periapsisAltitude: periapsisAltitude,
@@ -95,6 +105,9 @@ public final class DeorbitBurnController {
         let authority = clamp((10-degrees(alignment))/6, 0, 1)
         throttle = remaining < BurnThrottleLaw.terminalDeltaVTolerance ? 0
           : settings.maximumThrottle*min(fraction, Self.periapsisFraction(remainingAltitude: periapsisRemaining))*authority
+        let budget=max(0,settings.burnDeltaVLimit-deliveredTotalDeltaV-unobservedDeltaVUpperBound)
+        let horizon=max(dt,state.snapshotSpan+c.guidance.controlInterval)
+        throttle=min(throttle,budget*state.mass/(propulsion.availableThrust*horizon))
         let expected = propulsion.availableThrust*throttle/state.mass
         if remaining > 2 && expected > 0.02 && measuredAcceleration < max(0.01, expected*0.10) {
           lossSeconds += dt
@@ -107,6 +120,8 @@ public final class DeorbitBurnController {
     // pauses propulsion; continue correcting at zero throttle and use measured
     // periapsis/delivered impulse for shutdown. DeorbitRuntime separately
     // ends OMS if the craft actually descends into the atmosphere.
+    diagnostics.deliveredTotalDeltaV=deliveredTotalDeltaV
+    diagnostics.maximumTotalDeltaV=settings.burnDeltaVLimit
     diagnostics.planID = plan.identifier; diagnostics.deliveredDeltaV = deliveredDeltaV
     diagnostics.unobservedDeltaVUpperBound = unobservedDeltaVUpperBound
     diagnostics.targetDeltaV = plan.window.deltaV; diagnostics.periapsisAltitude = periapsisAltitude
@@ -175,6 +190,9 @@ public final class DeorbitBurnController {
         let authority = clamp((10-degrees(alignment))/6,0,1)
         let closure = remaining > 0 ? demand.length/remaining : 0
         throttle = remaining <= tolerance ? 0 : settings.maximumThrottle*min(fraction,closure)*authority
+        let budget=max(0,settings.burnDeltaVLimit-deliveredTotalDeltaV-unobservedDeltaVUpperBound)
+        let horizon=max(dt,state.snapshotSpan+c.guidance.controlInterval)
+        throttle=min(throttle,budget*state.mass/(propulsion.availableThrust*horizon))
         let expected = propulsion.availableThrust*throttle/state.mass
         let observed = acceleration*max(0,physicalThrust.dot(direction))
         if remaining > 2 && expected > 0.02 && observed < max(0.01,expected*0.10) { lossSeconds += dt }
@@ -183,6 +201,8 @@ public final class DeorbitBurnController {
       }
     } else if !complete && state.time >= plan.window.burnStart-12 { phase = .burnSetup }
     if complete { phase = .entryCoast; throttle = 0 }
+    diagnostics.deliveredTotalDeltaV=deliveredTotalDeltaV
+    diagnostics.maximumTotalDeltaV=settings.burnDeltaVLimit
     diagnostics.planID = plan.identifier; diagnostics.deliveredDeltaV = deliveredDeltaV
     diagnostics.deliveredNormalDeltaV = deliveredNormalDeltaV; diagnostics.targetNormalDeltaV = normalTarget
     diagnostics.unobservedDeltaVUpperBound = unobservedDeltaVUpperBound

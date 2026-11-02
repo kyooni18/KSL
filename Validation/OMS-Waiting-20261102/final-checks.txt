@@ -1,0 +1,52 @@
+Building for debugging...
+[Computing dependencies]
+[8 / 65]
+[11 / 68] KSLCore
+[13 / 70] KSLCore
+[20 / 82] CoreTests-product
+[26 / 84] KSLControl
+[31 / 81] CoreTests-product
+[35 / 83] KSLPhysics
+[42 / 87] KSLKRPC
+[44 / 89] KSLGuidance
+[46 / 91] KSLKRPC
+[53 / 90] KSLGuidance
+[59 / 94] KSLGuidance
+[63 / 92] GuidanceTests-product
+[69 / 95] KSLSimulation
+[71 / 96] KSLSimulation
+[75 / 94] KSLLanding
+[77 / 95] KSLLanding
+[81 / 93] KSLKRPC
+[86 / 91] ksl-landing-product
+[88 / 93] IntegrationTests-product
+[92 / 94] IntegrationTests-product
+[93 / 97] IntegrationTests-product
+Build complete! (6.87초)
+Test Suite 'Selected tests' started at 2026-11-03 00:08:10.543.
+Test Suite 'IntegrationTests.xctest' started at 2026-11-03 00:08:10.544.
+Test Suite 'DeorbitExecutionTests' started at 2026-11-03 00:08:10.544.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testAuthorizationRequiresScreenedEntryAndPlanIdentity]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testAuthorizationRequiresScreenedEntryAndPlanIdentity]' passed (0.001 seconds).
+Test Suite 'DeorbitExecutionTests' passed at 2026-11-03 00:08:10.546.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'NormalDeorbitCorrectionTests' started at 2026-11-03 00:08:10.546.
+Test Case '-[IntegrationTests.NormalDeorbitCorrectionTests testRecordedDessertBurnCanPriceAndExecuteIndependentNormalImpulse]' started.
+Test Case '-[IntegrationTests.NormalDeorbitCorrectionTests testRecordedDessertBurnCanPriceAndExecuteIndependentNormalImpulse]' passed (0.462 seconds).
+Test Suite 'NormalDeorbitCorrectionTests' passed at 2026-11-03 00:08:11.008.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.462 (0.462) seconds
+Test Suite 'OMSWaitingPolicyTests' started at 2026-11-03 00:08:11.008.
+Test Case '-[IntegrationTests.OMSWaitingPolicyTests testRecorded898MetrePerSecondPlanCannotAuthorizeUnder150Limit]' started.
+Test Case '-[IntegrationTests.OMSWaitingPolicyTests testRecorded898MetrePerSecondPlanCannotAuthorizeUnder150Limit]' passed (0.002 seconds).
+Test Case '-[IntegrationTests.OMSWaitingPolicyTests testRecordedOMSInventoryExcludesNonOMSResourcesAndSharedTankDuplication]' started.
+Test Case '-[IntegrationTests.OMSWaitingPolicyTests testRecordedOMSInventoryExcludesNonOMSResourcesAndSharedTankDuplication]' passed (0.001 seconds).
+Test Case '-[IntegrationTests.OMSWaitingPolicyTests testWaitingWinsAtComparableDeliveryAndQualifiedRoutesPreferFuel]' started.
+Test Case '-[IntegrationTests.OMSWaitingPolicyTests testWaitingWinsAtComparableDeliveryAndQualifiedRoutesPreferFuel]' passed (0.000 seconds).
+Test Suite 'OMSWaitingPolicyTests' passed at 2026-11-03 00:08:11.011.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'IntegrationTests.xctest' passed at 2026-11-03 00:08:11.011.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.466 (0.467) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 00:08:11.011.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.466 (0.468) seconds
+NORMAL_OMS candidate DeorbitWindow(burnStart: 217856.67014040114, deltaV: 31.450498183830543, duration: 182.75, normalAngle: 1.5707963267948966, periapsisAltitude: 49950.826686054235, afterBurn: KSLCore.OrbitalState(time: 218039.42014040114, position: KSLCore.Vector3(x: 9593.118323223849, y: 686532.8071181668, z: 11986.308974852178), velocity: KSLCore.Vector3(x: -2233.753993223666, y: 25.463937520429454, z: 106.0825491463411), mass: 25185.480759916987), entryInterface: KSLCore.OrbitalState(time: 218466.94806449083, position: KSLCore.Vector3(x: -659582.4008745716, y: 109911.03704840958, z: 33179.3669528126), velocity: KSLCore.Vector3(x: -316.05802054977073, y: -2272.7280339015, z: -26.237090191273083), mass: 25185.480759916987), entryRange: 998660.0129129223, entrySpeed: 2099.873559248081, entryFlightPath: -0.03002311563794446, entryCourseError: 0.09720224848588255, crossrange: 58065.055802273106, miss: 65982.91821327158, normalDeltaV: Optional(115.79851376867526)) finiteDeliveredNormal Optional(115.74099916088915) controlledEntry Vector3(x: -372066.300055684, y: 555627.1125019683, z: 32768.00365976829) Vector3(x: -1710.1197063330962, y: -1218.6042496155235, z: -32.48881832929533) controlledEntryFPA -1.7067026870010047 controlledNormal 115.79992007058142 controlledCrossMiss 57770.05664418232 baselineControlledCrossMiss 67228.08994404259
+OMS_BUDGET 4075.429643611079 burnoutMass 21556.168012638922 availableDV 585.8643579900081 wrongDryMassDV 845.2145423938664

@@ -189,6 +189,7 @@ public enum OperatorConfigurationMapper {
       record("guidance.deorbitRobustMinimumPassFraction", "inactive", "Native deorbit qualification is the nominal full-route case; no stress pass fraction applies")
     }
     var deorbit = c.deorbitSettings
+    if let limit=try number("guidance.deorbitMaximumDeltaV") {deorbit.maximumBurnDeltaV=limit}
     if let speed = try number("guidance.entryRangeReferenceSpeed") { deorbit.entryRangeReferenceSpeed = speed }
     let burns: [(String, WritableKeyPath<DeorbitConfiguration, Double>, Bool)] = [
       ("deorbitMaximumThrottle", \.maximumThrottle, false), ("deorbitThrottleRampDuration", \.throttleRampDuration, false),

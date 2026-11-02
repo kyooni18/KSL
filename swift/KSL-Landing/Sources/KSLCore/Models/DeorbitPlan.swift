@@ -18,6 +18,11 @@ public struct DeorbitWindow: Codable, Sendable {
   public let miss: Double
   /// Signed orbital-normal impulse, m/s; nil preserves legacy fixed-angle burns.
   public var normalDeltaV: Double? = nil
+  /// Total commanded propulsive impulse, rather than retrograde projection.
+  public var propulsiveDeltaV:Double {
+    if let normalDeltaV {return abs(normalDeltaV)+abs(deltaV)}
+    return abs(deltaV)/cos(normalAngle)
+  }
   public var closing: Bool { abs(entryCourseError) < .pi/2 }
   public init(burnStart: Double, deltaV: Double, duration: Double, normalAngle: Double,
     periapsisAltitude: Double, afterBurn: OrbitalState, entryInterface: OrbitalState,
@@ -105,7 +110,11 @@ public struct DeorbitPlan: Codable, Sendable {
   /// prohibit an otherwise physically admissible, fully evaluated entry test.
   /// This is one standard flight-planning policy, not an experimental mode.
   public var hasExecutableEntryWindow: Bool {
-    hasNominalEvaluation && unsafeCases == 0 && cases[0].burnCompleted
+    guard hasNominalEvaluation,unsafeCases==0,cases[0].burnCompleted,
+      propulsion.dryMass>0,propulsion.dryMass<source.mass else {return false}
+    let available=propulsion.specificImpulse*9.80665*log(source.mass/propulsion.dryMass)
+    return window.propulsiveDeltaV<=configuration.deorbitSettings.burnDeltaVLimit
+      && window.propulsiveDeltaV<available
   }
   public var permitsExplicitReducedAssurance: Bool { hasExecutableEntryWindow }
   public init(identifier: String = UUID().uuidString, source: VehicleState,
@@ -119,6 +128,12 @@ public struct DeorbitPlan: Codable, Sendable {
   }
   public func authorize(identifier: String, reducedAssurance: Bool) throws {
     guard identifier == self.identifier else { throw FlightError.invalidCommand("Plan identity differs from the reviewed plan") }
+    try propulsion.validate(mass:source.mass)
+    let available=propulsion.specificImpulse*9.80665*log(source.mass/propulsion.dryMass)
+    guard window.propulsiveDeltaV.isFinite,window.propulsiveDeltaV<available,
+      window.propulsiveDeltaV<=configuration.deorbitSettings.burnDeltaVLimit else {
+      throw FlightError.infeasible("Deorbit impulse exceeds the recorded OMS propellant budget")
+    }
     // Authorization requires a fully screened, physically admissible entry
     // window, not a provably successful prediction of a later controller.
     // Keep the uncertainty visible; do not fabricate a passed rollout case.

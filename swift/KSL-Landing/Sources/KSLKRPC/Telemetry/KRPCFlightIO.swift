@@ -59,6 +59,7 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
   private var measuredOMSThrustAxis: Vector3?
   private var measuredOMSAvailableThrust = 0.0
   private var measuredOMSSpecificImpulse = 0.0
+  private var measuredOMSBurnoutMass: Double?
   private var burnFinished = false
   private var ownsRailsWarp = false
   public private(set) var identity: KRPCVesselIdentity?
@@ -516,7 +517,7 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
     if let measuredOMSThrustAxis, measuredOMSAvailableThrust > 0,
        measuredOMSSpecificImpulse > 0 {
       state.propulsion = .init(availableThrust: measuredOMSAvailableThrust,
-        dryMass: try KRPCValue.decodeFloat(values[33]),
+        dryMass: measuredOMSBurnoutMass ?? state.mass,
         specificImpulse: measuredOMSSpecificImpulse,
         thrustDirectionBody: measuredOMSThrustAxis)
     } else { state.propulsion = nil }
@@ -807,10 +808,19 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
   public func armDeorbit(plan: DeorbitPlan, reducedAssurance: Bool) async throws {
     try plan.authorize(identifier: plan.identifier, reducedAssurance: reducedAssurance)
     guard plan.configuration == configuration else { throw FlightError.invalidConfiguration("Deorbit plan/configuration mismatch") }
+    // Re-read the engine feed pools after planning; a stale structural dry
+    // mass or transferred resource must not certify ignition.
+    measuredOMSThrustAxis=try await readActiveOMSThrustAxis()
+    latest=nil;sampledAt=nil
     let state = try await readState()
     guard state.time < plan.window.burnStart, state.position.length-configuration.planet.radius > configuration.planet.atmosphereTop,
       let propulsion = state.propulsion else { throw FlightError.invalidCommand("Deorbit plan is stale or vessel is already in the atmosphere") }
     try propulsion.validate(mass: state.mass)
+    let available=propulsion.specificImpulse*9.80665*log(state.mass/propulsion.dryMass)
+    guard plan.window.propulsiveDeltaV<available,
+      plan.window.propulsiveDeltaV<=configuration.deorbitSettings.burnDeltaVLimit else {
+      throw FlightError.infeasible("Deorbit impulse exceeds current OMS-accessible propellant budget")
+    }
     // Refuse to execute a plan that assumed nose-aligned thrust. The exact
     // same measured axis must survive the pre-burn state refresh and engine
     // discovery, or modeled orbit-to-entry timing is not trustworthy.
@@ -840,6 +850,9 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
   private func readActiveOMSThrustAxis() async throws -> Vector3? {
     measuredOMSAvailableThrust = 0
     measuredOMSSpecificImpulse = 0
+    measuredOMSBurnoutMass = nil
+    var pools: [String:(ratio:Double,amount:Double,density:Double)] = [:]
+    var requiredResources:Set<String>?
     let frame = try KRPCValue.decodeUInt(
       try await session.call([objectCall("Vessel_get_ReferenceFrame", vessel)])[0])
     let engineIds = try KRPCValue.decodeTuple(
@@ -871,6 +884,33 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
       guard bodyFRD.isFinite && bodyFRD.length > 0.9 else {
         throw FlightError.invalidTelemetry("Invalid measured OMS part axis")
       }
+      let propellants=try KRPCValue.decodeTuple(try await session.call([
+        objectCall("Engine_get_Propellants",engine)])[0]).map(KRPCValue.decodeUInt)
+      var names=Set<String>()
+      for propellant in propellants {
+        let data=try await session.call([objectCall("Propellant_get_Name",propellant),
+          objectCall("Propellant_get_Ratio",propellant),
+          objectCall("Propellant_get_TotalResourceAvailable",propellant),
+          objectCall("Propellant_get_IgnoreForIsp",propellant)])
+        if try KRPCValue.decodeBool(data[3]) {continue}
+        let name=try KRPCValue.decodeString(data[0])
+        names.insert(name)
+        let ratio=Double(try KRPCValue.decodeFloat(data[1]))
+        let amount=try KRPCValue.decodeDouble(data[2])
+        let density=Double(try KRPCValue.decodeFloat(try await session.call([
+          .init(procedure:"Resources_Density",arguments:[KRPCValue.string(name)])])[0]))
+        guard ratio>0,amount>=0,density>0 else {throw FlightError.invalidTelemetry("Invalid OMS propellant inventory")}
+        if let old=pools[name] {
+          guard old.ratio==ratio else {throw FlightError.invalidTelemetry("OMS engines have different propellant mixtures")}
+          // Shared tanks must not be counted once per engine. Taking the
+          // minimum reachable pool is conservative for disjoint feed sets.
+          pools[name]=(ratio,min(old.amount,amount),density)
+        } else {pools[name]=(ratio,amount,density)}
+      }
+      if let requiredResources,requiredResources != names {
+        throw FlightError.invalidTelemetry("OMS engines require different resources")
+      }
+      requiredResources=names
       weighted = weighted + bodyFRD.normalized * thrust
       activeOMS.append((thrust, isp))
     }
@@ -881,6 +921,12 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
     guard axis.x > 0.5, axis.isFinite else {
       throw FlightError.invalidTelemetry("Net OMS thrust is not predominantly forward")
     }
+    guard !pools.isEmpty else {throw FlightError.invalidTelemetry("No measured OMS propellant inventory")}
+    let usable=try OMSPropellantBudget.usableMass(pools.values.map {
+      (amount:$0.amount,ratio:$0.ratio,density:$0.density)})
+    let mass=Double(try KRPCValue.decodeFloat(try await session.call([objectCall("Vessel_get_Mass",vessel)])[0]))
+    guard usable>0,usable<mass else {throw FlightError.invalidTelemetry("Invalid usable OMS propellant mass")}
+    measuredOMSBurnoutMass=mass-usable
     measuredOMSAvailableThrust = activeOMS.reduce(0) { $0 + $1.thrust }
     measuredOMSSpecificImpulse = effectiveIsp
     return axis

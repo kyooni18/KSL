@@ -92,11 +92,21 @@ public actor DeorbitPlanner {
       if x.unsafeCases != y.unsafeCases { return x.unsafeCases < y.unsafeCases }
       if x.nominalPassed != y.nominalPassed { return x.nominalPassed }
       if x.passedCases != y.passedCases { return x.passedCases > y.passedCases }
+      if x.fullRouteQualified && y.fullRouteQualified {
+        if x.window.propulsiveDeltaV != y.window.propulsiveDeltaV {return x.window.propulsiveDeltaV<y.window.propulsiveDeltaV}
+        if x.window.burnStart != y.window.burnStart {return x.window.burnStart<y.window.burnStart}
+      }
       if let a=x.entryScreen, let b=y.entryScreen {
         if a.feasible != b.feasible {return a.feasible}
         if a.altitudeRejected != b.altitudeRejected {return !a.altitudeRejected}
         if a.machRejected != b.machRejected {return !a.machRejected}
-        if a.captureMiss != b.captureMiss {return a.captureMiss < b.captureMiss}
+        let bucketA=floor(a.captureMiss/x.configuration.entrySettings.handoffRadius)
+        let bucketB=floor(b.captureMiss/y.configuration.entrySettings.handoffRadius)
+        if bucketA != bucketB {return bucketA<bucketB}
+        if x.window.propulsiveDeltaV != y.window.propulsiveDeltaV {
+          return x.window.propulsiveDeltaV<y.window.propulsiveDeltaV
+        }
+        if x.window.burnStart != y.window.burnStart {return x.window.burnStart<y.window.burnStart}
       }
       let a = x.window.entryInterface.planetFixed(planet: x.configuration.planet,
         attitude: .init())
@@ -136,12 +146,19 @@ public actor DeorbitPlanner {
     let captureMiss: Double
     let violationCount: Int
     let entryMiss: Double
+    var impulse:Double=0
+    var burnStart:Double=0
+    var resolution:Double=0
     static func < (lhs: Self, rhs: Self) -> Bool {
       if lhs.hardUnsafe != rhs.hardUnsafe { return !lhs.hardUnsafe }
       if lhs.screenFeasible != rhs.screenFeasible { return lhs.screenFeasible }
       if lhs.altitudeRejected != rhs.altitudeRejected { return !lhs.altitudeRejected }
       if lhs.machRejected != rhs.machRejected { return !lhs.machRejected }
-      if lhs.captureMiss != rhs.captureMiss { return lhs.captureMiss < rhs.captureMiss }
+      let a=lhs.resolution>0 ? floor(lhs.captureMiss/lhs.resolution):lhs.captureMiss
+      let b=rhs.resolution>0 ? floor(rhs.captureMiss/rhs.resolution):rhs.captureMiss
+      if a != b {return a<b}
+      if lhs.impulse != rhs.impulse {return lhs.impulse<rhs.impulse}
+      if lhs.burnStart != rhs.burnStart {return lhs.burnStart<rhs.burnStart}
       if lhs.violationCount != rhs.violationCount { return lhs.violationCount < rhs.violationCount }
       return lhs.entryMiss < rhs.entryMiss
     }
@@ -154,10 +171,14 @@ public actor DeorbitPlanner {
     let unsafe: Int
     let passed: Int
     let miss: Double
+    var impulse:Double=0
+    var burnStart:Double=0
     static func < (lhs: Self, rhs: Self) -> Bool {
       if lhs.qualified != rhs.qualified { return lhs.qualified }
       if lhs.unsafe != rhs.unsafe { return lhs.unsafe < rhs.unsafe }
       if lhs.passed != rhs.passed { return lhs.passed > rhs.passed }
+      if lhs.impulse != rhs.impulse {return lhs.impulse<rhs.impulse}
+      if lhs.burnStart != rhs.burnStart {return lhs.burnStart<rhs.burnStart}
       return lhs.miss < rhs.miss
     }
   }
@@ -303,22 +324,26 @@ public actor DeorbitPlanner {
         let cases = [nominal]
         if nominal.passed {
           let rank = NominalRouteRank(qualified: !nominal.hardUnsafe,
-            unsafe: nominal.hardUnsafe ? 1 : 0, passed: 1, miss: candidate.miss)
+            unsafe: nominal.hardUnsafe ? 1 : 0, passed: 1, miss: candidate.miss,
+            impulse:candidate.propulsiveDeltaV,burnStart:candidate.burnStart)
           if bestPassedRank == nil || rank < bestPassedRank! {
             selected = candidate; selectedCases = cases; bestPassedRank = rank
           }
           hasQualifiedNominal = true
         } else if !hasQualifiedNominal {
-          let rank = Self.infeasibleApproachRank(track: entryForecasts[i].forecast.track,
+          var rank = Self.infeasibleApproachRank(track: entryForecasts[i].forecast.track,
             hardUnsafe: nominal.hardUnsafe, screenFeasible: entryForecasts[i].forecast.feasible,
             violationCount: nominal.violations.count, entryMiss: candidate.miss,
             configuration: configuration,
             terminalSpeed: screen.terminalSpeed(at: candidate.entryInterface.time))
+          rank.impulse=candidate.propulsiveDeltaV;rank.burnStart=candidate.burnStart
+          rank.resolution=configuration.entrySettings.handoffRadius
           if bestFailureRank == nil || rank < bestFailureRank! {
             selected = candidate; selectedCases = cases; bestFailureRank = rank
           }
         }
-        if nominal.passed && !nominal.hardUnsafe { break candidateSearch }
+        // A successful expensive maneuver does not eliminate a later,
+        // cheaper pass. Evaluate the remaining configured candidate budget.
       }
     }
     guard let window = selected else {

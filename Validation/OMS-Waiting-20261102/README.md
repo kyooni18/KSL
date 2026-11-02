@@ -1,0 +1,3 @@
+Read-only engine inventory: `live-inventory.json`, collected after the stopped flight, standard SpaceCenter APIs only. `final-checks.txt` records five passing focused methods. `release-build.txt` records the release build. These checks do not initiate or qualify a flight.
+
+Historical failed plan: `swift/KSL-Landing/Fixtures/overbudget-deorbit-20261102.json`. Inventory fixture: `swift/KSL-Landing/Fixtures/oms-propellant-inventory-20261102.json`. Earlier `focused-checks.txt` retains the development comparison test that omitted resolution metadata on one candidate; final checks supply consistent configured resolution.

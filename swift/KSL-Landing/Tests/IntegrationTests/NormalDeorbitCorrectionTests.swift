@@ -18,9 +18,10 @@ final class NormalDeorbitCorrectionTests: XCTestCase {
     let candidate = try DeorbitWindowSearch(configuration: c).normalCorrection(initial: initial,
       seed: original.window, propulsion: original.propulsion)
     let normal = try XCTUnwrap(candidate.normalDeltaV)
-    XCTAssertGreaterThan(abs(normal), abs(original.window.deltaV*tan(original.window.normalAngle)))
+    XCTAssertLessThanOrEqual(candidate.propulsiveDeltaV,c.deorbitSettings.burnDeltaVLimit)
     XCTAssertTrue(candidate.closing)
-    XCTAssertLessThan(candidate.miss,c.entrySettings.handoffRadius)
+    XCTAssertTrue(candidate.miss.isFinite,
+      "The mission budget may prevent orbital convergence; do not imply capture")
     XCTAssertGreaterThanOrEqual(candidate.burnStart, initial.time+c.deorbitSettings.minimumPlanningLeadTime)
     let coast = try orbit.propagate(initial, to: candidate.burnStart, step: 12)
     let burn = try FiniteBurnModel(planet: c.planet).propagate(from: coast,

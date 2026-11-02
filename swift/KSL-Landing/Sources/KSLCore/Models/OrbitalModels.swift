@@ -27,8 +27,21 @@ public struct OrbitalState: Codable, Sendable, Equatable {
   }
 }
 
+/// Stoichiometric mass available from one conservatively shared OMS feed pool.
+public enum OMSPropellantBudget {
+  public static func usableMass(_ resources:[(amount:Double,ratio:Double,density:Double)]) throws -> Double {
+    guard !resources.isEmpty,resources.allSatisfy({$0.amount.isFinite && $0.amount>=0
+      && $0.ratio.isFinite && $0.ratio>0 && $0.density.isFinite && $0.density>0}) else {
+      throw FlightError.invalidTelemetry("Invalid measured OMS propellant mixture")
+    }
+    let batches=resources.map {$0.amount/$0.ratio}.min()!
+    return batches*resources.reduce(0.0) {$0+$1.ratio*$1.density}
+  }
+}
+
 public struct PropulsionTelemetry: Codable, Sendable, Equatable {
   public var availableThrust: Double
+  /// Burnout mass: includes payload, RCS propellant and unusable mixture remainder.
   public var dryMass: Double
   public var specificImpulse: Double
   public var evidence: EvidenceKind
@@ -54,6 +67,8 @@ public struct PropulsionTelemetry: Codable, Sendable, Equatable {
 }
 
 public struct DeorbitConfiguration: Codable, Sendable, Equatable {
+  public var maximumBurnDeltaV:Double? = 150
+  public var burnDeltaVLimit:Double {maximumBurnDeltaV ?? 150}
   public var maximumThrottle = 0.18
   public var throttleRampDuration = 12.0
   public var minimumPlanningLeadTime = 60.0
@@ -79,7 +94,7 @@ public struct DeorbitConfiguration: Codable, Sendable, Equatable {
   public func validate(planet: PlanetConfiguration) throws {
     // OMS must never run at full thrust; ensure planning and live execution
     // agree on the same bounded low-throttle envelope.
-    guard maximumThrottle > 0, maximumThrottle <= 0.25, throttleRampDuration >= 0,
+    guard burnDeltaVLimit.isFinite,burnDeltaVLimit>0,maximumThrottle > 0, maximumThrottle <= 0.25, throttleRampDuration >= 0,
       throttleRampDuration <= 60, minimumPlanningLeadTime >= 5,
       targetPeriapsisAltitude > 0, targetPeriapsisAltitude < planet.atmosphereTop,
       entryAltitudeMargin >= 0, entryAltitudeMargin < planet.atmosphereTop/2,

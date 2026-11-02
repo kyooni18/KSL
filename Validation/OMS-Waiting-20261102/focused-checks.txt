@@ -1,0 +1,41 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 65]
+[2 / 66] KSLCore
+[4 / 68] KSLCore
+[10 / 68] KSLCore
+[19 / 47] KSLKRPC
+[21 / 49] KSLKRPC
+[24 / 47] PhysicsTests-product
+[32 / 52] SimulationTests-product
+[34 / 50] KSLKRPC
+[39 / 50] ksl-landing-product
+[48 / 59] IntegrationTests-product
+[51 / 57] IntegrationTests-product
+[53 / 57] IntegrationTests-product
+[57 / 57] ksl-landing-product
+Build complete! (7.53초)
+Test Suite 'Selected tests' started at 2026-11-03 00:00:23.328.
+Test Suite 'IntegrationTests.xctest' started at 2026-11-03 00:00:23.330.
+Test Suite 'DeorbitExecutionTests' started at 2026-11-03 00:00:23.330.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testAuthorizationRequiresScreenedEntryAndPlanIdentity]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testAuthorizationRequiresScreenedEntryAndPlanIdentity]' passed (0.002 seconds).
+Test Case '-[IntegrationTests.DeorbitExecutionTests testFailedDeorbitCandidatesAreRankedByPhysicalMM305EntryNotSeventyKilometreMiss]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testFailedDeorbitCandidatesAreRankedByPhysicalMM305EntryNotSeventyKilometreMiss]' passed (0.000 seconds).
+Test Suite 'DeorbitExecutionTests' passed at 2026-11-03 00:00:23.332.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'OMSWaitingPolicyTests' started at 2026-11-03 00:00:23.332.
+Test Case '-[IntegrationTests.OMSWaitingPolicyTests testRecordedOMSInventoryExcludesNonOMSResourcesAndSharedTankDuplication]' started.
+Test Case '-[IntegrationTests.OMSWaitingPolicyTests testRecordedOMSInventoryExcludesNonOMSResourcesAndSharedTankDuplication]' passed (0.001 seconds).
+Test Case '-[IntegrationTests.OMSWaitingPolicyTests testWaitingWinsAtComparableDeliveryAndQualifiedRoutesPreferFuel]' started.
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/IntegrationTests/OMSWaitingPolicyTests.swift:32: error: -[IntegrationTests.OMSWaitingPolicyTests testWaitingWinsAtComparableDeliveryAndQualifiedRoutesPreferFuel] : XCTAssertLessThan failed: ("InfeasibleApproachRank(hardUnsafe: false, screenFeasible: false, altitudeRejected: false, machRejected: false, captureMiss: 2000.0, violationCount: 1, entryMiss: 1000.0, impulse: 0.0, burnStart: 0.0, resolution: 0.0)") is not less than ("InfeasibleApproachRank(hardUnsafe: false, screenFeasible: false, altitudeRejected: false, machRejected: false, captureMiss: 23900.0, violationCount: 1, entryMiss: 1000.0, impulse: 35.0, burnStart: 9000.0, resolution: 1000.0)") - Fuel does not hide a substantial delivery deficit
+Test Case '-[IntegrationTests.OMSWaitingPolicyTests testWaitingWinsAtComparableDeliveryAndQualifiedRoutesPreferFuel]' failed (0.356 seconds).
+Test Suite 'OMSWaitingPolicyTests' failed at 2026-11-03 00:00:23.689.
+	 Executed 2 tests, with 1 failure (0 unexpected) in 0.357 (0.357) seconds
+Test Suite 'IntegrationTests.xctest' failed at 2026-11-03 00:00:23.689.
+	 Executed 4 tests, with 1 failure (0 unexpected) in 0.359 (0.359) seconds
+Test Suite 'Selected tests' failed at 2026-11-03 00:00:23.689.
+	 Executed 4 tests, with 1 failure (0 unexpected) in 0.359 (0.362) seconds
+OMS_BUDGET 4075.429643611079 burnoutMass 21556.168012638922 availableDV 585.8643579900081 wrongDryMassDV 845.2145423938664
+Note: Some test targets reported failures:
+  - IntegrationTests (XCTest)
