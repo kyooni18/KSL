@@ -196,7 +196,57 @@ final class TAEMPredictionEvidenceTests: XCTestCase {
       .evaluate(plan: plan, from: exact.seed.state, controlSnapshot: nil, previousTarget: nil,
         lift: 1, drag: 1, commandPrefix: exact)
     XCTAssertEqual(wrongModel.evaluation?.end, .unsupportedDynamics)
+    // Empty command prefixes exercise the continuation wiring only. A zero
+    // search horizon intentionally supplies no landing forecast or flight claim.
+    var zeroCoverage = c
+    zeroCoverage.guidance.maximumPredictionDuration = 0
+    var joins: [VehicleState] = []
+    let searched = try TAEMCommandSearch(configuration: zeroCoverage, atmosphere: atmosphere,
+      aerodynamics: aero).search([
+        .init(id: "first", topology: .incumbent, segments: []),
+        .init(id: "second", topology: .protection, segments: [])], from: seed,
+        maximumEvaluations: 2) { _, prefix in
+          joins.append(prefix.seed.state); return plan
+        }
+    XCTAssertEqual(joins.count, 2)
+    XCTAssertEqual(searched.trials[0].outcome?.evaluation?.comparisonContext,
+      searched.trials[1].outcome?.evaluation?.comparisonContext)
+    XCTAssertEqual(searched.trials[1].relation, .unassessed)
+    XCTAssertEqual(searched.incumbentTrial, 0)
+    XCTAssertTrue(searched.trials.allSatisfy { $0.outcome?.evaluation?.end == .horizon && $0.outcome?.qualified == false })
 
+  }
+
+  func testCommandSearchRetainsUnsupportedCandidatesWithoutInventingContinuations() throws {
+    let r = try recorded(), c = r.configuration
+    let atmosphere = try AtmosphericModelEngine(planet: c.planet)
+    let aero = try AerodynamicsEngine(referenceArea: c.vehicle.referenceArea)
+    let search = TAEMCommandSearch(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+    let seed = NativeCommandSeed(state: r.state, controls: nil, limiter: .init(previous: r.target))
+    let candidates = [TAEMCommandCandidate(id: "incumbent", topology: .incumbent, segments: [
+      .init(duration: c.guidance.controlInterval, command: .init(phase: .acquisition, target: r.target))]),
+      .init(id: "protection", topology: .protection, segments: [
+        .init(duration: c.guidance.controlInterval, command: .init(phase: .acquisition, target: r.target))])]
+    var continuationCalled = false
+    let result = try search.search(candidates, from: seed, maximumEvaluations: 2) { _, _ in
+      continuationCalled = true; return nil
+    }
+    XCTAssertFalse(continuationCalled)
+    XCTAssertEqual(result.end, .familyExhausted)
+    XCTAssertEqual(result.trials.count, 2)
+    XCTAssertNil(result.incumbentTrial)
+    XCTAssertTrue(result.trials.allSatisfy { $0.prefix.end == .unsupportedDynamics && $0.outcome == nil })
+    XCTAssertEqual(result.trials[0].prefix.comparisonContext, result.trials[1].prefix.comparisonContext)
+    let truncated = try search.search(candidates, from: seed, maximumEvaluations: 1) { _, _ in nil }
+    XCTAssertEqual(truncated.end, .candidateBudget)
+    XCTAssertEqual(truncated.trials.count, 1)
+    XCTAssertEqual(truncated.suppliedCandidates, 2)
+    let cancelled = try search.search(candidates, from: seed, maximumEvaluations: 2,
+      cancelled: { true }) { _, _ in nil }
+    XCTAssertEqual(cancelled.end, .cancelled)
+    XCTAssertTrue(cancelled.trials.isEmpty)
+    XCTAssertThrowsError(try search.search([candidates[0], candidates[0]], from: seed,
+      maximumEvaluations: 2) { _, _ in nil })
   }
 
 }

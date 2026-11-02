@@ -20,7 +20,8 @@ public final class TerminalTrajectoryEvaluator {
                        nativeSeed: NativeCommandSeed? = nil,
                        lift: Double, drag: Double,
                        commandPrefix: TAEMSchedulePrefix? = nil,
-                       trace: ((VehicleState, PathStation, GuidanceTarget) -> Void)? = nil) -> TerminalClosedLoopCase {
+                       trace: ((VehicleState, PathStation, GuidanceTarget) -> Void)? = nil,
+                       cancelled: () -> Bool = { false }) -> TerminalClosedLoopCase {
     let c = configuration, dt = c.guidance.controlInterval
     let seed = commandPrefix?.seed ?? nativeSeed ?? NativeCommandSeed(state: initial, controls: controlSnapshot,
       limiter: targetLimiter ?? GuidanceTargetLimiter(previous: previousTarget))
@@ -63,7 +64,7 @@ public final class TerminalTrajectoryEvaluator {
     }
     // As in entry propagation, discard only sub-resolution integration residue.
     while prefixValid && c.guidance.maximumPredictionDuration-(state.time-origin.time) > dt*1e-6 {
-      if Task.isCancelled { end = .cancelled; break }
+      if Task.isCancelled || cancelled() { end = .cancelled; break }
       guard rollout.modelConsistent, nativeSeed.map({
         $0.state.time == initial.time && $0.state.position == initial.position
           && $0.state.velocity == initial.velocity && $0.state.attitude == initial.attitude
@@ -134,7 +135,7 @@ public final class TerminalTrajectoryEvaluator {
       }
     }
     if evaluationStatus == .incomplete {
-      failures.append(.init(.timeout, Task.isCancelled ? "Terminal qualification cancelled" : "Terminal qualification did not complete rollout"))
+      failures.append(.init(.timeout, end == .cancelled ? "Terminal qualification cancelled" : "Terminal qualification did not complete rollout"))
     }
     if accounting.maximumPressureExcess > 0 { add(.init(.excessiveDynamicPressure, "Command/terminal trajectory q envelope")) }
     if accounting.maximumLoadExcess > 0 { add(.init(.excessiveLoad, "Command/terminal trajectory load envelope")) }
