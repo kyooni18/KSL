@@ -24,6 +24,8 @@ public struct RunwayGeometry: Codable, Sendable, Equatable {
     // appending repeated "(reciprocal)" labels on successive replans.
     if name.hasSuffix("09") { result.name = String(name.dropLast(2))+"27" }
     else if name.hasSuffix("27") { result.name = String(name.dropLast(2))+"09" }
+    else if name.hasSuffix("36") { result.name = String(name.dropLast(2))+"18" }
+    else if name.hasSuffix("18") { result.name = String(name.dropLast(2))+"36" }
     else { result.name = name+" (reciprocal)" }
     return result
   }

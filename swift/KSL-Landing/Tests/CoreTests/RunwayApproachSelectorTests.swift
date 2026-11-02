@@ -2,6 +2,19 @@ import XCTest
 @testable import KSLCore
 
 final class RunwayApproachSelectorTests: XCTestCase {
+  func testDessertReciprocalNamesAndGeometry() {
+    var c = MissionConfiguration()
+    c.runway.name = "Dessert Airfield Runway 36"
+    c.runway.latitude = radians(-6.60031229594)
+    c.runway.longitude = radians(-144.04084177757)
+    c.runway.heading = radians(0.94276554)
+    c.runway.length = 1750
+    let reverse = c.runway.reciprocal(planet: c.planet)
+    XCTAssertEqual(reverse.name, "Dessert Airfield Runway 18")
+    let twice = reverse.reciprocal(planet: c.planet)
+    XCTAssertEqual(twice.name, c.runway.name)
+    XCTAssertLessThan((RunwayFrame(runway: twice).origin - RunwayFrame(runway: c.runway).origin).length, 0.01)
+  }
   func testAutomaticSelectionPrefersInboundDirectionAndIsSymmetric() {
     var c = MissionConfiguration()
     let f = RunwayFrame(runway: c.runway, planet: c.planet)

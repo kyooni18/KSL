@@ -285,6 +285,9 @@ class KSLApp(App[int]):
                     for label, widget in (
                         ("Mode", Select([("Live KSP", "live"), ("Simulation", "sim")], value="live", allow_blank=False,
                                         id="q-land-mode")),
+                        ("Landing site", Select([("Configured site (normally KSC)", "configured"),
+                                                  ("Dessert Airfield · provisional", "dessert")],
+                                                 value=base["landing"]["siteSelection"], allow_blank=False, id="q-site")),
                         ("Start from", Select([("Auto (from vessel state)", "auto"), ("Deorbit plan", "deorbit"),
                                                ("Entry · MM304", "entry"), ("TAEM · MM305", "taem"),
                                                ("Final approach", "final")], value="auto", allow_blank=False,
@@ -357,6 +360,10 @@ class KSLApp(App[int]):
                                 yield Select([("Legacy STS", "legacy"), ("Intelligent · experimental", "intelligent")],
                                              value=ascent["guidanceMode"], allow_blank=False, id="ascent-mode")
                             with Vertical(id="landing-fields", classes="context-fields"):
+                                yield Label("Landing site")
+                                yield Select([("Configured site (normally KSC)", "configured"),
+                                              ("Dessert Airfield · provisional", "dessert")],
+                                             value=base["landing"]["siteSelection"], allow_blank=False, id="landing-site")
                                 yield Label("Landing configuration / model profile")
                                 yield Input(base["landing"]["backendConfiguration"], id="landing-config")
                                 yield Input(base["landing"]["modelProfile"], id="landing-model")
@@ -840,6 +847,7 @@ class KSLApp(App[int]):
     # --- simple launch / landing ----------------------------------------------------
     QUICK_FIELDS = {"q-altitude": "altitude", "q-inclination": "inclination", "q-kind": "kind",
                     "q-ascent-mode": "ascent-mode", "q-plane-target": "plane-target",
+                    "q-site": "landing-site",
                     "q-landing-config": "landing-config", "q-strict-plan": "strict-plan", "q-scenario": "scenario"}
 
     @on(Switch.Changed, "#q-launch-settings")
@@ -994,6 +1002,7 @@ class KSLApp(App[int]):
             "auto-warp": ("operations", "autoWarp"), "orbit-trim": ("orbit", "trim"),
             "hold-trim": ("orbit", "holdForTrigger"), "max-burns": ("orbit", "maxBurns"),
             "landing-config": ("landing", "backendConfiguration"), "landing-model": ("landing", "modelProfile"),
+            "landing-site": ("landing", "siteSelection"),
             "strict-plan": ("landing", "requireStrictPlan"),
         }
         for wid, (section, key) in fields.items():
@@ -1025,6 +1034,7 @@ class KSLApp(App[int]):
             "orbit.holdForTrigger": switch("hold-trim"),
             "orbit.maxBurns": int(self._number("max-burns", "Maximum trim burns")),
             "landing.backendConfiguration": self.query_one("#landing-config", Input).value.strip(),
+            "landing.siteSelection": str(value("landing-site")),
             "landing.modelProfile": self.query_one("#landing-model", Input).value.strip(),
             "landing.requireStrictPlan": switch("strict-plan"),
         }

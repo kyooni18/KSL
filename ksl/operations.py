@@ -153,8 +153,14 @@ class OperationRequest:
         if problems:
             raise ConfigError("; ".join(problems))
         op = BY_KEY[self.key]
+        if self.key == "simulate" and config["landing"]["siteSelection"] == "dessert":
+            raise ConfigError("Simulation scenarios supply their own runway; Dessert selection is available for live backend guidance only")
         lines = [f"{op.title} · {self.mode} · {config.name}", op.description,
                  f"{start.title} → {stop.title}"]
+        if self.key in ("deorbit", "entry", "taem", "final", "launch", "orbit", "continue"):
+            site = config.backend_configuration().get("site", {})
+            qualifier = " · provisional geometry; reciprocal allowed" if config["landing"]["siteSelection"] == "dessert" else ""
+            lines.append(f"Landing site: {site.get('name', 'configured site')}{qualifier}")
         if self.key in ("preflight", "launch", "orbit"):
             lines.append(f"Target: {config['ascent']['targetAltitudeKm']:g} km / "
                          f"{config['ascent']['inclinationDeg']:g}° · {config['profile']['kind']}")

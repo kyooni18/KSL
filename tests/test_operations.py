@@ -16,6 +16,29 @@ from ksl.plan_review import invalid_reason
 FAKE = Path(__file__).parent / "fakes" / "fake_backend.py"
 
 
+def test_tui_dessert_selection_reaches_backend_and_review(tmp_path):
+    from ksl.tui import KSLApp
+
+    async def exercise():
+        app = KSLApp(runs_root=tmp_path)
+        async with app.run_test(size=(120, 45)):
+            app.query_one("#q-site").value = "dessert"
+            app.query_one("#q-land-from").value = "entry"
+            app.quick_start("land")
+            request = app._request()
+            site = request.config.backend_configuration()["site"]
+            assert site["name"] == "Dessert Airfield Runway 36"
+            assert site["runwayLength"] == 1750 and site["runwayWidth"] == 42.6
+            assert site["allowReciprocalRunway"]
+            assert "provisional geometry" in request.preview()
+            assert app.controller is None
+            app.query_one("#mode").value = "sim"
+            app.selected_operation = "simulate"
+            with pytest.raises(ValueError, match="scenarios supply their own runway"):
+                app._request().preview()
+    asyncio.run(exercise())
+
+
 def vessel():
     return dict(scene="flight", situation="orbiting", observedAt=time.time(), vessel="STS",
                 vesselId=123, body="Kerbin", atmosphereDepth=70000, ut=100,

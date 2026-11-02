@@ -87,6 +87,7 @@ DEFAULTS: dict[str, Any] = {
     },
     "landing": {
         "backendConfiguration": "Configuration/sts.json",
+        "siteSelection": "configured",
         "modelProfile": "sts",
         "autoWarp": True,
         # Swift's NDJSON backend owns the complete deorbit-through-rollout flow.
@@ -204,6 +205,16 @@ class MissionConfig:
             "rpcPort": int(conn["rpcPort"]),
         })
         landing.setdefault("guidance", {})["useTimeWarp"] = bool(self.data["landing"]["autoWarp"])
+        if self.data["landing"]["siteSelection"] == "dessert":
+            # The first surveyed shuttle position is a provisional threshold;
+            # the stated length and visually estimated width are not surveyed.
+            landing["site"] = {
+                "name": "Dessert Airfield Runway 36",
+                "latitude": -6.60031229594, "longitude": -144.04084177757,
+                "altitude": 820.95, "runwayHeading": 0.94276554,
+                "runwayLength": 1750.0, "runwayWidth": 42.6,
+                "allowReciprocalRunway": True,
+            }
         return landing
 
     def validate(self) -> list[str]:
@@ -268,6 +279,10 @@ class MissionConfig:
                 problems.append(f"{section}.{key} must not be empty")
         if self.data["landing"].get("engine", "swift-backend") not in ("c", "swift", "swift-backend"):
             problems.append("landing.engine must be 'c', 'swift' or 'swift-backend'")
+        if self.data["landing"]["siteSelection"] not in ("configured", "dessert"):
+            problems.append("landing.siteSelection must be configured or dessert")
+        if self.data["landing"]["siteSelection"] == "dessert" and self.data["landing"]["engine"] != "swift-backend":
+            problems.append("Dessert selection requires the swift-backend landing engine")
         if self.data["landing"].get("engine") == "swift" and not 0 <= int(self.data["landing"]["swiftAirbrakeGroup"]) <= 9:
             problems.append("landing.swiftAirbrakeGroup must be 0-9")
         landing_path = repo_path(self.data["landing"]["backendConfiguration"])
