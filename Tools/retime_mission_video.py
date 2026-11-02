@@ -114,13 +114,16 @@ def main():
     meta=probe(source)
     source_video=next(s for s in meta['streams'] if s['codec_type']=='video')
     manifest=json.loads((args.manifest or source.with_suffix('.json')).read_text())
+    # Decode audio from the capture itself: a prior MP4 remux may shift its
+    # initial AAC edit offset even while preserving compressed packet bytes.
+    audio_source=Path(manifest['recording'])
     part=json.loads(Path(manifest['segments'][0]['path']).with_suffix('.json').read_text())
     timeline=Timeline(Path(part['launch']),Path(part['landing']),Path(part['native']))
     clock=PlaybackMap.mission(timeline,part['recordingStart'],float(meta['format']['duration']))
     work=out.parent/(out.stem+'-work');work.mkdir(parents=True,exist_ok=True)
     duration=float(clock.target[-1]);sample_rate=48000
     mapping=work/'audio-map.txt';clock.write_audio_map(mapping,sample_rate)
-    plan=dict(source=str(source),output=str(out),sourceMetadata=meta,
+    plan=dict(source=str(source),audioSource=str(audio_source),output=str(out),sourceMetadata=meta,
         sourceSeconds=clock.source.tolist(),outputSeconds=clock.target.tolist(),
         preservedTimewarpIntervals=clock.warp_intervals,duration=duration,
         policy='1x simulation UT outside timewarp; keep logged warp at original video speed',
@@ -147,7 +150,7 @@ def main():
         print(f'Copied {plan["videoCopy"]["frames"]} unchanged video packets in {plan["elapsedVideoSeconds"]:.1f}s',flush=True)
         # Fill the source AAC's initial ~77ms edit offset with silence before
         # passing absolute sample-frame coordinates to the audio time stretcher.
-        subprocess.run(['ffmpeg','-v','error','-n','-i',str(source),'-vn','-af',
+        subprocess.run(['ffmpeg','-v','error','-n','-i',str(audio_source),'-vn','-af',
             'aresample=async=1:first_pts=0','-ar',str(sample_rate),'-c:a','pcm_f32le',
             str(work/'audio-original.wav')],check=True)
         plan['audioCommand']=['rubberband','--fast','--centre-focus','--duration',str(duration),
