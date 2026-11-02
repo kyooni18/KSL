@@ -1,6 +1,7 @@
 import XCTest
 import KSLCore
 import KSLPhysics
+import KSLControl
 @testable import KSLGuidance
 
 final class TAEMPredictionEvidenceTests: XCTestCase {
@@ -8,6 +9,10 @@ final class TAEMPredictionEvidenceTests: XCTestCase {
     var configuration: MissionConfiguration
     var state: VehicleState
     let target: GuidanceTarget
+    let balanceHistory: [BalanceRecord]
+  }
+  private struct BalanceRecord: Decodable {
+    let state: VehicleState, phase: MissionPhase, target: GuidanceTarget
   }
   private func recorded() throws -> RecordedSeed {
     let url = try XCTUnwrap(Bundle.module.url(forResource: "taem-response-20261103",
@@ -84,4 +89,43 @@ final class TAEMPredictionEvidenceTests: XCTestCase {
       evaluation: incomplete.evaluation)
     XCTAssertFalse(optimistic.qualified)
   }
+  func testMeasuredMomentEvidenceExpiresWithoutRefreshFromModeledObservations() throws {
+    let r = try recorded(), c = r.configuration
+    let atmosphere = try AtmosphericModelEngine(planet: c.planet)
+    let aero = try AerodynamicsEngine(referenceArea: c.vehicle.referenceArea)
+    let controller = FlightController(configuration: c)
+    let history = r.balanceHistory
+    var previousTime: Double?
+    for row in history.dropLast() {
+      let dt = previousTime.map { row.state.time-$0 } ?? c.guidance.controlInterval
+      _ = try controller.command(state: row.state, solution: .init(phase: row.phase, target: row.target), dt: dt)
+      previousTime = row.state.time
+    }
+    let next = try XCTUnwrap(history.last)
+    XCTAssertNotNil(controller.snapshot.predictionPitchTrim(state: next.state))
+    let branch = NativeCommandRollout(seed: .init(state: next.state, controls: controller.snapshot,
+      limiter: .init(previous: next.target)), configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+    XCTAssertTrue(branch.pitchMomentSupported)
+    XCTAssertEqual(branch.pitchMomentSupport, .localBalance)
+    // This is native history/coverage bookkeeping on the genuine STS plant,
+    // not a historical-target replay or a counterfactual performance claim.
+    for _ in 0..<21 {
+      _ = try branch.advance(.init(phase: next.phase, target: next.target), duration: c.guidance.controlInterval)
+    }
+    XCTAssertFalse(branch.pitchMomentSupported)
+    let continued = NativeCommandRollout(seed: branch.seed, configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+    XCTAssertEqual(continued.pitchMomentSupport, .outsideEvidence)
+    XCTAssertFalse(continued.pitchMomentSupported, "A prediction checkpoint must not refresh measured moment evidence")
+    let prediction = TrajectoryPropagationEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+    var requestedUnsupportedCommand = false
+    let unsupported = prediction.predict(from: r.state, duration: c.guidance.pathLookaheadTime,
+      terminalSpeed: 0) { _ in
+        requestedUnsupportedCommand = true
+        return .init(alpha: r.target.angleOfAttack, bank: r.target.bank)
+      }
+    XCTAssertFalse(requestedUnsupportedCommand)
+    XCTAssertEqual(unsupported.duration, 0)
+    XCTAssertTrue(unsupported.violations.contains { $0.kind == .modelUncertainty })
+  }
+
 }

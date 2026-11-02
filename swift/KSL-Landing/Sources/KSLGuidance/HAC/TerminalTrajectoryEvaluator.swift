@@ -61,7 +61,7 @@ public final class TerminalTrajectoryEvaluator {
         evaluationStatus = .complete; end = .modeledCrash; break
       }
       if !state.contact.isGrounded && !rollout.pitchMomentSupported {
-        add(.init(.modelUncertainty, "Measured actuator torque does not identify pitch moment balance"))
+        add(.init(.modelUncertainty, "Terminal prediction lacks supported original pitch-moment evidence: \(rollout.pitchMomentSupport.rawValue)"))
         evaluationStatus = .invalid; end = .unsupportedDynamics; break
       }
       for violation in touchdown.observe(state) { add(violation) }

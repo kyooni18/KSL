@@ -26,7 +26,7 @@ struct AdaptiveTrim: Sendable {
     return (a, b, noise)
   }
   mutating func observe(time: Double, mach: Double, pressure: Double,
-                        alpha: Double, input: Double, settled: Bool) {
+                        alpha: Double, input: Double, settled: Bool, predictionSettled: Bool? = nil) {
     guard time.isFinite else { return }
     let dt = lastTime.map { time - $0 } ?? 0
     lastTime = time
@@ -37,12 +37,17 @@ struct AdaptiveTrim: Sendable {
     let decay = exp(-dt / 30)
     weight *= decay; x *= decay; y *= decay; xx *= decay; xy *= decay; yy *= decay
     let incidence = degrees(alpha)
-    guard settled, [mach, pressure, incidence, input].allSatisfy(\.isFinite),
+    guard [mach, pressure, incidence, input].allSatisfy(\.isFinite),
           pressure > 0, abs(incidence) <= 180, abs(input) <= 1 else { return }
     // A measured equilibrium at the actuator stop still identifies the local
     // balancing input. It does NOT identify a trim slope or the maximum AoA.
     // Keep it separate from the unsaturated regression and control feedforward.
-    localBalance = .init(time: time, mach: mach, pressure: pressure, alpha: alpha, input: input)
+    if predictionSettled ?? settled {
+      localBalance = .init(time: time, mach: mach, pressure: pressure, alpha: alpha, input: input)
+    }
+    // Prediction-only equilibrium does not update the controller's regression,
+    // its freshness clock, feedforward, or claimed attainable-incidence ceiling.
+    guard settled else { return }
     guard abs(input) < 0.95 else { return }
     if regimeValid && (abs(mach - self.mach) > 0.35 || pressure / self.pressure > 2 || pressure / self.pressure < 0.5) {
       weight = 0; regimeValid = false

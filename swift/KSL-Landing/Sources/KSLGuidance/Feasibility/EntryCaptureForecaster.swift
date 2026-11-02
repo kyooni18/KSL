@@ -219,6 +219,10 @@ public final class EntryCaptureForecaster {
     if searched, !violations.isEmpty {
       capture.feasible = false; capture.violations += violations; capture.deficit = .envelopeViolation
     }
+    if violations.contains(where: { $0.kind == .modelUncertainty }) {
+      capture.feasible = false; capture.certified = false; capture.deficit = .evaluationUnassessed
+      if !capture.violations.contains(where: { $0.kind == .modelUncertainty }) { capture.violations += violations }
+    }
     var maxQ = 0.0, maxLoad = 0.0
     let track: [[Double]] = samples.map { s in
       maxQ = max(maxQ, s.dynamicPressure); maxLoad = max(maxLoad, s.loadFactor)

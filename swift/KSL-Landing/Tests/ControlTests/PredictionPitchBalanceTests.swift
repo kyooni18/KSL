@@ -50,4 +50,15 @@ final class PredictionPitchBalanceTests: XCTestCase {
     XCTAssertNil(trim.predictionInput(time: 4.2, mach: 4, pressure: 4000, alpha: radians(20)))
   }
 
+  func testPredictionOnlyEquilibriumDoesNotBecomeFeedforwardOrAnIncidenceEnvelope() {
+    var trim = AdaptiveTrim()
+    for i in 0...3 {
+      trim.observe(time: Double(i)*0.1, mach: 2.8, pressure: 3480,
+        alpha: radians(26.5), input: 0.8, settled: false, predictionSettled: true)
+    }
+    XCTAssertEqual(trim.predictionInput(time: 0.4, mach: 2.8, pressure: 3480, alpha: radians(26.5)), 0.8)
+    XCTAssertNil(trim.input(alpha: radians(26.5)))
+    XCTAssertNil(trim.ceiling(maximum: radians(40)))
+  }
+
 }

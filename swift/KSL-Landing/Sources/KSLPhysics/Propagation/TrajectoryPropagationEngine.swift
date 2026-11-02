@@ -68,6 +68,11 @@ public final class TrajectoryPropagationEngine {
           dynamicPressure: s.aerodynamics.dynamicPressure, loadFactor: load))
         nextRecord += step * Double(recordEvery)
       }
+      guard rollout.pitchMomentSupported else {
+        violations.append(.init(.modelUncertainty,
+          "Measured-vehicle prediction lacks original pitch-moment support: \(rollout.pitchMomentSupport.rawValue)"))
+        break
+      }
       let dt = min(controlStep, end - s.time)
       feedback?(rollout.diagnostics)
       let requested = law(s)

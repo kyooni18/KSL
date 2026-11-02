@@ -164,14 +164,21 @@ public final class FlightController {
     let previousTrimInput = previousState.map {
       ($0.appliedControls?.pitch ?? 0) + ($0.appliedControls?.bodyFlapTrimFraction ?? 0)*trimCoefficient
     }
-    let momentSettled = solution.phase == .entry && pitchAuthorityReport > 0
+    let measuredMomentSettled = pitchAuthorityReport > 0
       && measuredPitchAcceleration.map { abs($0)/pitchAuthorityReport <= 0.03 } == true
       && previousTrimInput.map { abs(observedTrimInput-$0) <= 0.03 } == true
+    let momentSettled = solution.phase == .entry && measuredMomentSettled
+    let predictionSettled = [.entry, .acquisition, .headingAlignment].contains(solution.phase)
+      && !state.systems.rcs && previousState?.systems.rcs == false
+      && state.controlAuthority?.evidence == .measured && a.measuredForces
+      && state.appliedControls != nil && previousState?.appliedControls != nil
+      && abs(aeroRate.y) < radians(0.3) && measuredMomentSettled
     trimModel.observe(time: state.time, mach: a.mach, pressure: a.dynamicPressure,
       alpha: a.angleOfAttack, input: observedTrimInput,
       settled: !state.systems.rcs && previousState != nil
         && abs(aeroRate.y) < radians(0.3)
-        && (abs(aerodynamicError) < radians(0.5) || momentSettled) && state.appliedControls != nil)
+        && (abs(aerodynamicError) < radians(0.5) || momentSettled) && state.appliedControls != nil,
+      predictionSettled: predictionSettled)
     pitchAuthority.observe(rate: state.angularVelocity.y, input: observed.pitch,
                            dt: dt, interference: 0, responseTime: 0)
     rollAuthority.observe(rate: state.angularVelocity.x, input: observed.roll,

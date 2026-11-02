@@ -3,6 +3,7 @@ import KSLCore
 import KSLControl
 import KSLPhysics
 import KSLDiagnostics
+import KSLGuidance
 
 /// One historical response interval. The FCS is warmed exclusively with prior
 /// measured states and recorded limited targets. Plant replay uses recorded
@@ -13,8 +14,22 @@ enum TAEMResponseAudit {
     let altitudeError: Double, speedError: Double, alphaError: Double, bankError: Double
     let angularRateError: Vector3, energyChange: Double
   }
+  struct ForceSeed: Encodable {
+    let mode: String, liftEffectiveness: Double, dragEffectiveness: Double
+    let environment: EnvironmentCalibration
+  }
+  struct SupportedPrefix: Encodable {
+    let duration: Double, intervals: Int
+    let altitudeError: Double, speedError: Double, alphaError: Double, bankError: Double
+    let measuredEnergyChange: Double, predictedEnergyChange: Double
+  }
   struct Report: Encodable {
     let evidence: String
+    let seedSelection: String
+    let seedPitchBalance: Double?
+    let firstMomentSupportExit: Double?
+    let supportedPrefix: SupportedPrefix?
+    let forceSeed: ForceSeed
     let warmRecords: Int, dynamicsResets: Int
     let maximumWarmCommandError: Double
     let seedTime: Double, duration: Double, intervals: Int
@@ -27,14 +42,20 @@ enum TAEMResponseAudit {
     let localResidualPrediction: LocalResidualPrediction
     let limitations: [String]
   }
-  static func run(input: String, configuration c: MissionConfiguration) async throws -> Report {
+  static func run(input: String, configuration c: MissionConfiguration, firstSupportedBalance: Bool = false, identifiedForces: Bool = false) async throws -> Report {
     let reader = try FlightReplayReader(url: URL(fileURLWithPath: input))
     defer { try? reader.close() }
     let atmosphere = try AtmosphericModelEngine(planet: c.planet)
     let aero = try await PhysicsModelLoader.aerodynamics(configuration: c)
     var controller = FlightController(configuration: c)
+    let forceEstimator = AerodynamicAuthorityEstimator(model: aero)
+    var forceSeed = ForceSeed(mode: "frozen-nominal", liftEffectiveness: 1, dragEffectiveness: 1, environment: .init())
     var previousTime: Double?, sequence: UInt64?, warm = 0, resets = 0
     var maximumWarmError = 0.0
+    var seedBalance: Double?
+    var momentEvidence: FlightControlSnapshot?
+    var firstSupportExit: Double?
+    var supportedPrefix: SupportedPrefix?
     var seed: VehicleState?, plant: ShuttlePhysicsEngine?, predicted: VehicleState?
     var localPlant: ShuttlePhysicsEngine?, localPredicted: VehicleState?, previousState: VehicleState?
     var localBias = Vector3.zero, anchorInterval = 0.0
@@ -54,7 +75,7 @@ enum TAEMResponseAudit {
       if r.sequence == 1 {
         guard seed == nil else { throw FlightError.protocolViolation("New session inside response interval") }
         controller = .init(configuration: c); previousTime = nil; previousState = nil; sequence = nil
-        warm = 0; resets = 0; maximumWarmError = 0
+        warm = 0; resets = 0; maximumWarmError = 0; forceEstimator.reset()
       }
       if let sequence, r.sequence != sequence+1 {
         throw FlightError.protocolViolation("Missing/reordered atmospheric control history")
@@ -65,13 +86,23 @@ enum TAEMResponseAudit {
         throw FlightError.protocolViolation("Unreconciled historical telemetry gap")
       }
       if let change = r.dynamicsChange {
-        controller.adaptToDynamicsChange(change, at: r.state); resets += 1
+        controller.adaptToDynamicsChange(change, at: r.state); forceEstimator.reset(); resets += 1
       }
-      if seed == nil && [.acquisition, .headingAlignment].contains(r.guidance.phase) {
-        seed = r.state
+      let balance = controller.snapshot.predictionPitchTrim(state: r.state)
+      if seed == nil && [.acquisition, .headingAlignment].contains(r.guidance.phase)
+        && (!firstSupportedBalance || balance != nil) {
+        seed = r.state; seedBalance = balance; momentEvidence = controller.snapshot
+        if balance == nil { firstSupportExit = 0 }
         horizon = max(c.guidance.pathLookaheadTime,
           controller.diagnostics.pitchResponseSeconds ?? 0, controller.diagnostics.rollResponseSeconds ?? 0)
-        plant = .init(configuration: c, atmosphere: atmosphere, aerodynamics: aero,
+        if identifiedForces {
+          forceSeed = .init(mode: "prebranch-live-estimator", liftEffectiveness: forceEstimator.liftEffectiveness,
+            dragEffectiveness: forceEstimator.dragEffectiveness, environment: r.calibration?.environment ?? .init())
+        }
+        let branchAtmosphere = identifiedForces ? atmosphere.corrected(forceSeed.environment) : atmosphere
+        let branchAero = identifiedForces ? aero.scaled(lift: forceSeed.liftEffectiveness,
+          drag: forceSeed.dragEffectiveness) : aero
+        plant = .init(configuration: c, atmosphere: branchAtmosphere, aerodynamics: branchAero,
           initialControls: r.state.appliedControls ?? .init(), initialState: r.state,
           pitchBalancingInput: controller.snapshot.predictionPitchTrim(state: r.state))
         predicted = plant!.observe(r.state)
@@ -89,17 +120,33 @@ enum TAEMResponseAudit {
         let model = RotationalDynamicsEngine(configuration: c.vehicle, planet: c.planet)
         localBias = (r.state.angularVelocity-prior.angularVelocity)/anchorInterval
           - model.angularAcceleration(state: r.state, surfaces: .init(command: applied))
-        localPlant = .init(configuration: c, atmosphere: atmosphere, aerodynamics: aero,
+        localPlant = .init(configuration: c, atmosphere: branchAtmosphere, aerodynamics: branchAero,
           initialControls: applied, initialState: r.state, localAngularAccelerationBias: localBias)
         localPredicted = localPlant!.observe(r.state)
       }
       if seed != nil, let precedingCommand, let p = predicted {
         predicted = try plant!.advance(p, command: precedingCommand, duration: dt)
         localPredicted = try localPlant!.advance(localPredicted!, command: precedingCommand, duration: dt)
+        if firstSupportExit == nil {
+          if momentEvidence?.predictionPitchTrim(state: predicted!) != seedBalance {
+            firstSupportExit = predicted!.time-seed!.time
+          } else {
+            let p = predicted!, observed = r.state
+            supportedPrefix = .init(duration: p.time-seed!.time, intervals: intervals+1,
+              altitudeError: p.position.length-observed.position.length,
+              speedError: p.aerodynamics.airspeed-observed.aerodynamics.airspeed,
+              alphaError: wrapAngle(p.aerodynamics.angleOfAttack-observed.aerodynamics.angleOfAttack),
+              bankError: wrapAngle(p.aerodynamics.bank-observed.aerodynamics.bank),
+              measuredEnergyChange: energy(observed)-energy(seed!), predictedEnergyChange: energy(p)-energy(seed!))
+          }
+        }
         intervals += 1
       }
       let command = try controller.command(state: r.state, solution: r.guidance, dt: dt)
-      if seed == nil { warm += 1; maximumWarmError = max(maximumWarmError, error(command,r.command)) }
+      if seed == nil {
+        warm += 1; maximumWarmError = max(maximumWarmError, error(command,r.command))
+        forceEstimator.observe(r.state)
+      }
       else { replayError = max(replayError,error(command,r.command)) }
       previousTime = r.state.time; previousState = r.state
       if let seed {
@@ -109,9 +156,11 @@ enum TAEMResponseAudit {
       }
     }
     guard let seed, let end, let predicted, let localPredicted, intervals > 0, end.time-seed.time >= horizon else {
-      throw FlightError.invalidConfiguration("No complete first-TAEM response interval in recording")
+      throw FlightError.invalidConfiguration("No complete selected TAEM response interval in recording")
     }
     return .init(evidence: "recorded-limited-target-FCS-reconstruction-and-issued-command-plant-replay",
+      seedSelection: firstSupportedBalance ? "first-prebranch-supported-pitch-balance" : "first-TAEM-state",
+      seedPitchBalance: seedBalance, firstMomentSupportExit: firstSupportExit, supportedPrefix: supportedPrefix, forceSeed: forceSeed,
       warmRecords: warm, dynamicsResets: resets, maximumWarmCommandError: maximumWarmError,
       seedTime: seed.time, duration: end.time-seed.time, intervals: intervals,
       maximumReplayCommandError: replayError, seedLiftResidual: liftResidual, seedDragResidual: dragResidual,
@@ -131,7 +180,7 @@ enum TAEMResponseAudit {
         energyChange: energy(localPredicted)-energy(seed)), limitations: [
         "Recorded targets are already limited; raw guidance and limiter rates are not reconstructed.",
         "Applied axis telemetry is not individual surface-deflection measurement.",
-        "Frozen nominal resources are used; seed force residuals expose unmodeled calibration/history.",
+        "Force model mode and prebranch observed corrections are explicit; no actual postbranch force or calibration updates are assimilated.",
         "The optional local residual is identified at the seed only; its time/q/Mach/alpha dependence is unknown.",
         "Same-snapshot RCS-excluded torque is applied at the command boundary; other authority evolution remains unvalidated.",
         "No uncertainty-based acceptance tolerance is identified; residuals are evidence, not certification.",

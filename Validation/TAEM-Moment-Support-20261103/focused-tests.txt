@@ -1,0 +1,85 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 20] KSLCore
+[2 / 45] KSLPhysics
+[5 / 48] KSLPhysics
+[14 / 57] KSLPhysics
+[19 / 59] KSLGuidance
+[28 / 72] KSLGuidance
+[32 / 80] PhysicsTests-product
+[33 / 80] KSLKRPC
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Sources/KSLGuidance/Entry/EntryDragReference.swift:60:28: warning: immutable value 'e' was never used; consider replacing with '_' or removing it [#NoUsage]
+ 58 |                referenceRangeScale: Double = 1,
+ 59 |                objective: EntryCaptureObjective, maximumAlpha: Double) -> EntryDiagnostics {
+ 60 |     let c = configuration, e = c.entrySettings, a = s.aerodynamics
+    |                            `- warning: immutable value 'e' was never used; consider replacing with '_' or removing it [#NoUsage]
+ 61 |     let targetAltitude = objective.altitude, targetSpeed = objective.speed
+ 62 |     let speed = a.airspeed, height = s.position.length - c.planet.radius
+
+[#NoUsage]: <https://docs.swift.org/compiler/documentation/diagnostics/no-usage>
+[42 / 80] ControlTests-product
+[50 / 88] ControlTests-product
+[50 / 88] PhysicsTests-product
+[56 / 97] KSLGuidance
+[60 / 97] KSLKRPC
+[63 / 96] KSLRuntime
+[68 / 99] KSLRuntime
+[72 / 103] KSLGuidance
+[84 / 105] PhysicsTests-product
+[86 / 106] KSLSimulation
+[99 / 120] KSLLanding
+[99 / 133] KSLLanding
+[105 / 145] IntegrationTests-product
+[110 / 147] KSLLanding
+[115 / 149] SimulationTests-product
+[122 / 152] GuidanceTests-product
+[127 / 152] SimulationTests-product
+[134 / 152] GuidanceTests-product
+[136 / 152] GuidanceTests-product
+[143 / 154] IntegrationTests-product
+[149 / 154] GuidanceTests-product
+[153 / 155] IntegrationTests-product
+[153 / 155] GuidanceTests-product
+Build complete! (5.15초)
+Test Suite 'Selected tests' started at 2026-11-03 02:52:38.164.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-03 02:52:38.165.
+Test Suite 'TAEMPredictionEvidenceTests' started at 2026-11-03 02:52:38.165.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testMeasuredMomentEvidenceExpiresWithoutRefreshFromModeledObservations]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testMeasuredMomentEvidenceExpiresWithoutRefreshFromModeledObservations]' passed (0.011 seconds).
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testRecordedRCSHandoffUsesExcludedTorqueAndRejectsMissingDecomposition]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testRecordedRCSHandoffUsesExcludedTorqueAndRejectsMissingDecomposition]' passed (0.003 seconds).
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testUnidentifiedPlantAndMissingSuffixNeverQualifyAsTerminalOutcomes]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testUnidentifiedPlantAndMissingSuffixNeverQualifyAsTerminalOutcomes]' passed (0.004 seconds).
+Test Suite 'TAEMPredictionEvidenceTests' passed at 2026-11-03 02:52:38.184.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.018 (0.019) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-03 02:52:38.184.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.018 (0.019) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 02:52:38.184.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.018 (0.020) seconds
+Test Suite 'Selected tests' started at 2026-11-03 02:52:38.281.
+Test Suite 'ControlTests.xctest' started at 2026-11-03 02:52:38.281.
+Test Suite 'PredictionPitchBalanceTests' started at 2026-11-03 02:52:38.282.
+Test Case '-[ControlTests.PredictionPitchBalanceTests testBalanceCannotCrossUnsupportedRegimeOrTelemetryGap]' started.
+Test Case '-[ControlTests.PredictionPitchBalanceTests testBalanceCannotCrossUnsupportedRegimeOrTelemetryGap]' passed (0.001 seconds).
+Test Case '-[ControlTests.PredictionPitchBalanceTests testPredictionOnlyEquilibriumDoesNotBecomeFeedforwardOrAnIncidenceEnvelope]' started.
+Test Case '-[ControlTests.PredictionPitchBalanceTests testPredictionOnlyEquilibriumDoesNotBecomeFeedforwardOrAnIncidenceEnvelope]' passed (0.000 seconds).
+Test Case '-[ControlTests.PredictionPitchBalanceTests testSaturatedEquilibriumIsPredictionBiasNotAClaimedTrimEnvelope]' started.
+Test Case '-[ControlTests.PredictionPitchBalanceTests testSaturatedEquilibriumIsPredictionBiasNotAClaimedTrimEnvelope]' passed (0.000 seconds).
+Test Case '-[ControlTests.PredictionPitchBalanceTests testSaturatedNewRegimeCannotReuseAnOldUnsaturatedFit]' started.
+Test Case '-[ControlTests.PredictionPitchBalanceTests testSaturatedNewRegimeCannotReuseAnOldUnsaturatedFit]' passed (0.000 seconds).
+Test Case '-[ControlTests.PredictionPitchBalanceTests testUnsettledSaturationIsNotMomentEvidence]' started.
+Test Case '-[ControlTests.PredictionPitchBalanceTests testUnsettledSaturationIsNotMomentEvidence]' passed (0.000 seconds).
+Test Suite 'PredictionPitchBalanceTests' passed at 2026-11-03 02:52:38.283.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'ControlTests.xctest' passed at 2026-11-03 02:52:38.283.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 02:52:38.283.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.003) seconds
+􀟈  Test run started.
+􀄵  Testing Library Version: 2067.1
+􀄵  Target Platform: arm64e-apple-macos14.0
+􀟈  Suite ProtocolTests started.
+􀟈  Test testAnchorOffsetIsBodyRelativeAndInvariantToWorldAttitude() started.
+􁁛  Test testAnchorOffsetIsBodyRelativeAndInvariantToWorldAttitude() passed after 0.001 seconds.
+􁁛  Suite ProtocolTests passed after 0.001 seconds.
+􁁛  Test run with 1 test in 1 suite passed after 0.001 seconds.

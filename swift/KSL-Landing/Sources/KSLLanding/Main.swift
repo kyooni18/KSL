@@ -167,7 +167,8 @@ struct LandingCLI {
         throw FlightError.invalidConfiguration("taem-response-audit requires --input and --configuration")
       }
       let c = try JSONDecoder().decode(MissionConfiguration.self, from: Data(contentsOf: URL(fileURLWithPath: path)))
-      try output(await TAEMResponseAudit.run(input: input, configuration: c))
+      try output(await TAEMResponseAudit.run(input: input, configuration: c,
+        firstSupportedBalance: args.contains("--first-supported-balance"), identifiedForces: args.contains("--identified-forces")))
     case "pitch-balance-probe":
       guard let input = option("--input"), let path = option("--configuration") else {
         throw FlightError.invalidConfiguration("pitch-balance-probe requires --input and --configuration")

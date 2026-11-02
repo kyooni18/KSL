@@ -1,0 +1,76 @@
+{
+  "alphaError" : 0.08042036623655063,
+  "altitudeError" : 1.3807791580911726,
+  "angularRateError" : {
+    "x" : -0.0014914862217979934,
+    "y" : 0.0239036386436716,
+    "z" : -0.0016250285333820986
+  },
+  "bankError" : -0.01045407572953767,
+  "duration" : 6.059999996825354,
+  "dynamicsResets" : 3,
+  "evidence" : "recorded-limited-target-FCS-reconstruction-and-issued-command-plant-replay",
+  "firstCommandRCS" : false,
+  "firstMomentSupportExit" : 1.9399999983143061,
+  "forceSeed" : {
+    "dragEffectiveness" : 1.1066205633611648,
+    "environment" : {
+      "densityScale" : 0.9996747609846443,
+      "evidence" : "measured",
+      "observedAt" : 216412.69235289673,
+      "soundSpeedScale" : 0.9999628176811893
+    },
+    "liftEffectiveness" : 0.9872347687766883,
+    "mode" : "prebranch-live-estimator"
+  },
+  "intervals" : 59,
+  "limitations" : [
+    "Recorded targets are already limited; raw guidance and limiter rates are not reconstructed.",
+    "Applied axis telemetry is not individual surface-deflection measurement.",
+    "Force model mode and prebranch observed corrections are explicit; no actual postbranch force or calibration updates are assimilated.",
+    "The optional local residual is identified at the seed only; its time\/q\/Mach\/alpha dependence is unknown.",
+    "Same-snapshot RCS-excluded torque is applied at the command boundary; other authority evolution remains unvalidated.",
+    "No uncertainty-based acceptance tolerance is identified; residuals are evidence, not certification.",
+    "This is one recorded command interval, not alternative-turn validation or landing qualification."
+  ],
+  "localResidualPrediction" : {
+    "alphaError" : 0.025556492539598852,
+    "altitudeError" : -1.007165867369622,
+    "anchorInterval" : 0.0999999999476131,
+    "angularAccelerationBias" : {
+      "x" : 0.030287681871312568,
+      "y" : -0.12235297897718367,
+      "z" : 0.005833101359126316
+    },
+    "angularRateError" : {
+      "x" : 0.058981137070851695,
+      "y" : 0.00950744796195312,
+      "z" : 0.032915636031588445
+    },
+    "bankError" : 0.28527517726116125,
+    "energyChange" : -48069.358062240295,
+    "speedError" : 1.640126637697108
+  },
+  "maximumReplayCommandError" : 0,
+  "maximumWarmCommandError" : 2.9608260287972143e-14,
+  "measuredEnergyChange" : -49308.032313502394,
+  "predictedEnergyChange" : -49569.55284027755,
+  "seedDragResidual" : -0.19291655610786926,
+  "seedLiftResidual" : -0.03955928710447567,
+  "seedPitchBalance" : 0.7993575930595398,
+  "seedRCS" : false,
+  "seedSelection" : "first-prebranch-supported-pitch-balance",
+  "seedTime" : 216412.69235289673,
+  "speedError" : -0.36050983235065814,
+  "supportedPrefix" : {
+    "alphaError" : 0.007470314012302137,
+    "altitudeError" : -0.09431740490254015,
+    "bankError" : -0.0039637698470594476,
+    "duration" : 1.819999998435378,
+    "intervals" : 18,
+    "measuredEnergyChange" : -15251.915951624513,
+    "predictedEnergyChange" : -14851.529594267718,
+    "speedError" : 0.5024173727515517
+  },
+  "warmRecords" : 4846
+}
