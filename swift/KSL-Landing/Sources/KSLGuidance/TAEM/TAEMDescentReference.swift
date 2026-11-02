@@ -17,6 +17,16 @@ struct TAEMDescentReference {
       (3*a*x*x+2*b*x+distance*endSlope)/distance,
       (6*a*x+2*b)/(distance*distance))
   }
+  /// Required upward normal acceleration along this profile. A negative
+  /// value is an impossible push-over for the positive-lift TAEM bank law;
+  /// it must not be clipped to zero when assessing a candidate.
+  func normalAcceleration(at remaining: Double, speedSquared: Double,
+                          gravity: Double, radius: Double) -> Double {
+    let r = sample(remaining), metric = hypot(1, r.slope)
+    let horizontalSquared = speedSquared / (metric * metric)
+    return (gravity - horizontalSquared / radius) / metric
+      + speedSquared * r.curvature / (metric * metric * metric)
+  }
   func fits(maximumGlide: Double) -> Bool {
     // The derivative is quadratic. Endpoints and its one stationary point
     // exactly bound the planned slope; no sampled optimistic path length.

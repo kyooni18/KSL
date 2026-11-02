@@ -28,6 +28,9 @@ public struct TAEMStatus: Codable, Sendable {
   public var downmoded = false
   public var insufficientEnergy = false
   public var descentPlanFits = false
+  /// Necessary same-profile force check; not a flight certificate.
+  public var descentCheckFailure: String?
+  public var predictedNEPEnergy: Double?
 }
 
 /// TAEM recovery to the NEP, using JSC-16522 phase/energy-envelope concepts.
@@ -55,6 +58,11 @@ final class TAEMGuidanceEngine {
   private var hacPolarAngle: Double?
   private var captureTurn: Double?
   private var descent: TAEMDescentReference?
+  private struct DescentCheck {
+    var energy: Double?
+    var failure: String?
+  }
+  private var descentCheck: (time: Double, result: DescentCheck)?
 
   init(configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine, aerodynamics: AerodynamicsEngine) {
     self.configuration = configuration; self.atmosphere = atmosphere; aero = aerodynamics
@@ -65,7 +73,7 @@ final class TAEMGuidanceEngine {
 
   func reset() {
     status = .init(); geometry = nil; geometryAdapted = false; lines = nil; sTurnSign = 0
-    captureTurn = nil; descent = nil; hacPolarAngle = nil
+    captureTurn = nil; descent = nil; hacPolarAngle = nil; descentCheck = nil
   }
 
   /// Ground position repeats every winding. Only measured angular progress
@@ -326,6 +334,80 @@ final class TAEMGuidanceEngine {
     return out
   }
 
+  /// Necessary force/energy check on the commanded altitude profile, not the
+  /// unrelated q-scheduled EN/EMIN curve. This still-air point-mass check can
+  /// reject a path; passing is not an actuator or closed-loop certificate.
+  private func checkDescent(state: VehicleState, profile: TAEMDescentReference,
+    range: Double, hac: SpiralHAC, turn: Double, acquisitionArc: Double,
+    acquisitionCurvature: Double, liftGain: Double, dragGain: Double,
+    alphaCeiling: Double) -> DescentCheck {
+    let c = configuration, v = c.vehicle
+    let hacLength = Self.spiralLength(hac, to: turn)
+    var remaining = range, energy = energyModel.height(state), elapsed = 0.0
+    var gearDown = state.systems.gearDown
+    func station(_ d: Double, _ e: Double) -> (speed: Double, loss: Double, failure: String?) {
+      let ref = profile.sample(d)
+      let position = referencePosition(ref.height)
+      let speedSquared = energyModel.speedSquared(height: e, position: position)
+      guard speedSquared > 0 else { return (0, 0, "kineticEnergy") }
+      let speed = sqrt(speedSquared), metric = hypot(1, ref.slope)
+      let air = atmosphere.sample(position: position, time: state.time + elapsed)
+      guard air.wind.length == 0 else { return (speed, 0, "windUnpriced") }
+      let gear = gearDown || ref.height <= (c.guidance.gearDeploymentAltitude ?? 1500)
+      let q = 0.5 * air.density * speedSquared
+      guard q <= v.maximumDynamicPressure else { return (speed, 0, "dynamicPressure") }
+      // Invert spiral arclength instead of assuming angle proportional to d.
+      var curvature = 0.0
+      if d < hacLength {
+        var lo = 0.0, hi = turn
+        for _ in 0..<24 {
+          let mid = (lo + hi) / 2
+          if Self.spiralLength(hac, to: mid) < d { lo = mid } else { hi = mid }
+        }
+        curvature = abs(hac.sample(remainingAngle: (lo + hi) / 2).curvature)
+      } else if d > range - acquisitionArc { curvature = acquisitionCurvature }
+      let horizontalSquared = speedSquared / (metric * metric)
+      let normal = profile.normalAcceleration(at: d, speedSquared: speedSquared,
+        gravity: gravity(atHeight: ref.height), radius: position.length)
+      guard normal >= 0 else { return (speed, 0, "negativeNormalLift") }
+      let lateral = horizontalSquared * curvature
+      let bank = atan2(lateral, normal), demand = hypot(normal, lateral)
+      guard bank <= v.maximumBank else { return (speed, 0, "bank") }
+      guard demand <= v.maximumLoadFactor * 9.80665 else { return (speed, 0, "load") }
+      let solution = aero.liftSolution(acceleration: demand / max(1e-9, liftGain),
+        mass: state.mass, dynamicPressure: q, mach: speed / air.speedOfSound,
+        minimumAlpha: max(0, v.minimumAngleOfAttack), maximumAlpha: alphaCeiling,
+        gear: gear)
+      guard solution.achievable,
+        demand <= solution.maximumAcceleration * liftGain * (1-v.aerodynamicUncertainty) else { return (speed, 0, "trimLift") }
+      let coefficients = aero.coefficients(mach: speed / air.speedOfSound,
+        alpha: solution.alpha, dynamicPressure: q, gear: gear)
+      let produced = q * aero.referenceArea * coefficients.lift * liftGain / state.mass
+      // A nonzero minimum incidence cannot supply less lift than its polar.
+      // 1e-6 relative acceleration is only interpolation roundoff tolerance.
+      guard produced <= demand + 1e-6 * max(1, demand) else { return (speed, 0, "minimumLift") }
+      let loss = q * aero.referenceArea * coefficients.drag * dragGain / state.mass
+        * metric / energyModel.gravity
+      return (speed, loss, nil)
+    }
+    while remaining > 0, elapsed < c.guidance.maximumPredictionDuration {
+      let start = station(remaining, energy)
+      if let failure = start.failure { return .init(energy: nil, failure: failure) }
+      let horizontal = start.speed / hypot(1, profile.sample(remaining).slope)
+      let distance = min(remaining, horizontal * c.guidance.predictionStep)
+      guard distance > 0 else { return .init(energy: nil, failure: "noProgress") }
+      let mid = station(remaining - distance / 2, energy - start.loss * distance / 2)
+      if let failure = mid.failure { return .init(energy: nil, failure: failure) }
+      energy -= mid.loss * distance
+      elapsed += distance / horizontal
+      remaining = max(0, remaining - distance)
+      gearDown = gearDown || profile.sample(remaining).height <= (c.guidance.gearDeploymentAltitude ?? 1500)
+    }
+    guard remaining == 0 else { return .init(energy: nil, failure: "predictionHorizon") }
+    let end = station(0, energy)
+    return .init(energy: end.failure == nil ? energy : nil, failure: end.failure)
+  }
+
   // MARK: Update
 
   func update(_ state: VehicleState, nep: NominalEnergyPoint, liftGain: Double, dragGain: Double,
@@ -348,7 +430,7 @@ final class TAEMGuidanceEngine {
     if status.phase == .headingAlignment, p.along >= nepAlong, p.height > nep.height,
       status.remainingTurn*max(status.finalRadius,c.guidance.minimumHACRadius)
         <= vh*c.guidance.controlInterval {
-      status.phase = .acquisition; lines = nil; captureTurn = nil; descent = nil; hacPolarAngle = nil
+      status.phase = .acquisition; lines = nil; captureTurn = nil; descent = nil; hacPolarAngle = nil; descentCheck = nil
     }
 
     // HAC size: final radius flies the NEP airspeed, the spiral grows so a
@@ -453,6 +535,16 @@ final class TAEMGuidanceEngine {
       lines = (state.time, t.side, t.turn, nominal, minimum)
     }
 
+    func check(_ candidate: Track, profile: TAEMDescentReference) -> DescentCheck {
+      let curvature = sqrt(max(0, candidate.arcLoad*candidate.arcLoad-1))*g/(vh*vh)
+      return checkDescent(state: state, profile: profile, range: candidate.range,
+        hac: candidate.hac, turn: candidate.turn, acquisitionArc: candidate.arc,
+        acquisitionCurvature: curvature, liftGain: liftGain, dragGain: dragGain,
+        alphaCeiling: ceiling)
+    }
+    let requiredNEPEnergy = energyModel.height(position: referencePosition(nep.height),
+      speedSquared: nep.airspeed*nep.airspeed)
+
     // Selection (overhead default, below). Latched; one low-energy downmode.
     // The side is latched once chosen (only the downmode changes it); the
     // winding follows the measured geometry on that side.
@@ -467,19 +559,21 @@ final class TAEMGuidanceEngine {
       selected = t
     }
     if lines == nil || selected == nil {
-      // Overhead by default: the longest track whose nominal energy is met,
-      // else the longest still above its minimum line (the downmode test);
-      // the shortest only when none is.
-      var best: Track?, fallback: Track?
-      let fitting=candidates.filter {descentPlan(for:$0).fits(maximumGlide:glideLimit)}
-      let options=fitting.isEmpty ? candidates:fitting
-      for t in options.sorted(by: { $0.range > $1.range }) {
-        refreshLines(for: t)
-        if energy >= lines!.nominal.sample(t.range).energy { best = t; break }
-        if fallback == nil, energy >= lines!.minimum.sample(t.range).energy { fallback = t }
+      // Use the same physical profile check for every candidate. Legacy
+      // EN/EMIN remains telemetry/advisory, never a route admission price.
+      let fitting = candidates.filter {descentPlan(for: $0).fits(maximumGlide: glideLimit)}
+      let options = (fitting.isEmpty ? candidates : fitting).sorted {$0.range > $1.range}
+      for candidate in options {
+        let result = check(candidate, profile: descentPlan(for: candidate))
+        if let delivered = result.energy, delivered >= requiredNEPEnergy {
+          selected = candidate
+          descentCheck = (state.time, result)
+          break
+        }
       }
-      selected = best ?? fallback ?? (fitting.isEmpty
-        ? options.max {$0.range<$1.range} : options.min {$0.range<$1.range})
+      // No admissible candidate is not permission to abandon control or
+      // claim a cheaper trajectory. Keep the overhead recovery unqualified.
+      if selected == nil { selected = options.first; descentCheck = nil }
       captureTurn=selected!.turn
       descent=descentPlan(for:selected!)
       refreshLines(for: selected!)
@@ -489,12 +583,28 @@ final class TAEMGuidanceEngine {
     }
     debug = candidates.map { "side \($0.side) turn \(degrees($0.turn)) range \($0.range) arc \($0.arc) EN \(lines!.nominal.sample($0.range).energy)" }.joined(separator: "; ") + " acqR \(acquisitionRadius)" // SCRATCH
     var t = selected!
-    if status.phase != .headingAlignment, !status.downmoded,
-       energy < lines!.minimum.sample(t.range).energy,
-       let shorter = candidates.filter({ $0.range < t.range && descentPlan(for:$0).fits(maximumGlide:glideLimit) }).min(by: { $0.range < $1.range }) {
-      status.downmoded = true; t = shorter; refreshLines(for: t)
-      captureTurn=t.turn; descent=descentPlan(for:t)
+    if descentCheck == nil || state.time - descentCheck!.time >= c.guidance.terminalReplanInterval {
+      let current = check(t, profile: descent ?? descentPlan(for: t))
+      descentCheck = (state.time, current)
+      // Both sides of a downmode must refer to the profile actually flown.
+      // A failed force check means unknown delivery, not a fabricated energy
+      // price. Retain recovery unless another route passes the same check.
+      if status.phase != .headingAlignment, !status.downmoded,
+        current.energy == nil || current.energy! < requiredNEPEnergy {
+        for shorter in candidates.filter({$0.range < t.range}).sorted(by: {$0.range > $1.range}) {
+          let proposed = descentPlan(for: shorter)
+          guard proposed.fits(maximumGlide: glideLimit) else { continue }
+          let alternative = check(shorter, profile: proposed)
+          guard let delivered = alternative.energy, delivered >= requiredNEPEnergy else { continue }
+          status.downmoded = true; t = shorter; refreshLines(for: t)
+          captureTurn = t.turn; descent = proposed
+          descentCheck = (state.time, alternative)
+          break
+        }
+      }
     }
+    status.descentCheckFailure = descentCheck?.result.failure
+    status.predictedNEPEnergy = descentCheck?.result.energy
     status.side = t.side; status.remainingTurn = t.turn; status.range = t.range
     status.finalRadius = rf; status.growth = growth
     if descent == nil {descent=descentPlan(for:t)}

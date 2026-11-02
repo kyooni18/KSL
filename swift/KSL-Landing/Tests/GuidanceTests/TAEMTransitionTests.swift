@@ -20,6 +20,22 @@ final class TAEMTransitionTests: XCTestCase {
     XCTAssertTrue(approach.recoveryDue(state(height:profile.reference(along:-c.guidance.finalDistance).height)))
   }
 
+  func testRecordedShortDownmodeRequiresImpossiblePushOver() {
+    // Actual 5.1-second switch from terra-price.json (2026-11-02), not a
+    // modified vehicle. Slope-fit alone admitted this physically impossible
+    // reference. NEP altitude/slope are the configured Final inlet.
+    let c = MissionConfiguration()
+    let end = ApproachProfile(configuration: c).reference(along: -c.guidance.finalDistance)
+    let path = TAEMDescentReference(distance: 29_851.045932774443,
+      startHeight: 25_881.28265955992, endHeight: end.height,
+      startSlope: -tan(radians(-9.067695994774725)), endSlope: tan(c.guidance.outerGlideAngle))
+    XCTAssertTrue(path.fits(maximumGlide: .pi / 2))
+    let radius = c.planet.radius + c.runway.elevation + path.startHeight
+    XCTAssertLessThan(path.normalAcceleration(at: path.distance,
+      speedSquared: pow(721.5818052601974, 2),
+      gravity: c.planet.gravitationalParameter / (radius * radius), radius: radius), 0)
+  }
+
   func testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary() {
     let remaining=2 * Double.pi+0.03
     let next=TAEMGuidanceEngine.advanceTurn(remaining,from:0.03,to:-0.01)
