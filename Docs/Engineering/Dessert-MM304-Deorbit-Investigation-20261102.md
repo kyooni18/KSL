@@ -104,3 +104,14 @@ There are also prediction-fidelity limits: nominal full-route qualification disa
 4. Present the predicted inlet miss and the failed nominal endpoint in plan review. Keep search permission, best-available selection, landing qualification and explicit actuation authorization separate.
 
 No additional flight, KSP action, full-route campaign or altered-vehicle test was run. The only new numerical check was the two-state force/reference diagnostic. Flight readiness remains unknown. The already committed TAEM reference repair restores a control path; it does not repair this MM304 delivery problem.
+
+
+## Follow-up: could OMS remove more lateral work before entry?
+
+Yes, orbital-normal impulse is a physically relevant degree of freedom. The selected 31.4614 m/s burn at a 23.8403° normal angle corresponds approximately to 28.7769 m/s retrograde and **12.7163 m/s normal** impulse. This decomposition is a small-burn summary; the actual finite burn continuously follows the orbital basis.
+
+The active search does not independently optimize normal and retrograde delta-v. `DeorbitWindowSearch.solveDeltaV` solves total magnitude to the configured 50 km periapsis for a fixed direction; its local direction refinement is clamped to ±45°. `FiniteBurnModel.propagate` additionally rejects normal angles of magnitude 60° or more. Thus a maneuver dominated by plane change, or a separate preparatory plane correction followed by retrograde deorbit, is outside the active candidate family. At fixed 28.7769 m/s retrograde component, a 45° vector would contain approximately 28.7769 m/s normal and 40.6967 m/s total delta-v; that is only a geometric illustration, not a propagated feasible burn.
+
+These are implementation restrictions on maneuver shape, not evidence that the actual vehicle lacks propellant or thrust for a more useful lateral maneuver. Conversely, unused fuel alone does not establish that a particular normal burn reaches Dessert: timing, normal sign, finite pointing/burn duration, resulting orbit/periapsis, entry flight-path angle and eventual terminal geometry all matter.
+
+A justified next planner change is to expose independently priced orbital-normal correction and retrograde deorbit components, possibly as a preparatory burn plus deorbit, and evaluate their controlled finite execution and common downstream delivery objective. Merely widening an angle clamp would neither fix the periapsis-bracketing assumptions nor establish a supported entry. No additional simulation or burn was run for this follow-up.
