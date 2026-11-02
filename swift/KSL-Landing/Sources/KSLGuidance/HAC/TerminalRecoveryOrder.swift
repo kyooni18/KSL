@@ -94,3 +94,14 @@ public enum TerminalRecoveryOrder {
     }
   }
 }
+
+/// One already-executed comparison. Trial indices are local to a PlanningResult,
+/// not globally unique candidate IDs. The first trial has no incumbent/relation.
+/// Retaining the outcome preserves unknown suffixes and Pareto alternatives;
+/// this record grants no plan admission or control ownership.
+public struct TerminalRecoveryComparison: Codable, Sendable {
+  public let trial: Int
+  public let incumbentTrial: Int?
+  public let relation: TerminalRecoveryRelation?
+  public let outcome: TerminalClosedLoopCase
+}

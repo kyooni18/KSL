@@ -9,6 +9,8 @@ public struct PlanningResult: Codable, Sendable {
   public let evaluatedCandidates: Int
   public let advisoryCounts: [String: Int]
   public var closedLoopAdvisories: [TerminalClosedLoopCase]?
+  /// Executed trials only, in evaluation order. Nil in historical records.
+  public var recoveryComparisons: [TerminalRecoveryComparison]? = nil
   /// Physical energy/geometry envelope of the whole examined HAC family.
   public var envelope: TerminalEnvelopeSummary?
   public var fit: HACFitDiagnostics? = nil
@@ -20,7 +22,7 @@ public struct PlanningResult: Codable, Sendable {
 // missing historical diagnostics are simply empty.
 extension PlanningResult {
   private enum CodingKeys: String, CodingKey {
-    case plan, bestAdvisory, evaluatedCandidates, advisoryCounts, closedLoopAdvisories, envelope, fit, nominalEnergyPoint
+    case plan, bestAdvisory, evaluatedCandidates, advisoryCounts, closedLoopAdvisories, recoveryComparisons, envelope, fit, nominalEnergyPoint
   }
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -29,6 +31,7 @@ extension PlanningResult {
     evaluatedCandidates = try c.decode(Int.self, forKey: .evaluatedCandidates)
     advisoryCounts = try c.decodeIfPresent([String: Int].self, forKey: .advisoryCounts) ?? [:]
     closedLoopAdvisories = try c.decodeIfPresent([TerminalClosedLoopCase].self, forKey: .closedLoopAdvisories)
+    recoveryComparisons = try c.decodeIfPresent([TerminalRecoveryComparison].self, forKey: .recoveryComparisons)
     envelope = try c.decodeIfPresent(TerminalEnvelopeSummary.self, forKey: .envelope)
     fit = try c.decodeIfPresent(HACFitDiagnostics.self, forKey: .fit)
     nominalEnergyPoint = try c.decodeIfPresent(NominalEnergyPoint.self, forKey: .nominalEnergyPoint)
@@ -148,6 +151,7 @@ public final class HACPlanningEngine {
     var chosen: TerminalPlan?
     var candidates: [TerminalPlan] = []
     var closedLoopAdvisories: [TerminalClosedLoopCase] = []
+    var recoveryComparisons: [TerminalRecoveryComparison] = []
     var advisory: TerminalAssessment?
     var count = 0
     var advisoryCounts: [String: Int] = [:]
@@ -497,11 +501,16 @@ public final class HACPlanningEngine {
       let comparisonSeed = nativeSeed ?? NativeCommandSeed(state: state, controls: controlSnapshot,
         limiter: targetLimiter ?? GuidanceTargetLimiter(previous: previousTarget))
       var nominal: TerminalClosedLoopCase?
+      var incumbentTrial: Int?
       for candidate in candidates where candidate.assessment.feasible && !Task.isCancelled {
         let result = trajectory.evaluate(plan: candidate, from: state,
           controlSnapshot: controlSnapshot, previousTarget: previousTarget, targetLimiter: targetLimiter, nativeSeed: comparisonSeed, lift: 1, drag: 1)
-        if nominal == nil || TerminalRecoveryOrder.compare(result, to: nominal!) == .challengerPreferred {
-          selected = candidate; nominal = result
+        let trial = recoveryComparisons.count
+        let relation = nominal.map { TerminalRecoveryOrder.compare(result, to: $0) }
+        recoveryComparisons.append(.init(trial: trial, incumbentTrial: incumbentTrial,
+          relation: relation, outcome: result))
+        if nominal == nil || relation == .challengerPreferred {
+          selected = candidate; nominal = result; incumbentTrial = trial
         }
         if result.qualified { break }
         // A different drawing cannot supply the missing plant evidence.
@@ -519,6 +528,7 @@ public final class HACPlanningEngine {
     if chosen != nil { nextIdentifier += 1 }
     var result = PlanningResult(plan: chosen, bestAdvisory: advisory, evaluatedCandidates: count,
       advisoryCounts: advisoryCounts, closedLoopAdvisories: closedLoopAdvisories, envelope: envelope)
+    result.recoveryComparisons = recoveryComparisons
     result.nominalEnergyPoint = nep
     result.fit = .init(stateTime: state.time, previousPlanID: context?.previousPlanID,
       continuingSpiral: continuing, fittedRemainingAngle: remaining, availableBank: bankAuthority,

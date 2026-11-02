@@ -1,0 +1,23 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 25] SimulationTests-product
+[2 / 8] GuidanceTests-product
+[4 / 10] GuidanceTests-product
+[8 / 12] GuidanceTests-product
+[10 / 12] GuidanceTests-product
+Build complete! (1.50초)
+Test Suite 'Selected tests' started at 2026-11-03 03:36:04.952.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-03 03:36:04.953.
+Test Suite 'TerminalRecoveryOrderTests' started at 2026-11-03 03:36:04.953.
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testComparisonRejectsMixedOriginsModelsAndPoliciesAndDoesNotRewardStopPrecision]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testComparisonRejectsMixedOriginsModelsAndPoliciesAndDoesNotRewardStopPrecision]' passed (0.009 seconds).
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testMissingSuffixCannotBeatCompleteFailedRecoveryAndBetterFailureNeedsNoQualification]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testMissingSuffixCannotBeatCompleteFailedRecoveryAndBetterFailureNeedsNoQualification]' passed (0.003 seconds).
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testPlanningRecordRetainsIncomparableTrialsAndDecodesLegacyAbsence]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testPlanningRecordRetainsIncomparableTrialsAndDecodesLegacyAbsence]' passed (0.005 seconds).
+Test Suite 'TerminalRecoveryOrderTests' passed at 2026-11-03 03:36:04.971.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.018 (0.018) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-03 03:36:04.971.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.018 (0.018) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 03:36:04.971.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.018 (0.019) seconds

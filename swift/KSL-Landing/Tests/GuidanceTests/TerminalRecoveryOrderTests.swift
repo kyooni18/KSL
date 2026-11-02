@@ -88,4 +88,30 @@ final class TerminalRecoveryOrderTests: XCTestCase {
       from: JSONEncoder().encode(incumbent))
     XCTAssertEqual(decoded.evaluation?.comparisonContext, context)
   }
+  func testPlanningRecordRetainsIncomparableTrialsAndDecodesLegacyAbsence() throws {
+    let (_, context) = try setup()
+    let incumbent = try outcome(context, pressure: 200, integral: 300)
+    let challenger = try outcome(context, pressure: 100, integral: 400)
+    let relation = TerminalRecoveryOrder.compare(challenger, to: incumbent)
+    var result = PlanningResult(plan: nil, bestAdvisory: nil, evaluatedCandidates: 2,
+      advisoryCounts: [:], closedLoopAdvisories: [incumbent])
+    result.recoveryComparisons = [
+      .init(trial: 0, incumbentTrial: nil, relation: nil, outcome: incumbent),
+      .init(trial: 1, incumbentTrial: 0, relation: relation, outcome: challenger)]
+    let data = try JSONEncoder().encode(result)
+    let decoded = try JSONDecoder().decode(PlanningResult.self, from: data)
+    let trials = try XCTUnwrap(decoded.recoveryComparisons)
+    XCTAssertEqual(trials.count, 2)
+    XCTAssertNil(trials[0].relation)
+    XCTAssertEqual(trials[1].incumbentTrial, 0)
+    XCTAssertEqual(trials[1].relation, .incomparableOutcomes)
+    XCTAssertEqual(trials[1].outcome.evaluation?.pressureExcessIntegral, 400)
+    XCTAssertEqual(trials[1].outcome.evaluation?.comparisonContext, context)
+    var historical = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+    historical.removeValue(forKey: "recoveryComparisons")
+    let legacy = try JSONDecoder().decode(PlanningResult.self,
+      from: JSONSerialization.data(withJSONObject: historical))
+    XCTAssertNil(legacy.recoveryComparisons)
+  }
+
 }
