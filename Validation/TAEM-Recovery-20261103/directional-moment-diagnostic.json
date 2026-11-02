@@ -1,0 +1,49 @@
+{
+  "source": "runs/20261102T152517Z-dessert-150ms-live/live.jsonl",
+  "consumedPrefixSHA256": "17c7a1b6251154d24c873bfcb49e6b9af7e899581a5d96dddd39bdbcfbb9b1c5",
+  "configurationSHA256": "31ec96db53001c18f6db2719f5114cba3975f84566630b07a8b888f74b6f03da",
+  "baseline": "Validation/TAEM-Recovery-20261103/first-supported-balance-current.json",
+  "baselineSHA256": "d48f29caa0404047653be3390c45d93d0404f85c11ccf337f0e96959cc79e6f5",
+  "firstSequence": 4847,
+  "lastSequence": 4906,
+  "seedTime": 216412.69235289673,
+  "prebranchBalance": 0.7993575930595398,
+  "positivePitchAcceleration": 0.2863250530101665,
+  "negativePitchAcceleration": 0.14906371631800974,
+  "positiveNegativeRatio": 1.9208232565416923,
+  "appliedEquivalentPitchRange": [
+    0.8028468489646912,
+    0.8244684934616089
+  ],
+  "beforeRecordedSupportExit": {
+    "intervals": 18,
+    "duration": 1.8199999990465585,
+    "symmetricMinimum": {
+      "timeWeightedRMSRadPerSec2": 0.00462503766047457,
+      "timeWeightedBiasRadPerSec2": 0.0045512830846781305
+    },
+    "directionalAvailableTorque": {
+      "timeWeightedRMSRadPerSec2": 0.006336287452101588,
+      "timeWeightedBiasRadPerSec2": 0.006167764594901726
+    }
+  },
+  "fullDiagnosticInterval": {
+    "intervals": 59,
+    "duration": 6.059999996825354,
+    "symmetricMinimum": {
+      "timeWeightedRMSRadPerSec2": 0.004062839715623232,
+      "timeWeightedBiasRadPerSec2": 0.003912592811641678
+    },
+    "directionalAvailableTorque": {
+      "timeWeightedRMSRadPerSec2": 0.006747660048298068,
+      "timeWeightedBiasRadPerSec2": 0.00661867268589211
+    }
+  },
+  "limitations": [
+    "One-step recorded-state closure, not an open-loop trajectory prediction.",
+    "Actual postbranch axis readbacks and body rates are used by both hypotheses; no actual individual surface angle is available.",
+    "Available torque is not a measured control derivative; directional hypothesis is not deployed.",
+    "Seed torque, inertia and prebranch balance are frozen, with no fitted postbranch coefficients.",
+    "Full diagnostic interval extends beyond original measured moment support; no validation or flight-readiness claim."
+  ]
+}

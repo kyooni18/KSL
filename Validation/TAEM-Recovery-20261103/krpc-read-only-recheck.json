@@ -1,0 +1,14 @@
+{
+  "date": "2026-11-03",
+  "runID": 2,
+  "replacedRunningProgram": false,
+  "terminalStatus": "error",
+  "returnCode": 1,
+  "elapsedSeconds": 3.421,
+  "error": "ConnectionRefusedError",
+  "errno": 61,
+  "queryBodyExecuted": false,
+  "requestedQueries": ["UT", "paused", "vessel name", "mass", "part count"],
+  "gameOrControlMutationRequested": false,
+  "newPlantMeasurementsObtained": false
+}
