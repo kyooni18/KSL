@@ -19,13 +19,24 @@ public final class TerminalTrajectoryEvaluator {
                        targetLimiter: GuidanceTargetLimiter? = nil,
                        nativeSeed: NativeCommandSeed? = nil,
                        lift: Double, drag: Double,
+                       commandPrefix: TAEMSchedulePrefix? = nil,
                        trace: ((VehicleState, PathStation, GuidanceTarget) -> Void)? = nil) -> TerminalClosedLoopCase {
     let c = configuration, dt = c.guidance.controlInterval
-    let seed = nativeSeed ?? NativeCommandSeed(state: initial, controls: controlSnapshot,
+    let seed = commandPrefix?.seed ?? nativeSeed ?? NativeCommandSeed(state: initial, controls: controlSnapshot,
       limiter: targetLimiter ?? GuidanceTargetLimiter(previous: previousTarget))
     let model = lift == 1 && drag == 1 ? aerodynamics : aerodynamics.scaled(lift: lift, drag: drag)
-    let comparisonContext = TerminalComparisonContext(seed: seed, configuration: c,
+    let tailContext = TerminalComparisonContext(seed: seed, configuration: c,
       atmosphere: atmosphere, aerodynamics: model)
+    let comparisonContext = commandPrefix?.comparisonContext ?? tailContext
+    let origin = comparisonContext.startState
+    let prefixValid = commandPrefix.map { prefix in
+      prefix.end == .scheduleExhausted && prefix.comparisonContext.originID == seed.originID
+        && prefix.comparisonContext.configuration == c
+        && prefix.comparisonContext.atmosphereID == atmosphere.instanceID
+        && prefix.comparisonContext.aerodynamicsID == model.instanceID
+        && prefix.comparisonContext.continuationPolicy == tailContext.continuationPolicy
+        && prefix.seed.state == initial
+    } ?? true
     let rollout = NativeCommandRollout(seed: seed, configuration: c, atmosphere: atmosphere, aerodynamics: model)
     let tracker = PathTrackingEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
     let approach = ApproachGuidanceEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
@@ -38,8 +49,7 @@ public final class TerminalTrajectoryEvaluator {
     var lastReference: PathStation?
     var evaluationStatus = TerminalEvaluationStatus.incomplete
     var end = TerminalEvaluationEnd.horizon
-    var work = 0.0, pressureIntegral = 0.0, loadIntegral = 0.0
-    var maximumPressureExcess = 0.0, maximumLoadExcess = 0.0
+    var accounting = commandPrefix?.accounting ?? NativeTrajectoryAccounting()
     func add(_ violation: ConstraintViolation) {
       if !failures.contains(where: { $0.kind == violation.kind }) { failures.append(violation) }
     }
@@ -47,8 +57,12 @@ public final class TerminalTrajectoryEvaluator {
       s.velocity.squaredLength/2-c.planet.gravitationalParameter/s.position.length
         - c.planet.angularVelocity.cross(s.position).squaredLength/2
     }
+    if !prefixValid {
+      add(.init(.modelUncertainty, "Command prefix is incomplete or its context/endpoint differs"))
+      evaluationStatus = .invalid; end = .unsupportedDynamics
+    }
     // As in entry propagation, discard only sub-resolution integration residue.
-    while c.guidance.maximumPredictionDuration-(state.time-initial.time) > dt*1e-6 {
+    while prefixValid && c.guidance.maximumPredictionDuration-(state.time-origin.time) > dt*1e-6 {
       if Task.isCancelled { end = .cancelled; break }
       guard rollout.modelConsistent, nativeSeed.map({
         $0.state.time == initial.time && $0.state.position == initial.position
@@ -67,10 +81,6 @@ public final class TerminalTrajectoryEvaluator {
         evaluationStatus = .invalid; end = .unsupportedDynamics; break
       }
       for violation in touchdown.observe(state) { add(violation) }
-      let pressureExcess = max(0, state.aerodynamics.dynamicPressure-c.vehicle.maximumDynamicPressure)
-      let loadExcess = max(0, abs(state.aerodynamics.lift)/(state.mass*9.80665)-c.vehicle.maximumLoadFactor)
-      maximumPressureExcess = max(maximumPressureExcess, pressureExcess)
-      maximumLoadExcess = max(maximumLoadExcess, loadExcess)
       if state.aerodynamics.dynamicPressure > c.vehicle.maximumDynamicPressure {
         add(.init(.excessiveDynamicPressure, "Closed-loop terminal q envelope"))
       }
@@ -113,18 +123,9 @@ public final class TerminalTrajectoryEvaluator {
       }
       phase = raw.phase
       do {
-        let duration = min(dt, c.guidance.maximumPredictionDuration-(state.time-initial.time))
+        let duration = min(dt, c.guidance.maximumPredictionDuration-(state.time-origin.time))
         let step = try rollout.advance(raw, duration: duration)
-        let actualDuration = step.after.time-step.before.time
-        work += actualDuration/2 * (
-          step.before.aerodynamics.force.dot(step.before.velocity)/step.before.mass
-          + step.after.aerodynamics.force.dot(step.after.velocity)/step.after.mass)
-        let nextPressure = max(0, step.after.aerodynamics.dynamicPressure-c.vehicle.maximumDynamicPressure)
-        let nextLoad = max(0, abs(step.after.aerodynamics.lift)/(step.after.mass*9.80665)-c.vehicle.maximumLoadFactor)
-        pressureIntegral += actualDuration*(pressureExcess+nextPressure)/2
-        loadIntegral += actualDuration*(loadExcess+nextLoad)/2
-        maximumPressureExcess = max(maximumPressureExcess, nextPressure)
-        maximumLoadExcess = max(maximumLoadExcess, nextLoad)
+        accounting.include(step, configuration: c)
         if let reference = lastReference { trace?(step.before, reference, step.limited) }
         state = step.after
       } catch {
@@ -135,17 +136,19 @@ public final class TerminalTrajectoryEvaluator {
     if evaluationStatus == .incomplete {
       failures.append(.init(.timeout, Task.isCancelled ? "Terminal qualification cancelled" : "Terminal qualification did not complete rollout"))
     }
+    if accounting.maximumPressureExcess > 0 { add(.init(.excessiveDynamicPressure, "Command/terminal trajectory q envelope")) }
+    if accounting.maximumLoadExcess > 0 { add(.init(.excessiveLoad, "Command/terminal trajectory load envelope")) }
     let event = rollout.touchdown
     return .init(liftMultiplier: lift, dragMultiplier: drag, feasible: success && event?.acceptable == true && failures.isEmpty,
-      elapsed: state.time-initial.time, touchdownSpeed: event?.horizontalSpeed,
+      elapsed: state.time-origin.time, touchdownSpeed: event?.horizontalSpeed,
       touchdownSink: event?.verticalSpeed, touchdownPitch: event?.pitch,
       stoppedAlong: success ? frame.coordinates(of: state.position).along : nil,
       maximumTrackingError: maximumTrackingError, violations: failures, evidence: "offline-native-control-model-only",
       evaluation: .init(status: evaluationStatus, end: end, state: state,
-        aerodynamicWork: work, energyChange: energy(state)-energy(initial),
-        heightChange: state.position.length-initial.position.length,
-        maximumPressureExcess: maximumPressureExcess, pressureExcessIntegral: pressureIntegral,
-        maximumLoadExcess: maximumLoadExcess, loadExcessIntegral: loadIntegral,
+        aerodynamicWork: accounting.aerodynamicWork, energyChange: energy(state)-energy(origin),
+        heightChange: state.position.length-origin.position.length,
+        maximumPressureExcess: accounting.maximumPressureExcess, pressureExcessIntegral: accounting.pressureExcessIntegral,
+        maximumLoadExcess: accounting.maximumLoadExcess, loadExcessIntegral: accounting.loadExcessIntegral,
         comparisonContext: comparisonContext, touchdown: event))
   }
 }

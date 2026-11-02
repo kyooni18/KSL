@@ -172,6 +172,31 @@ final class TAEMPredictionEvidenceTests: XCTestCase {
     XCTAssertEqual(bounded.end, .durationCoverage)
     XCTAssertEqual(bounded.steps.count, 1)
     XCTAssertEqual(bounded.seed.state.time, seed.state.time+dt/2)
+    let exact = try TAEMCommandScheduleEvaluator(configuration: short, atmosphere: atmosphere,
+      aerodynamics: aero).evaluate([.init(duration: dt/2, command: command)], from: seed)
+    XCTAssertEqual(exact.end, .scheduleExhausted)
+    let plan = TerminalPlan(identifier: 1, createdAt: row.state.time, spiral: nil, stations: [],
+      assessment: .init(feasible: true, violations: [], touchdownSpeed: 0, minimumLiftMargin: 0,
+        maximumBank: 0, maximumQ: 0, maximumLoad: 0, score: 0, uncertaintyFraction: 0))
+    let terminal = TerminalTrajectoryEvaluator(configuration: short, atmosphere: atmosphere, aerodynamics: aero)
+    let accounted = terminal.evaluate(plan: plan, from: exact.seed.state, controlSnapshot: nil,
+      previousTarget: nil, lift: 1, drag: 1, commandPrefix: exact)
+    XCTAssertEqual(accounted.evaluation?.end, .horizon)
+    XCTAssertFalse(accounted.qualified)
+    XCTAssertEqual(accounted.elapsed, exact.seed.state.time-seed.state.time)
+    XCTAssertEqual(accounted.evaluation?.comparisonContext, exact.comparisonContext)
+    XCTAssertEqual(accounted.evaluation?.aerodynamicWork, exact.accounting.aerodynamicWork)
+    XCTAssertEqual(accounted.evaluation?.heightChange, exact.seed.state.position.length-seed.state.position.length)
+    let invalid = terminal.evaluate(plan: plan, from: bounded.seed.state, controlSnapshot: nil,
+      previousTarget: nil, lift: 1, drag: 1, commandPrefix: bounded)
+    XCTAssertEqual(invalid.evaluation?.end, .unsupportedDynamics)
+    XCTAssertEqual(invalid.evaluation?.status, .invalid)
+    let wrongModel = TerminalTrajectoryEvaluator(configuration: short,
+      atmosphere: try AtmosphericModelEngine(planet: c.planet), aerodynamics: aero)
+      .evaluate(plan: plan, from: exact.seed.state, controlSnapshot: nil, previousTarget: nil,
+        lift: 1, drag: 1, commandPrefix: exact)
+    XCTAssertEqual(wrongModel.evaluation?.end, .unsupportedDynamics)
+
   }
 
 }
