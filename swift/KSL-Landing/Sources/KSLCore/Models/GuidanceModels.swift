@@ -142,6 +142,9 @@ public struct CommandRecoveryDiagnostics: Codable, Sendable {
   public var runwayQualified: Bool
   public var sourceTime: Double?
   public var forecastFailure: String? = nil
+  public var referencePlanID: Int? = nil
+  public var referenceStationDistance: Double? = nil
+  public var referencePathError: Double? = nil
   public var requestedForce: Vector2? = nil
   public var modeledForce: Vector2? = nil
   public var forceResidual: Vector2? = nil

@@ -1,0 +1,24 @@
+{
+  "sourceRun": "/Users/kyooni18/Code/KSL/runs/20261103T033809Z-mainstream-live",
+  "observedFirstTAEM": 24855.229272483724,
+  "observedThroughUT": 25236.329272492043,
+  "recoveryProposals": 76,
+  "selectedCommandCandidates": 0,
+  "prefixEnds": {
+    "unsupportedDynamics": 608,
+    "scheduleExhausted": 76
+  },
+  "advisoryPlanID": 248527,
+  "advisoryCreatedAt": 24852.74927248367,
+  "advisoryFeasible": false,
+  "advisoryTouchdownSpeed": 51.35003093171161,
+  "minimumSafeSpeed": 85,
+  "firstTAEMSequence": 4594,
+  "fixtureSHA256": "87e5b3d3b8086a4a4f119d73f45287627a3a4c2ed76e638433beabf403b3cec7",
+  "advisoryStationCount": 75,
+  "failureKinds": [
+    "actuatorAuthority",
+    "insufficientEnergy",
+    "insufficientLift"
+  ]
+}

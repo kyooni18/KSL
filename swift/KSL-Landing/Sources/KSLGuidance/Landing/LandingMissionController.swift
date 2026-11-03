@@ -32,6 +32,8 @@ public final class LandingMissionController {
   private var recoveryCursor: TAEMCommandCursor?
   private var recoveryContinuation: TerminalPlan?
   private var activeRecoveryProposal: TAEMRecoveryProposal?
+  private var localPathPlanID: Int?
+  private var localPathForceFit: TAEMNormalForceFit?
   private let permitsSynchronousCommandPlanning: Bool
   private var lastPlanAttempt = -Double.infinity
   private var stoppedSince: Double?
@@ -72,6 +74,7 @@ public final class LandingMissionController {
     lastPlanningResult = nil; lastAdmission = nil; lastPlanAttempt = -.infinity
     lastCapture = nil; advisoryPlan = nil; publishedTerminalEpoch = nil
     lastRecoveryProposal = nil; recoveryCursor = nil; recoveryContinuation = nil; activeRecoveryProposal = nil
+    localPathPlanID = nil; localPathForceFit = nil
     if plan != nil {
       activePlanDynamicsCurrent = false; activeReferenceCache = nil
       poorTrackingSince = nil
@@ -228,6 +231,7 @@ public final class LandingMissionController {
         recoveryCursor = .init(proposal: recovery, state: state, configuration: configuration)
         recoveryContinuation = recovery.candidate?.segments.isEmpty == true ? recovery.continuation : nil
         activeRecoveryProposal = recovery
+        localPathPlanID = nil
         tracker.reset()
       }
     }
@@ -269,6 +273,7 @@ public final class LandingMissionController {
     previousTime = nil
     recoveryCursor = nil; recoveryContinuation = nil; activeRecoveryProposal = nil
     lastPlanAttempt = -.infinity
+    localPathPlanID = nil; localPathForceFit = nil
     // Preserve limiter history; recover locally from the fresh measured state
     // until the worker rebases a new command forecast.
   }
@@ -358,6 +363,7 @@ public final class LandingMissionController {
 
   public func update(_ state: VehicleState) throws -> GuidanceSolution {
     var advisories: [ConstraintViolation] = []
+    localPathForceFit = nil
     var dt = configuration.guidance.controlInterval
     if let completed = try prepareUpdate(state, advisories: &advisories, dt: &dt) { return completed }
     incidence.observe(time: state.time, measuredAlpha: state.aerodynamics.angleOfAttack,
@@ -477,6 +483,26 @@ public final class LandingMissionController {
               rollResponseSeconds: controlFeedback?.rollResponseSeconds,
               pitchResponseSeconds: controlFeedback?.pitchResponseSeconds).0
           }
+          // An unqualified route can still supply a useful horizontal recovery
+          // reference. Follow its contiguous curve rather than the independent
+          // legacy tangent. Retain current-state pressure/glide recovery for the
+          // vertical request; stale advisory heights/speeds are not flown.
+          if recoveryCursor == nil && recoveryContinuation == nil,
+            let advisory = advisoryPlan, advisory.stations.count > 1,
+            let vertical = taem.status.forceFit?.requested.x {
+            if localPathPlanID != advisory.identifier { tracker.reset(); localPathPlanID = advisory.identifier }
+            let demand = tracker.lateralDemand(state, plan: advisory,
+              rollResponseSeconds: controlFeedback?.rollResponseSeconds)
+            let ceiling = RotationalDynamicsEngine(configuration: configuration.vehicle, planet: configuration.planet)
+              .supportedTrimAlpha(state, identifiedCeiling: attainableAlphaCeiling)
+            if let fit = try? TAEMNormalForceFitter.fit(vertical: vertical,
+              lateral: state.aerodynamics.dynamicPressure > configuration.vehicle.maximumDynamicPressure ? 0 : demand.acceleration,
+              state: state, configuration: configuration,
+              aerodynamics: aerodynamics.scaled(lift: authority.liftEffectiveness, drag: authority.dragEffectiveness),
+              maximumAlpha: ceiling, baseTarget: target) {
+              target = fit.target; localPathForceFit = fit
+            }
+          }
           let s = taem.status
           var violations: [ConstraintViolation] = []
           if s.insufficientEnergy {
@@ -492,7 +518,7 @@ public final class LandingMissionController {
             violations.append(.init(.invalidGeometry,
               "TAEM committed-profile force check failed: \(failure); recovery remains unqualified"))
           }
-          raw = .init(phase: s.phase == .headingAlignment ? .headingAlignment : .acquisition,
+          raw = .init(phase: (localPathForceFit != nil ? (tracker.reference?.segment == .spiral && tracksCurrentRoute) : s.phase == .headingAlignment) ? .headingAlignment : .acquisition,
             target: target, violations: violations, pathRemaining: s.range,
             diagnostic: "TAEM phase=\(s.phase.rawValue) side=\(s.side) hacTurn=\(degrees(s.remainingTurn)) deg rpred=\(s.range) m E=\(s.energyHeight) m EN=\(s.nominalEnergy) m EMIN=\(s.minimumEnergy) m href=\(s.referenceHeight) m qref=\(s.referenceDynamicPressure) Pa qmin=\(s.minimumDynamicPressure) Pa rf=\(s.finalRadius) m growth=\(s.growth) m/rad2 downmoded=\(s.downmoded) descentFits=\(s.descentPlanFits) descentCheck=\(s.descentCheckFailure ?? "necessaryChecksPassed") referenceTracking=\(s.referenceTracking ?? false)")
         } else if approach.recoveryDue(state) {
@@ -584,14 +610,19 @@ public final class LandingMissionController {
       pathRemaining: raw.pathRemaining, diagnostic: raw.diagnostic)
     solution.targetHistory = .init(requested: requested, before: limiterBefore, after: limiter)
     if [.acquisition, .headingAlignment].contains(phase) {
-      solution.commandRecovery = .init(mode: recoveryContinuation != nil ? "command-terminal-continuation" : (recoveryCursor == nil ? "local-coupled-no-complete-forecast" : "command-schedule"),
+      solution.commandRecovery = .init(mode: recoveryContinuation != nil ? "command-terminal-continuation" : (recoveryCursor == nil ? (localPathForceFit != nil ? "local-advisory-path-no-complete-forecast" : "local-coupled-no-complete-forecast") : "command-schedule"),
         proposalID: (activeRecoveryProposal ?? lastRecoveryProposal)?.id, candidateID: (recoveryCursor != nil || recoveryContinuation != nil) ? activeRecoveryProposal?.candidate?.id : nil,
         evaluatedCandidates: lastRecoveryProposal?.trials.count ?? 0,
         forecastComplete: recoveryCursor != nil || recoveryContinuation != nil,
         runwayQualified: (recoveryCursor != nil || recoveryContinuation != nil) ? activeRecoveryProposal?.outcome?.qualified ?? false : false,
         sourceTime: (activeRecoveryProposal ?? lastRecoveryProposal)?.time)
       solution.commandRecovery?.forecastFailure = lastRecoveryProposal?.failure
-      if recoveryCursor == nil && recoveryContinuation == nil, let fit = taem.status.forceFit {
+      if localPathForceFit != nil {
+        solution.commandRecovery?.referencePlanID = localPathPlanID
+        solution.commandRecovery?.referenceStationDistance = tracker.reference?.distance
+        solution.commandRecovery?.referencePathError = tracker.trackingError
+      }
+      if recoveryCursor == nil && recoveryContinuation == nil, let fit = localPathForceFit ?? taem.status.forceFit {
         solution.commandRecovery?.requestedForce = fit.requested
         solution.commandRecovery?.modeledForce = fit.modeled
         solution.commandRecovery?.forceResidual = fit.residual
@@ -744,6 +775,10 @@ public final class LandingMissionController {
       d.mm305Advisory = admission.violations.map(\.message).joined(separator: "; ")
     } else if let capture = lastCapture, !capture.feasible {
       d.mm305Advisory = "HAC model advisory: \(capture.deficit.rawValue)"
+    }
+    if localPathForceFit != nil, let reference = localPathPlanID {
+      d.mm305Advisory = "Local horizontal recovery follows advisory \(reference); complete forecast/runway qualification unavailable. "
+        + (d.mm305Advisory ?? "")
     }
     return d
   }
