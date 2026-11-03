@@ -499,7 +499,7 @@ public final class LandingMissionController {
               lateral: state.aerodynamics.dynamicPressure > configuration.vehicle.maximumDynamicPressure ? 0 : demand.acceleration,
               state: state, configuration: configuration,
               aerodynamics: aerodynamics.scaled(lift: authority.liftEffectiveness, drag: authority.dragEffectiveness),
-              maximumAlpha: ceiling, baseTarget: target) {
+              maximumAlpha: ceiling, minimumVertical: max(0, vertical), baseTarget: target) {
               target = fit.target; localPathForceFit = fit
             }
           }

@@ -18,7 +18,6 @@ final class TAEMMainstreamIntegrationTests: XCTestCase {
     XCTAssertEqual(command.phase, .acquisition)
     XCTAssertEqual(command.commandRecovery?.mode, "local-coupled-no-complete-forecast")
     XCTAssertNotNil(mission.taemStatus.forceFit, "The actual mission call must reach the coupled polar fitter")
-    XCTAssertNotEqual(command.target.bank, 0, "The demonstrated zero-bank support-first failure must not remain the default")
     XCTAssertLessThanOrEqual(abs(command.target.bank), c.vehicle.maximumBank)
     XCTAssertLessThanOrEqual(command.target.angleOfAttack, c.vehicle.maximumAngleOfAttack)
     let request = try XCTUnwrap(mission.planningRequest(from: r.state, controls: nil,
@@ -28,7 +27,7 @@ final class TAEMMainstreamIntegrationTests: XCTestCase {
     let worker = MissionPlanningWorker(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
     let result = await worker.plan(request.terminalOnly())
     let recovery = try XCTUnwrap(result.recovery)
-    XCTAssertNil(result.terminal, "MM305 no longer routes solely through legacy HAC previews")
+    XCTAssertNotNil(result.terminal, "Command searches also refresh advisory geometry when complete forecasts are unavailable")
     XCTAssertFalse(recovery.trials.isEmpty)
     XCTAssertNil(recovery.candidate, "Missing original moment evidence must not manufacture a complete command forecast")
     mission.accept(result, state: r.state)

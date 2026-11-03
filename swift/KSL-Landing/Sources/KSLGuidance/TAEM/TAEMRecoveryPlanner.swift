@@ -57,7 +57,7 @@ public enum TAEMRecoveryPlanner {
     let previous = limiter.previous ?? .init(angleOfAttack: a.angleOfAttack, bank: a.bank)
     let fit = try? TAEMNormalForceFitter.fit(vertical: vertical,
       lateral: a.dynamicPressure > c.vehicle.maximumDynamicPressure ? 0 : lateral,
-      state: state, configuration: c, aerodynamics: aero, maximumAlpha: ceiling, baseTarget: previous)
+      state: state, configuration: c, aerodynamics: aero, maximumAlpha: ceiling, minimumVertical: max(0, vertical), baseTarget: previous)
     let protection = GuidanceSolution(phase: .acquisition, target: fit?.target ?? previous)
     let duration = min(c.guidance.maximumPredictionDuration, response)
     var parameters: [TAEMTopologySeedParameters] = []

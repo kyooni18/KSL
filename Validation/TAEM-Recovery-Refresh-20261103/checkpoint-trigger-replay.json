@@ -1,0 +1,17 @@
+{
+  "watcher": "/tmp/ksl-save72-reflight.py",
+  "actualRecordedCrossings": [
+    {
+      "before": {
+        "ut": 18010.92037598805,
+        "altitudeASL": 72005.61764115328
+      },
+      "trigger": {
+        "ut": 18011.040375988054,
+        "altitudeASL": 71998.71993159887
+      }
+    }
+  ],
+  "count": 1,
+  "rpcSaveExecuted": false
+}

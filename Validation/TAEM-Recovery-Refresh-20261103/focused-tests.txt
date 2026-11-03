@@ -1,0 +1,39 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 1]
+[1 / 41] KSLGuidance
+[2 / 7] GuidanceTests-product
+[4 / 9] GuidanceTests-product
+[9 / 13] GuidanceTests-product
+Build complete! (1.72초)
+Test Suite 'Selected tests' started at 2026-11-03 15:32:15.255.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-03 15:32:15.256.
+Test Suite 'JointNormalForceProjectionTests' started at 2026-11-03 15:32:15.256.
+Test Case '-[GuidanceTests.JointNormalForceProjectionTests testJointProjectionCanTradeDesiredSupportForTurnWithoutIncreasingVehicleLimits]' started.
+Test Case '-[GuidanceTests.JointNormalForceProjectionTests testJointProjectionCanTradeDesiredSupportForTurnWithoutIncreasingVehicleLimits]' passed (0.006 seconds).
+Test Suite 'JointNormalForceProjectionTests' passed at 2026-11-03 15:32:15.262.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'TAEMAdvisoryOwnershipTests' started at 2026-11-03 15:32:15.262.
+Test Case '-[GuidanceTests.TAEMAdvisoryOwnershipTests testActualUnqualifiedAdvisoryDrivesLocalCurveWithoutClaimingCompleteForecast]' started.
+Test Case '-[GuidanceTests.TAEMAdvisoryOwnershipTests testActualUnqualifiedAdvisoryDrivesLocalCurveWithoutClaimingCompleteForecast]' passed (0.234 seconds).
+Test Suite 'TAEMAdvisoryOwnershipTests' passed at 2026-11-03 15:32:15.496.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.234 (0.234) seconds
+Test Suite 'TAEMMainstreamIntegrationTests' started at 2026-11-03 15:32:15.496.
+Test Case '-[GuidanceTests.TAEMMainstreamIntegrationTests testDefaultMissionIssuesCoupledRecoveryAndDefaultWorkerRunsCommandSearch]' started.
+Test Case '-[GuidanceTests.TAEMMainstreamIntegrationTests testDefaultMissionIssuesCoupledRecoveryAndDefaultWorkerRunsCommandSearch]' passed (0.280 seconds).
+Test Case '-[GuidanceTests.TAEMMainstreamIntegrationTests testScheduleCursorUsesMeasuredEpochAndDoesNotLoseTerminalHandoff]' started.
+Test Case '-[GuidanceTests.TAEMMainstreamIntegrationTests testScheduleCursorUsesMeasuredEpochAndDoesNotLoseTerminalHandoff]' passed (0.001 seconds).
+Test Suite 'TAEMMainstreamIntegrationTests' passed at 2026-11-03 15:32:15.776.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.281 (0.281) seconds
+Test Suite 'TAEMRecoveryRefreshTests' started at 2026-11-03 15:32:15.776.
+Test Case '-[GuidanceTests.TAEMRecoveryRefreshTests testMM305WorkerRefreshesGeometryFromEachRecordedStateWithoutCertifyingIt]' started.
+Test Case '-[GuidanceTests.TAEMRecoveryRefreshTests testMM305WorkerRefreshesGeometryFromEachRecordedStateWithoutCertifyingIt]' passed (0.555 seconds).
+Test Case '-[GuidanceTests.TAEMRecoveryRefreshTests testRecordedUnattainableTurnCannotSpendReservedRecoverySupport]' started.
+Test Case '-[GuidanceTests.TAEMRecoveryRefreshTests testRecordedUnattainableTurnCannotSpendReservedRecoverySupport]' passed (0.003 seconds).
+Test Suite 'TAEMRecoveryRefreshTests' passed at 2026-11-03 15:32:16.334.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.558 (0.558) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-03 15:32:16.335.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 1.078 (1.079) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 15:32:16.335.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 1.078 (1.080) seconds
+RECORDED_RECOVERY_SUPPORT requested Vector2(x: 8.213886187490417, y: -49.88000594668125) joint Vector2(x: 2.6723375078669576, y: -7.342186960026102) reserved Vector2(x: 7.813392164222266, y: -1.164286161098222e-07) bank -8.537736462515939e-07

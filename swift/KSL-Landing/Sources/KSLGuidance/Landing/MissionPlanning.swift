@@ -77,7 +77,16 @@ public actor MissionPlanningWorker {
         atmosphere: atmosphere.corrected(request.environment), aerodynamics: model,
         controls: request.controls, limiter: request.targetLimiter ?? .init(previous: request.previousTarget),
         context: request.hac, incumbent: request.taemIncumbent)
-      return .init(time: request.time, entry: nil, terminal: nil, recovery: recovery,
+      // An unsupported command forecast must not freeze the last pre-entry
+      // curve for the rest of MM305. Refit geometry from this same snapshot,
+      // including the current winding/force/response context. This is still
+      // advisory: acceptTerminal retains the independent admission checks.
+      let refreshed = HACPlanningEngine(configuration: configuration,
+        atmosphere: atmosphere.corrected(request.environment), aerodynamics: model)
+        .plan(from: state, allowDirect: request.hac?.onSpiral != true, preview: true,
+          controlSnapshot: request.controls, previousTarget: request.previousTarget,
+          targetLimiter: request.targetLimiter, context: request.hac)
+      return .init(time: request.time, entry: nil, terminal: refreshed, recovery: recovery,
         dynamicsRevision: request.dynamicsRevision)
     }
     let terminalResult = request.terminalState.map {

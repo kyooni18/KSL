@@ -854,13 +854,13 @@ final class TAEMGuidanceEngine {
       vertical = max(vertical, support + speed * (pressureBound(v.maximumDynamicPressure) - state.flightPathAngle) / tau)
     }
 
-    // The desired vertical profile is an objective, not a reservation of
-    // every available newton. Fit one actual polar lift/bank/drag choice.
+    // Unqualified geometric recovery must retain the attainable part of its
+    // pressure/glide support request while fitting one actual polar vector.
     // An already exceeded configured q limit retains straight pressure recovery.
     let requestedLateral = a.dynamicPressure > v.maximumDynamicPressure ? 0 : lateral
     let fitted = try? TAEMNormalForceFitter.fit(vertical: vertical, lateral: requestedLateral,
       state: state, configuration: c, aerodynamics: aero.scaled(lift: liftGain, drag: dragGain),
-      maximumAlpha: ceiling, baseTarget: .init())
+      maximumAlpha: ceiling, minimumVertical: max(0, vertical), baseTarget: .init())
     status.forceFit = fitted
     // Legacy spatial geometry stays advisory while the command-search worker
     // establishes a complete continuation. Do not render it as tracked motion.
