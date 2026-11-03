@@ -12,12 +12,12 @@
     "nominalAlpha": 0.3141592653589793,
     "rollAcceleration": 0.031415926535897934,
     "rollRate": 0.07853981633974483,
-    "terminalMachHalfWidth": 0.35,
-    "terminalMaximumAltitude": 30000,
-    "terminalMinimumAltitude": 22000,
-    "terminalTargetAltitude": 25000,
-    "terminalTargetMach": 2.5,
-    "terminalTargetRange": 35023
+    "terminalMachHalfWidth": 0.25,
+    "terminalMaximumAltitude": 24000,
+    "terminalMinimumAltitude": 17000,
+    "terminalTargetAltitude": 20000,
+    "terminalTargetMach": 1.35,
+    "terminalTargetRange": 18143
   },
   "guidance": {
     "allowDirectTerminal": true,
