@@ -338,6 +338,15 @@ public final class HACPlanningEngine {
       alphaFloor: max(0, v.minimumAngleOfAttack), alphaCeiling: trimAlpha, gear: state.systems.gearDown)
     let desiredLength = max(max(0, energyHeight-touchdownEnergy)*liftDrag,
       glide.range(from: energyHeight, to: touchdownEnergy, derate: 1))
+    // Shortest energy-consistent length: equilibrium glide held at the trim
+    // ceiling, the most drag the airframe can fly without a drag device.
+    // Lengths between this and the clean best-glide range are dissipated by
+    // drag, not by lengthening the ground track.
+    let draggedGlide = EquilibriumGlideRange(aero: aero, atmosphere: atmosphere, frame: frame,
+      along: p.along, cross: p.cross, time: state.time, mass: state.mass, gravity: gravity,
+      alphaFloor: trimAlpha, alphaCeiling: trimAlpha, gear: state.systems.gearDown)
+    let shortestLength = min(desiredLength,
+      draggedGlide.range(from: energyHeight, to: touchdownEnergy, derate: 1))
     let directToExit = (p.horizontal-Vector2(-c.finalDistance-unloadLength, 0)).length
     let nominalExitRadius = c.finalSpeed*c.finalSpeed/max(Double.leastNormalMagnitude, gravity*tan(EnergyManagementEngine.acquisitionBank(configuration)))
     let old = context?.previousSpiral
@@ -437,7 +446,7 @@ public final class HACPlanningEngine {
     func fitCost(_ plan: TerminalPlan) -> Double {
       let a = plan.assessment
       let distanceScale = max(state.horizontalSpeed*c.pathLookaheadTime, desiredLength, c.finalDistance)
-      let pathEnergy = abs(plan.length-desiredLength)/distanceScale
+      let pathEnergy = max(0, plan.length-desiredLength, shortestLength-plan.length)/distanceScale
       let liftDeficit = max(0, -a.minimumLiftMargin)/max(gravity, Double.leastNormalMagnitude)
       let bankDeficit = max(0, a.maximumBank/v.maximumBank-1)
       let pressure = max(0, a.maximumQ/v.maximumDynamicPressure-1)
