@@ -774,8 +774,12 @@ final class TAEMGuidanceEngine {
       attainableNormal * (1-v.aerodynamicUncertainty))
     let plannedLateral = min(abs(lateral), normalReference * tan(v.maximumBank),
       sqrt(max(0, reservedLift*reservedLift-normalReference*normalReference)))
-    let frontQ = hypot(normalReference, plannedLateral) * state.mass
-      / max(1e-9,aero.referenceArea*supportCoefficient*(1-v.aerodynamicUncertainty))
+    // TAEM also never prices a reference below the configured minimum safe
+    // airspeed: its q at the measured density is a floor beside lift support.
+    let safeSpeed = v.minimumSafeSpeed ?? v.landingSpeed
+    let frontQ = max(hypot(normalReference, plannedLateral) * state.mass
+      / max(1e-9,aero.referenceArea*supportCoefficient*(1-v.aerodynamicUncertainty)),
+      0.5 * state.atmosphere.density * safeSpeed * safeSpeed)
     func height(atDynamicPressure q: Double) -> Double {
       var lo = 0.0, hi = maximumReferenceHeight
       for _ in 0..<28 {

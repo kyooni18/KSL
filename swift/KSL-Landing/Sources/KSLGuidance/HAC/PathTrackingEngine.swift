@@ -154,7 +154,11 @@ public final class PathTrackingEngine {
     // raising it would spend kinetic energy that the vehicle does not have.
     let exchange = ref.segment != .final && priced
       ? min(0, (ref.speed * ref.speed - speed * speed) / (2 * g)) : 0
-    let heightTarget = ref.height - exchange
+    // Below the configured minimum safe airspeed, trade height for the
+    // missing kinetic energy rather than holding a reference height.
+    let safeSpeed = configuration.vehicle.minimumSafeSpeed ?? configuration.vehicle.landingSpeed
+    let deficit = ref.segment != .final ? max(0, safeSpeed * safeSpeed - speed * speed) / (2 * g) : 0
+    let heightTarget = ref.height - exchange - deficit
     let rateTime = max(5, pitchFloor), heightTime = rateTime * 12 / 5
     let desiredVertical = speed * sin(gamma) + clamp((heightTarget - p.height) / heightTime, -35, 35)
     let desiredGamma = asin(clamp(desiredVertical / max(1, speed), -1, 1))
@@ -163,7 +167,6 @@ public final class PathTrackingEngine {
       + speed * speed * ref.verticalCurvature
     let maxAlpha = rotation.supportedTrimAlpha(state, identifiedCeiling: identifiedTrimCeiling)
     let scale = max(Double.leastNormalMagnitude, liftEffectiveness)
-    let safeSpeed = configuration.vehicle.minimumSafeSpeed ?? configuration.vehicle.landingSpeed
     let ceiling = speed < 1.15*safeSpeed
       ? min(maxAlpha, aero.bestGlideAlpha(mach: state.aerodynamics.mach, maximumAlpha: maxAlpha,
           dynamicPressure: state.aerodynamics.dynamicPressure, gear: state.systems.gearDown)) : maxAlpha
@@ -187,7 +190,7 @@ public final class PathTrackingEngine {
         target: plan.nominalEnergyPoint, cleanDragAcceleration: cleanDrag)
     } else { brake = 0 }
     return (.init(angleOfAttack: alpha, bank: bank,
-      desiredSpeed: priced ? ref.speed : (configuration.vehicle.minimumSafeSpeed ?? configuration.vehicle.landingSpeed),
+      desiredSpeed: priced ? max(ref.speed, ref.segment != .final ? safeSpeed : 0) : safeSpeed,
       desiredHeight: heightTarget, desiredFlightPath: desiredGamma,
       gearDown: state.systems.gearDown || p.height <= (configuration.guidance.gearDeploymentAltitude ?? 1500),
       speedbrakeFraction: brake), ref)
