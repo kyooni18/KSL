@@ -605,6 +605,10 @@ final class TAEMGuidanceEngine {
     if lines == nil || selected == nil {
       // Use the same physical profile check for every candidate. Legacy
       // EN/EMIN remains telemetry/advisory, never a route admission price.
+      // One HAC: once a side is latched, re-selection stays on it. Another
+      // side is considered only when this side has no ground track at all.
+      let latched = lines == nil ? candidates : candidates.filter {$0.side == status.side}
+      let candidates = latched.isEmpty ? candidates : latched
       let fitting = candidates.filter {descentPlan(for: $0).fits(maximumGlide: glideLimit)}
       let options = (fitting.isEmpty ? candidates : fitting).sorted {$0.range > $1.range}
       for candidate in options {
@@ -656,7 +660,8 @@ final class TAEMGuidanceEngine {
       // price. Retain recovery unless another route passes the same check.
       if status.phase != .headingAlignment, !status.downmoded,
         current.energy == nil || current.energy! < requiredNEPEnergy {
-        for shorter in candidates.filter({$0.range < t.range}).sorted(by: {$0.range > $1.range}) {
+        // A downmode shortens this HAC; it never reverses its side.
+        for shorter in candidates.filter({$0.range < t.range && $0.side == t.side}).sorted(by: {$0.range > $1.range}) {
           let proposed = descentPlan(for: shorter)
           guard proposed.fits(maximumGlide: glideLimit) else { continue }
           let alternative = check(shorter, profile: proposed)

@@ -593,7 +593,10 @@ public final class LandingMissionController {
     if [.acquisition, .headingAlignment].contains(phase) {
       if recoveryCursor != nil || recoveryContinuation != nil {
         // Preserve the drag-device command that was actually priced.
-      } else if taem.status.referenceTracking == true, let nep = nominalEnergyPoint?.point {
+      } else if let nep = nominalEnergyPoint?.point {
+        // Shed energy above the NEP with drag over the predicted TAEM range,
+        // whether or not the reference is tracked, rather than by twisting
+        // the ground track. Feedback is zero when energy is not in excess.
         requested.speedbrakeFraction = speedbrake.feedback(state, target: nep,
           remainingDistance: taem.status.range, dt: dt,
           responseSeconds: max(configuration.guidance.pathLookaheadTime, controlFeedback?.pitchResponseSeconds ?? 0),

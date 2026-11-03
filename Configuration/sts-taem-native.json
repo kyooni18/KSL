@@ -17,7 +17,7 @@
     "terminalMinimumAltitude": 17000,
     "terminalTargetAltitude": 20000,
     "terminalTargetMach": 1.35,
-    "terminalTargetRange": 18143
+    "terminalTargetRange": 25000
   },
   "guidance": {
     "allowDirectTerminal": true,
