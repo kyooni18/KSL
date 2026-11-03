@@ -26,4 +26,5 @@ public struct FlightControlSnapshot: Sendable {
   let previousFeedforward: Double, feedforwardWasIdentified: Bool
   let feedforwardWasPrior: Bool
   let coupledRollAcceleration: Double
+  let reactionControlReleased: Bool
 }

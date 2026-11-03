@@ -24,6 +24,8 @@ public final class FlightController {
   private var feedforwardWasIdentified = false
   private var feedforwardWasPrior = false
   private var coupledRollAcceleration = 0.0
+  /// TAEM has handed attitude to measured non-RCS authority; never re-armed.
+  private var reactionControlReleased = false
   public private(set) var diagnostics = ControlDiagnostics()
 
   public init(configuration: MissionConfiguration, snapshot: FlightControlSnapshot? = nil) {
@@ -39,6 +41,7 @@ public final class FlightController {
       previousFeedforward = s.previousFeedforward; feedforwardWasIdentified = s.feedforwardWasIdentified
       feedforwardWasPrior = s.feedforwardWasPrior
       coupledRollAcceleration = s.coupledRollAcceleration
+      reactionControlReleased = s.reactionControlReleased
       diagnostics = s.diagnostics; mainContactLatched = s.mainContactLatched
       rollout = .init(configuration: configuration, snapshot: s.rollout)
     }
@@ -51,7 +54,32 @@ public final class FlightController {
       previousDesiredAttitude: previousDesiredAttitude, pitchReferenceRate: pitchReferenceRate,
       previousState: previousState, previousPhase: previousPhase, trimModel: trimModel,
       previousFeedforward: previousFeedforward, feedforwardWasIdentified: feedforwardWasIdentified,
-      feedforwardWasPrior: feedforwardWasPrior, coupledRollAcceleration: coupledRollAcceleration)
+      feedforwardWasPrior: feedforwardWasPrior, coupledRollAcceleration: coupledRollAcceleration,
+      reactionControlReleased: reactionControlReleased)
+  }
+  /// Configured RCS stays on through MM304 and into TAEM until measured
+  /// non-RCS (surface and wheel) authority covers this attitude law's own
+  /// demand on every axis: the bandwidth times the configured maximum pitch
+  /// rate and TAEM roll rate, with the body yaw a stability-axis roll needs
+  /// at the measured AoA. Release then latches; approach and flare never use RCS.
+  /// Missing non-RCS evidence keeps RCS rather than guessing authority.
+  public func reactionControl(state: VehicleState, phase: MissionPhase) -> Bool {
+    guard configuration.vehicle.rcsAttitudeControl else { return false }
+    if phase == .entry { return true }
+    guard [.acquisition, .headingAlignment].contains(phase), !reactionControlReleased else { return false }
+    let report = state.systems.rcs ? state.controlAuthority?.excludingRCS : state.controlAuthority
+    guard let report, report.isValid, report.evidence == .measured else { return true }
+    let a = state.aerodynamics, p = configuration.vehicle.controlPlant
+    let wn = ControlLaw.bandwidth(q: a.dynamicPressure, mach: a.mach, terminal: false)
+    let rollRate = min(p.maximumRollRate,
+      configuration.guidance.terminalRollRate ?? configuration.guidance.bankSlewRate)
+    let roll = wn.roll * rollRate
+    let required = Vector3(roll, wn.pitch * p.maximumPitchRate, roll * abs(sin(a.angleOfAttack)))
+    let available = report.minimumAcceleration
+    if available.x >= required.x, available.y >= required.y, available.z >= required.z {
+      reactionControlReleased = true
+    }
+    return !reactionControlReleased
   }
   public func reset() {
     pitchAuthority = .init(); rollAuthority = .init(); yawAuthority = .init()
@@ -62,6 +90,7 @@ public final class FlightController {
     trimModel = .init(); previousFeedforward = 0; feedforwardWasIdentified = false; feedforwardWasPrior = false
     coupledRollAcceleration = 0
     diagnostics = .init(); rollout = .init(configuration: configuration)
+    reactionControlReleased = false
   }
   /// Drop the old mass-distribution fit without stepping the actuators to zero.
   public func invalidateDynamics(at state: VehicleState) {
@@ -358,9 +387,7 @@ public final class FlightController {
       roll: moveToward(previous.roll, clamp(rollRaw, -1, 1), maximumDelta: delta),
       yaw: moveToward(previous.yaw, clamp(yawRaw, -1, 1), maximumDelta: delta),
       gearDown: solution.target.gearDown,
-      // Configured RCS is authorized for MM304 entry only. MM305 acquisition,
-      // HAC, approach and flare must explicitly release it at ownership transfer.
-      rcs: solution.phase == .entry && configuration.vehicle.rcsAttitudeControl,
+      rcs: reactionControl(state: state, phase: solution.phase),
       speedbrakeFraction: solution.target.speedbrakeFraction ?? 0,
       bodyFlapTrimFraction: flapTrim)
     var d = ControlDiagnostics()

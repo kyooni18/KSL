@@ -112,7 +112,7 @@ public final class NativeCommandRollout {
     guard modelConsistent else {
       throw FlightError.invalidConfiguration("Continuation model/configuration changed; rebase from measured history")
     }
-    let rcs = requested.phase == .entry && configuration.vehicle.rcsAttitudeControl
+    let rcs = controller.reactionControl(state: state, phase: requested.phase)
     guard plant.authoritySupports(rcs: rcs) else {
       throw FlightError.invalidConfiguration("Prediction lacks authority for requested RCS transition")
     }

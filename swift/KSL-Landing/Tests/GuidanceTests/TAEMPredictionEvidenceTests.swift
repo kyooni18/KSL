@@ -30,7 +30,13 @@ final class TAEMPredictionEvidenceTests: XCTestCase {
     let rollout = branch(r.state)
     XCTAssertTrue(r.state.systems.rcs)
     XCTAssertFalse(rollout.pitchMomentSupported, "Measured torque alone cannot identify a missing moment balance")
-    let step = try rollout.advance(.init(phase: .acquisition, target: r.target), duration: c.guidance.controlInterval)
+    // At this recorded handoff, measured surface pitch authority is below the
+    // attitude law's demand, so TAEM keeps RCS. A forced release (approach)
+    // must then predict with the excluded torque only.
+    let kept = try branch(r.state).advance(.init(phase: .acquisition, target: r.target),
+      duration: c.guidance.controlInterval)
+    XCTAssertTrue(kept.issued.rcs)
+    let step = try rollout.advance(.init(phase: .approach, target: r.target), duration: c.guidance.controlInterval)
     XCTAssertFalse(step.issued.rcs)
     XCTAssertFalse(step.after.systems.rcs)
     let expected = try XCTUnwrap(r.state.controlAuthority?.excludingRCS)
@@ -41,7 +47,7 @@ final class TAEMPredictionEvidenceTests: XCTestCase {
     missing.controlAuthority?.rcsExcludedPositiveTorque = nil
     missing.controlAuthority?.rcsExcludedNegativeTorque = nil
     let unsupported = branch(missing)
-    XCTAssertThrowsError(try unsupported.advance(.init(phase: .acquisition, target: r.target),
+    XCTAssertThrowsError(try unsupported.advance(.init(phase: .approach, target: r.target),
       duration: c.guidance.controlInterval))
     XCTAssertEqual(unsupported.state.time, r.state.time)
     XCTAssertEqual(unsupported.limiter.previous, r.target)

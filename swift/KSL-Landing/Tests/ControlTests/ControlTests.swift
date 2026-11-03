@@ -28,7 +28,7 @@ final class ControlTests: XCTestCase {
     let terminal = try controller.command(state: acquired,
       solution: .init(phase: .acquisition, target: .init(angleOfAttack: radians(10), bank: radians(20))),
       dt: c.guidance.controlInterval)
-    XCTAssertFalse(terminal.rcs)  // acquisition is still unpowered flight
+    XCTAssertTrue(terminal.rcs)  // TAEM keeps RCS until measured surface authority suffices
     XCTAssertFalse(command.sas)
     XCTAssertFalse(command.airbrakes)
   }

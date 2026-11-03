@@ -5,7 +5,7 @@ import XCTest
 @testable import KSLControl
 
 final class EntryRCSPolicyTests: XCTestCase {
-  func testConfiguredEntryRCSIsReleasedForTerminalGuidance() throws {
+  func testTAEMKeepsRCSUntilMeasuredSurfaceAuthorityThenReleases() throws {
     var configuration = MissionConfiguration()
     let position = Vector3(610_000, 0, 0), velocity = Vector3(0, 200, 0)
     let plant = ShuttlePhysicsEngine(
@@ -21,10 +21,30 @@ final class EntryRCSPolicyTests: XCTestCase {
         let command = try controller.command(state: state,
           solution: .init(phase: phase, target: .init(angleOfAttack: radians(10), bank: 0)),
           dt: configuration.guidance.controlInterval)
-        XCTAssertEqual(command.rcs, enabled && phase == .entry, "\(enabled), \(phase)")
+        // No measured non-RCS authority: TAEM keeps RCS; approach never uses it.
+        let expected = enabled && [.entry, .acquisition, .headingAlignment].contains(phase)
+        XCTAssertEqual(command.rcs, expected, "\(enabled), \(phase)")
         state.systems.rcs = command.rcs
       }
     }
+    configuration.vehicle.rcsAttitudeControl = true
+    let controller = FlightController(configuration: configuration)
+    var state = seed
+    state.systems.rcs = true
+    func authority(_ acceleration: Double) -> ControlAuthorityTelemetry {
+      var report = ControlAuthorityTelemetry(positiveTorque: Vector3(1, 1, 1),
+        negativeTorque: Vector3(1, 1, 1), inertia: Vector3(1, 1, 1))
+      report.rcsExcludedPositiveTorque = Vector3(acceleration, acceleration, acceleration)
+      report.rcsExcludedNegativeTorque = Vector3(acceleration, acceleration, acceleration)
+      return report
+    }
+    state.controlAuthority = authority(1e-3)
+    XCTAssertTrue(controller.reactionControl(state: state, phase: .acquisition))
+    state.controlAuthority = authority(1)
+    XCTAssertFalse(controller.reactionControl(state: state, phase: .acquisition))
+    // Release latches even if q later falls.
+    state.controlAuthority = authority(1e-3); state.systems.rcs = false
+    XCTAssertFalse(controller.reactionControl(state: state, phase: .headingAlignment))
   }
 
   func testRCSSettingDoesNotOverrideAerodynamicTrimEvidence() throws {

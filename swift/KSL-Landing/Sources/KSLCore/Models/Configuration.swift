@@ -28,8 +28,8 @@ public struct VehicleConfiguration: Codable, Sendable, Equatable {
   public var maximumDynamicPressure = 45_000.0
   public var maximumLoadFactor = 3.5
   public var maximumBank = radians(70)
-  /// Allows orbital pointing and MM304 entry attitude RCS. MM305 acquisition,
-  /// HAC, approach and flare prohibit RCS independently of this setting.
+  /// Allows orbital pointing, MM304 entry and early TAEM attitude RCS. TAEM
+  /// releases it on measured surface authority; approach and flare prohibit it.
   public var rcsAttitudeControl = true
   public var minimumAngleOfAttack = radians(-5)
   public var maximumAngleOfAttack = radians(40)
