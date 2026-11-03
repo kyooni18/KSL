@@ -1,0 +1,43 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 1]
+[1 / 53] KSLKRPC
+[2 / 22] KSLRuntime
+[4 / 24] KSLRuntime
+[11 / 30] KSLSimulation
+[15 / 33] KSLLanding
+[26 / 44] ksl-landing-product
+[29 / 48] KSLRuntime
+[31 / 50] KSLSimulation
+[37 / 46] SimulationTests-product
+[46 / 53] SimulationTests-product
+[49 / 55] SimulationTests-product
+[55 / 59] IntegrationTests-product
+Build complete! (3.08초)
+Test Suite 'Selected tests' started at 2026-11-03 14:06:42.543.
+Test Suite 'IntegrationTests.xctest' started at 2026-11-03 14:06:42.543.
+Test Suite 'DeorbitDeliveryCoverageTests' started at 2026-11-03 14:06:42.543.
+Test Case '-[IntegrationTests.DeorbitDeliveryCoverageTests testRecordedAtmosphericPrefixCannotPurchaseAnUnpricedTAEMArrival]' started.
+Test Case '-[IntegrationTests.DeorbitDeliveryCoverageTests testRecordedAtmosphericPrefixCannotPurchaseAnUnpricedTAEMArrival]' passed (5.527 seconds).
+Test Suite 'DeorbitDeliveryCoverageTests' passed at 2026-11-03 14:06:48.071.
+	 Executed 1 test, with 0 failures (0 unexpected) in 5.527 (5.528) seconds
+Test Suite 'DeorbitExecutionTests' started at 2026-11-03 14:06:48.071.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testFailedDeorbitCandidatesAreRankedByPhysicalMM305EntryNotSeventyKilometreMiss]' started.
+Test Case '-[IntegrationTests.DeorbitExecutionTests testFailedDeorbitCandidatesAreRankedByPhysicalMM305EntryNotSeventyKilometreMiss]' passed (0.000 seconds).
+Test Suite 'DeorbitExecutionTests' passed at 2026-11-03 14:06:48.071.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'OMSWaitingPolicyTests' started at 2026-11-03 14:06:48.071.
+Test Case '-[IntegrationTests.OMSWaitingPolicyTests testRecorded898MetrePerSecondPlanCannotAuthorizeUnder150Limit]' started.
+Test Case '-[IntegrationTests.OMSWaitingPolicyTests testRecorded898MetrePerSecondPlanCannotAuthorizeUnder150Limit]' passed (0.001 seconds).
+Test Case '-[IntegrationTests.OMSWaitingPolicyTests testRecordedOMSInventoryExcludesNonOMSResourcesAndSharedTankDuplication]' started.
+Test Case '-[IntegrationTests.OMSWaitingPolicyTests testRecordedOMSInventoryExcludesNonOMSResourcesAndSharedTankDuplication]' passed (0.000 seconds).
+Test Case '-[IntegrationTests.OMSWaitingPolicyTests testWaitingWinsAtComparableDeliveryAndQualifiedRoutesPreferFuel]' started.
+Test Case '-[IntegrationTests.OMSWaitingPolicyTests testWaitingWinsAtComparableDeliveryAndQualifiedRoutesPreferFuel]' passed (0.000 seconds).
+Test Suite 'OMSWaitingPolicyTests' passed at 2026-11-03 14:06:48.073.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'IntegrationTests.xctest' passed at 2026-11-03 14:06:48.073.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 5.529 (5.529) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 14:06:48.073.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 5.529 (5.530) seconds
+RECORDED_ORBITAL_COVERAGE selectedRange 120615.85319011039 selectedMiss 909593.4162146155 fallbackRange 1029860.7230590193 fallbackMiss 14978.170393925591 fallbackDeltaV 32.144886462351565 fallbackBurnStart 17591.6853288177 candidates 12
+OMS_BUDGET 4075.429643611079 burnoutMass 21556.168012638922 availableDV 585.8643579900081 wrongDryMassDV 845.2145423938664

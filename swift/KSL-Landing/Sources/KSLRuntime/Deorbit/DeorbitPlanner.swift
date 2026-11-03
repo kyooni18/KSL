@@ -84,41 +84,6 @@ public actor DeorbitPlanner {
     // Compare nominal full-route qualification first, then robust pass count
     // and safety failures. Only when all physical evidence ties use necessary
     // entry-interface heading change, then window miss, as advisory tie-breakers.
-    func ranksAhead(_ x: DeorbitPlan, _ y: DeorbitPlan) -> Bool {
-      if x.executionQualified != y.executionQualified { return x.executionQualified }
-      if x.fullRouteQualified != y.fullRouteQualified { return x.fullRouteQualified }
-      // Hard physical entry limits outrank a nominal endpoint success in the
-      // provisional plant; never prefer an unsafe burn just for a rollout.
-      if x.unsafeCases != y.unsafeCases { return x.unsafeCases < y.unsafeCases }
-      if x.nominalPassed != y.nominalPassed { return x.nominalPassed }
-      if x.passedCases != y.passedCases { return x.passedCases > y.passedCases }
-      if x.fullRouteQualified && y.fullRouteQualified {
-        if x.window.propulsiveDeltaV != y.window.propulsiveDeltaV {return x.window.propulsiveDeltaV<y.window.propulsiveDeltaV}
-        if x.window.burnStart != y.window.burnStart {return x.window.burnStart<y.window.burnStart}
-      }
-      if let a=x.entryScreen, let b=y.entryScreen {
-        if a.feasible != b.feasible {return a.feasible}
-        if a.altitudeRejected != b.altitudeRejected {return !a.altitudeRejected}
-        if a.machRejected != b.machRejected {return !a.machRejected}
-        let bucketA=floor(a.captureMiss/x.configuration.entrySettings.handoffRadius)
-        let bucketB=floor(b.captureMiss/y.configuration.entrySettings.handoffRadius)
-        if bucketA != bucketB {return bucketA<bucketB}
-        if x.window.propulsiveDeltaV != y.window.propulsiveDeltaV {
-          return x.window.propulsiveDeltaV<y.window.propulsiveDeltaV
-        }
-        if x.window.burnStart != y.window.burnStart {return x.window.burnStart<y.window.burnStart}
-      }
-      let a = x.window.entryInterface.planetFixed(planet: x.configuration.planet,
-        attitude: .init())
-      let b = y.window.entryInterface.planetFixed(planet: y.configuration.planet,
-        attitude: .init())
-      let first = RunwayApproachSelector.assess(a, configuration: x.configuration)
-      let second = RunwayApproachSelector.assess(b, configuration: y.configuration)
-      if abs(first.minimumHeadingTravel-second.minimumHeadingTravel) > radians(0.1) {
-        return first.minimumHeadingTravel < second.minimumHeadingTravel
-      }
-      return x.window.miss < y.window.miss
-    }
     // A missed/unqualified MM305 or rollout forecast is not proof that an
     // orbital entry window is unusable. Choose the best physically screened
     // runway/OMS continuation and carry its unqualified terminal evidence
@@ -126,12 +91,58 @@ public actor DeorbitPlanner {
     // Actual burn authority, window freshness and propulsion limits remain
     // checked by DeorbitPlan, DeorbitRuntime and KRPCFlightIO.
     let safeEntry = evaluated.filter { $0.hasExecutableEntryWindow }
-    guard let choice = safeEntry.sorted(by: ranksAhead).first else {
+    guard let choice = safeEntry.sorted(by: Self.ranksPlansAhead).first else {
       throw FlightError.infeasible(
         "No physically admissible OMS-to-entry window for either runway. "
         + errors.joined(separator: "; "))
     }
     return choice
+  }
+
+  static func ranksPlansAhead(_ x: DeorbitPlan, _ y: DeorbitPlan) -> Bool {
+    if x.executionQualified != y.executionQualified { return x.executionQualified }
+    if x.fullRouteQualified != y.fullRouteQualified { return x.fullRouteQualified }
+    // Hard physical entry limits outrank a nominal endpoint success in the
+    // provisional plant; never prefer an unsafe burn just for a rollout.
+    if x.unsafeCases != y.unsafeCases { return x.unsafeCases < y.unsafeCases }
+    if x.nominalPassed != y.nominalPassed { return x.nominalPassed }
+    if x.passedCases != y.passedCases { return x.passedCases > y.passedCases }
+    if x.fullRouteQualified && y.fullRouteQualified {
+      if x.window.propulsiveDeltaV != y.window.propulsiveDeltaV {return x.window.propulsiveDeltaV<y.window.propulsiveDeltaV}
+      if x.window.burnStart != y.window.burnStart {return x.window.burnStart<y.window.burnStart}
+    }
+    if let a=x.entryScreen, let b=y.entryScreen {
+      let assessedA = a.deliveryAssessed == true, assessedB = b.deliveryAssessed == true
+      if assessedA != assessedB { return assessedA }
+      if !assessedA {
+        // Missing descent must not look like a cheap/near TAEM arrival.
+        // Retain the configured orbital-entry objective as an advisory
+        // fallback until a delivery-state forecast actually exists.
+        if x.window.miss != y.window.miss { return x.window.miss < y.window.miss }
+        if x.window.propulsiveDeltaV != y.window.propulsiveDeltaV { return x.window.propulsiveDeltaV < y.window.propulsiveDeltaV }
+        return x.window.burnStart < y.window.burnStart
+      }
+      if a.feasible != b.feasible {return a.feasible}
+      if a.altitudeRejected != b.altitudeRejected {return !a.altitudeRejected}
+      if a.machRejected != b.machRejected {return !a.machRejected}
+      let bucketA=floor(a.captureMiss/x.configuration.entrySettings.handoffRadius)
+      let bucketB=floor(b.captureMiss/y.configuration.entrySettings.handoffRadius)
+      if bucketA != bucketB {return bucketA<bucketB}
+      if x.window.propulsiveDeltaV != y.window.propulsiveDeltaV {
+        return x.window.propulsiveDeltaV<y.window.propulsiveDeltaV
+      }
+      if x.window.burnStart != y.window.burnStart {return x.window.burnStart<y.window.burnStart}
+    }
+    let a = x.window.entryInterface.planetFixed(planet: x.configuration.planet,
+      attitude: .init())
+    let b = y.window.entryInterface.planetFixed(planet: y.configuration.planet,
+      attitude: .init())
+    let first = RunwayApproachSelector.assess(a, configuration: x.configuration)
+    let second = RunwayApproachSelector.assess(b, configuration: y.configuration)
+    if abs(first.minimumHeadingTravel-second.minimumHeadingTravel) > radians(0.1) {
+      return first.minimumHeadingTravel < second.minimumHeadingTravel
+    }
+    return x.window.miss < y.window.miss
   }
 
   /// A failed full-route flight cannot be qualified, but its approximate
@@ -146,11 +157,18 @@ public actor DeorbitPlanner {
     let captureMiss: Double
     let violationCount: Int
     let entryMiss: Double
+    var deliveryAssessed = true
     var impulse:Double=0
     var burnStart:Double=0
     var resolution:Double=0
     static func < (lhs: Self, rhs: Self) -> Bool {
       if lhs.hardUnsafe != rhs.hardUnsafe { return !lhs.hardUnsafe }
+      if lhs.deliveryAssessed != rhs.deliveryAssessed { return lhs.deliveryAssessed }
+      if !lhs.deliveryAssessed {
+        if lhs.entryMiss != rhs.entryMiss { return lhs.entryMiss < rhs.entryMiss }
+        if lhs.impulse != rhs.impulse { return lhs.impulse < rhs.impulse }
+        return lhs.burnStart < rhs.burnStart
+      }
       if lhs.screenFeasible != rhs.screenFeasible { return lhs.screenFeasible }
       if lhs.altitudeRejected != rhs.altitudeRejected { return !lhs.altitudeRejected }
       if lhs.machRejected != rhs.machRejected { return !lhs.machRejected }
@@ -204,7 +222,16 @@ public actor DeorbitPlanner {
     guard let point else {
       return .init(hardUnsafe: hardUnsafe, screenFeasible: screenFeasible,
         altitudeRejected: true, machRejected: true, captureMiss: .greatestFiniteMagnitude,
-        violationCount: violationCount, entryMiss: entryMiss)
+        violationCount: violationCount, entryMiss: entryMiss, deliveryAssessed: false)
+    }
+    // Track heights are runway-relative. A predictor ending near 70 km has
+    // not priced a 22–30 km delivery state, however close its ground point.
+    let altitude = point[3]+c.runway.elevation
+    guard altitude >= c.mm304DeliveryMinimumAltitude,
+      altitude <= e.terminalMaximumAltitude else {
+      return .init(hardUnsafe: hardUnsafe, screenFeasible: false,
+        altitudeRejected: true, machRejected: true, captureMiss: .greatestFiniteMagnitude,
+        violationCount: violationCount, entryMiss: entryMiss, deliveryAssessed: false)
     }
     let mach = point[4]*c.mm304DeliveryMach/max(1, terminalSpeed)
     return .init(hardUnsafe: hardUnsafe, screenFeasible: screenFeasible,
@@ -356,7 +383,8 @@ public actor DeorbitPlanner {
       configuration:configuration,terminalSpeed:screen.terminalSpeed(at:window.entryInterface.time))
     let retained=DeorbitEntryScreen(feasible:forecast.feasible,altitudeRejected:rank.altitudeRejected,
       machRejected:rank.machRejected,captureMiss:rank.captureMiss,terminalAlong:forecast.terminalAlong,
-      terminalCross:forecast.terminalCross,terminalAltitude:forecast.terminalAltitude,terminalMach:forecast.terminalMach)
+      terminalCross:forecast.terminalCross,terminalAltitude:forecast.terminalAltitude,terminalMach:forecast.terminalMach,
+      deliveryAssessed: rank.deliveryAssessed)
     return .init(source: source, configuration: configuration, propulsion: propulsion, window: window,
       cases: selectedCases, modelLimitations: [
         "The inherited STS-N subsonic pitch fit does not validate STS entry moments.",

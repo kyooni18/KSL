@@ -66,6 +66,8 @@ public struct DeorbitStressCase: Codable, Sendable {
 
 /// Downstream MM304 evidence retained across runway comparisons. No landing certificate.
 public struct DeorbitEntryScreen: Codable, Sendable {
+  /// Nil in historical records. A stopped atmospheric prefix is not TAEM delivery.
+  public let deliveryAssessed: Bool?
   public let feasible: Bool
   public let altitudeRejected: Bool
   public let machRejected: Bool
@@ -75,7 +77,9 @@ public struct DeorbitEntryScreen: Codable, Sendable {
   public let terminalAltitude: Double
   public let terminalMach: Double
   public init(feasible: Bool, altitudeRejected: Bool, machRejected: Bool, captureMiss: Double,
-    terminalAlong: Double, terminalCross: Double, terminalAltitude: Double, terminalMach: Double) {
+    terminalAlong: Double, terminalCross: Double, terminalAltitude: Double, terminalMach: Double,
+    deliveryAssessed: Bool? = nil) {
+    self.deliveryAssessed=deliveryAssessed
     self.feasible=feasible;self.altitudeRejected=altitudeRejected;self.machRejected=machRejected
     self.captureMiss=captureMiss;self.terminalAlong=terminalAlong;self.terminalCross=terminalCross
     self.terminalAltitude=terminalAltitude;self.terminalMach=terminalMach
