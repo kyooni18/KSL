@@ -87,6 +87,7 @@ final class TAEMAdvisoryInletTests: XCTestCase {
     let r = try recorded(), c = r.configuration
     let limit = c.guidance.taemGlideAngle ?? c.guidance.outerGlideAngle
     let old = r.oldAdvisory
+    let rollRate = c.guidance.terminalRollRate ?? c.guidance.bankSlewRate
     XCTAssertGreaterThan(HACAdvisoryPreference.glideDeparture(old, maximumGlide: limit), 0)
     // Analytic normal-glide geometry checks ordering only, not flight
     // performance. No vehicle/aero/actuator capability is changed.
@@ -103,15 +104,38 @@ final class TAEMAdvisoryInletTests: XCTestCase {
     XCTAssertLessThan(HACAdvisoryPreference.glideDeparture(normal, maximumGlide: limit),
       HACAdvisoryPreference.glideDeparture(old, maximumGlide: limit))
     XCTAssertEqual(HACAdvisoryPreference.prefers(normal, over: old,
-      incumbentSide: old.spiral?.side, maximumGlide: limit), true)
+      incumbentSide: old.spiral?.side, maximumGlide: limit, rollRate: rollRate), true)
     let spiral = try XCTUnwrap(old.spiral)
     let reversed = try SpiralHAC(exitAlong: spiral.exitAlong, finalRadius: spiral.finalRadius,
       growth: spiral.growth, turnAngle: spiral.turnAngle, side: -spiral.side)
     let other = TerminalPlan(identifier: 2, createdAt: normal.createdAt, spiral: reversed,
       stations: normal.stations, assessment: normal.assessment)
     XCTAssertEqual(HACAdvisoryPreference.prefers(normal, over: other,
-      incumbentSide: spiral.side, maximumGlide: limit), true)
+      incumbentSide: spiral.side, maximumGlide: limit, rollRate: rollRate), true)
     XCTAssertEqual(HACAdvisoryPreference.prefers(other, over: normal,
-      incumbentSide: spiral.side, maximumGlide: limit), false)
+      incumbentSide: spiral.side, maximumGlide: limit, rollRate: rollRate), false)
+  }
+
+  func testRollReversalAndLargeBankRankBehindGentleTurnOnSameGlide() throws {
+    let r = try recorded(), c = r.configuration
+    let limit = c.guidance.taemGlideAngle ?? c.guidance.outerGlideAngle
+    let rollRate = c.guidance.terminalRollRate ?? c.guidance.bankSlewRate
+    let old = r.oldAdvisory
+    func plan(_ id: Int, _ banks: [Double]) -> TerminalPlan {
+      let stations = banks.enumerated().map { i, bank in
+        PathStation(distance: Double(i)*1000, position: .init(Double(i)*1000, 0), tangent: .init(1, 0),
+          curvature: 0, height: 8000-Double(i)*1000*tan(limit), slope: -tan(limit),
+          speed: 150, bank: bank, segment: .spiral)
+      }
+      return TerminalPlan(identifier: id, createdAt: old.createdAt, spiral: old.spiral,
+        stations: stations, assessment: old.assessment)
+    }
+    let gentle = plan(1, [0.3, 0.3, 0.3, 0.3])
+    let reversing = plan(2, [0.3, -0.3, 0.3, -0.3])
+    let steep = plan(3, [1.1, 1.1, 1.1, 1.1])
+    for radical in [reversing, steep] {
+      XCTAssertEqual(HACAdvisoryPreference.prefers(gentle, over: radical,
+        incumbentSide: old.spiral?.side, maximumGlide: limit, rollRate: rollRate), true)
+    }
   }
 }

@@ -481,7 +481,7 @@ public final class HACPlanningEngine {
       // a fallback when the entire family is infeasible.
       if let preferred = HACAdvisoryPreference.prefers($0, over: $1,
         incumbentSide: context?.previousSpiral?.side,
-        maximumGlide: c.taemGlideAngle ?? c.outerGlideAngle) { return preferred }
+        maximumGlide: c.taemGlideAngle ?? c.outerGlideAngle, rollRate: rollRate) { return preferred }
       return Self.ranksAhead(feasible: $0.assessment.feasible, cost: fitCost($0),
         ofFeasible: $1.assessment.feasible, cost: fitCost($1))
     }
