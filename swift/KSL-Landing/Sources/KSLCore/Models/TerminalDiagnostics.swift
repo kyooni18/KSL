@@ -35,6 +35,9 @@ public struct TerminalAdmissionDiagnostics: Codable, Sendable {
 /// MM304 -> MM305 handoff evidence: the predicted capture MM304 is steering
 /// toward, and MM305's independent verdict on the measured state.
 public struct CaptureHandoffDiagnostics: Codable, Sendable {
+  public var advisoryInletTime: Double?
+  public var advisorySourceTime: Double?
+  public var advisoryInletModel: String?
   /// Measured runway-chart coordinates, distinct from the forecasted capture
   /// endpoint and from the distance to the movable MM304 inlet objective.
   public var actualAlong: Double?

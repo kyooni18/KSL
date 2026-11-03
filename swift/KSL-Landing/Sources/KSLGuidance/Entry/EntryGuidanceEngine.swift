@@ -43,6 +43,10 @@ public final class EntryGuidanceEngine {
   public var reversalCount: Int { law.memory.lateral.reversals }
   public var diagnostics: EntryDiagnostics { law.diagnostics }
   var handoffForecast: EntryHandoffForecast? {law.memory.rangeReference?.handoffForecast}
+  var advisoryInlet: TAEMAdvisoryInlet? {
+    [captureForecast?.advisoryInlet, law.memory.rangeReference?.advisoryInlet]
+      .compactMap { $0 }.max { $0.sourceTime < $1.sourceTime }
+  }
   public var environment = EnvironmentCalibration()
   public init(configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine,
               aerodynamics: AerodynamicsEngine, permitsReplanning: Bool = true) {
@@ -83,6 +87,9 @@ public final class EntryGuidanceEngine {
   public func invalidatePrediction() {
     bestPrediction = nil; candidateCount = 0; captureForecast = nil
     law.memory.objective = nil
+    // Mass/CoM/control changes invalidate the propagated inlet as well as
+    // the native forecast; a cached endpoint cannot survive a plant revision.
+    law.memory.rangeReference = nil
     rangeMultiplier = 1
     lastSolve = -.infinity
     law.memory.identifiedTrimCeiling = nil

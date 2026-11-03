@@ -19,6 +19,7 @@ struct EntryRangeReference: Sendable {
   var speed: Double
   var bracketed: Bool
   var reachedEnergy: Bool
+  var advisoryInlet: TAEMAdvisoryInlet? = nil
 
   var handoffForecast: EntryHandoffForecast {
     .init(createdAt:createdAt,arrivalResidual:captureResidual)
@@ -68,11 +69,23 @@ struct EntryRangeReference: Sendable {
       var s=initial, alpha=s.aerodynamics.angleOfAttack, bank=s.aerodynamics.bank
       let end=initial.time+c.guidance.maximumPredictionDuration
       var reached=false
+      var inlet: TAEMAdvisoryInlet?
+      func captureInlet(_ state: VehicleState) {
+        guard inlet == nil else { return }
+        let lift = state.position.length-c.planet.radius <= c.entrySettings.terminalMaximumAltitude
+          ? EntryHandoffTiming.maximumLift(state:state,configuration:c,aerodynamics:aero,ceiling:ceiling) : nil
+        if LandingMissionController.terminalHandoffDue(phase:.entry,plan:nil,state:state,
+          configuration:c,objective:objective,responseSeconds:max(pitchResponse,rollResponse,c.guidance.pathLookaheadTime),
+          maximumLiftAcceleration:lift) {
+          inlet = .init(sourceTime:initial.time,state:state,model:"response-limited-point-mass")
+        }
+      }
       while s.time < end, s.position.length > c.planet.radius+c.runway.elevation {
         s.atmosphere=atmosphere.sample(position:s.position,time:s.time)
         s.attitude = .windAttitude(position:s.position,airVelocity:s.velocity-s.atmosphere.wind,alpha:alpha,bank:bank)
         s.aerodynamics=aero.evaluate(position:s.position,velocity:s.velocity,attitude:s.attitude,
           atmosphere:s.atmosphere,gear:s.systems.gearDown)
+        captureInlet(s)
         if energy(s)<=endpoint {reached=true;break}
         if s.aerodynamics.dynamicPressure>c.vehicle.maximumDynamicPressure
           || s.aerodynamics.lift/s.mass>c.vehicle.maximumLoadFactor*9.80665 {break}
@@ -99,6 +112,13 @@ struct EntryRangeReference: Sendable {
           s.time=before.time+dt*fraction;reached=true;break
         }
       }
+      // Re-evaluate the interpolated endpoint before exposing its full state.
+      // This does not change the range solve's commands or stopping energy.
+      s.atmosphere=atmosphere.sample(position:s.position,time:s.time)
+      s.attitude = .windAttitude(position:s.position,airVelocity:s.velocity-s.atmosphere.wind,alpha:alpha,bank:bank)
+      s.aerodynamics=aero.evaluate(position:s.position,velocity:s.velocity,attitude:s.attitude,
+        atmosphere:s.atmosphere,gear:s.systems.gearDown)
+      captureInlet(s)
       let p = frame.coordinates(of:s.position)
       let v = frame.coordinateVelocity(at:s.position,velocity:s.velocity)
       let heading = abs(atan2(v.y,v.x))
@@ -112,7 +132,7 @@ struct EntryRangeReference: Sendable {
       return .init(createdAt:initial.time,blend:blend,cross:p.cross,headingError:heading,
         captureResidual:residual,along:p.along,
         altitude:s.position.length-c.planet.radius,speed:s.velocity.length,
-        bracketed:false,reachedEnergy:reached)
+        bracketed:false,reachedEnergy:reached,advisoryInlet:inlet)
     }
     let low=trial(0), high=trial(1)
     func better(_ a: Self, _ b: Self) -> Bool {

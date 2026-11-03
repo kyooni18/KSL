@@ -57,6 +57,7 @@ public final class LandingMissionController {
   public private(set) var lastCapture: TAEMCaptureAssessment?
   public private(set) var handoffTiming: EntryHandoffTiming?
   private var publishedForecastEpoch: Double?
+  private var advisoryInlet: TAEMAdvisoryInlet?
   private var publishedTerminalEpoch: Double?
   private var previousTime: Double?
   private var wasAirborne = false
@@ -72,7 +73,7 @@ public final class LandingMissionController {
     nominalEnergyPoint = nil
     controlSnapshot = nil; controlFeedback = nil
     lastPlanningResult = nil; lastAdmission = nil; lastPlanAttempt = -.infinity
-    lastCapture = nil; advisoryPlan = nil; publishedTerminalEpoch = nil
+    lastCapture = nil; advisoryPlan = nil; advisoryInlet = nil; publishedTerminalEpoch = nil
     lastRecoveryProposal = nil; recoveryCursor = nil; recoveryContinuation = nil; activeRecoveryProposal = nil
     localPathPlanID = nil; localPathForceFit = nil
     if plan != nil {
@@ -174,7 +175,7 @@ public final class LandingMissionController {
   private func terminalSearchDue(_ state: VehicleState) -> Bool {
     // HAC previews advise MM304 only; TAEM owns MM305 without a certificate.
     [.entry, .acquisition, .headingAlignment].contains(phase) && !hacCompleted
-      && (phase != .entry || plan != nil || inTerminalSearchEnvelope(state))
+      && (phase != .entry || plan != nil || entry.advisoryInlet != nil || inTerminalSearchEnvelope(state))
       && state.time - lastPlanAttempt >= configuration.guidance.terminalReplanInterval
   }
   public func shouldPrioritizeTerminalSearch(_ state: VehicleState) -> Bool {
@@ -195,8 +196,18 @@ public final class LandingMissionController {
     }
     guard [.entry, .acquisition, .headingAlignment].contains(phase), !hacCompleted else { return nil }
     var terminalState: VehicleState?
+    var predictedInlet: TAEMAdvisoryInlet?
     if allowTerminal && terminalSearchDue(state) {
-      terminalState = state; lastPlanAttempt = state.time
+      if phase == .entry {
+        // A TAEM preview begins where MM304 predicts giving up ownership,
+        // never at the present high-energy MM304 aircraft position.
+        if let inlet = entry.advisoryInlet, inlet.sourceTime <= state.time,
+          state.time-inlet.sourceTime <= 2*configuration.guidance.entryReplanInterval,
+          inlet.state.time >= state.time {
+          predictedInlet = inlet; terminalState = inlet.state
+        }
+      } else { terminalState = state }
+      lastPlanAttempt = state.time
     }
     // Separate entry and terminal workers can update independently. Neither
     // consumes the other's request epoch or cancels its trajectory rollout.
@@ -206,7 +217,7 @@ public final class LandingMissionController {
     return .init(time: state.time, entry: entryRequest, terminalState: terminalState,
       controls: controls, previousTarget: limiter.previous, targetLimiter: limiter, environment: environment, hac: hacContext(),
       taemRecovery: phase == .acquisition || phase == .headingAlignment,
-      taemIncumbent: recoveryCursor?.tail)
+      taemIncumbent: recoveryCursor?.tail, terminalInlet: predictedInlet)
   }
   public func accept(_ proposal: MissionPlanningProposal, state: VehicleState) {
     guard proposal.time <= state.time else { return }
@@ -239,10 +250,15 @@ public final class LandingMissionController {
       state.time - proposal.time <= 2 * configuration.guidance.terminalReplanInterval,
       publishedTerminalEpoch.map({ proposal.time > $0 }) ?? true {
       publishedTerminalEpoch = proposal.time
-      acceptTerminal(result, state: state)
+      if phase == .entry, let inlet = proposal.terminalInlet {
+        lastPlanningResult = result; advisoryPlan = result.plan; advisoryInlet = inlet
+        // A future point-mass/native endpoint is advice, never admission at
+        // the present measured aircraft state or permission to leave MM304.
+      } else { acceptTerminal(result, state: state) }
     }
   }
   private func acceptTerminal(_ result: PlanningResult, state: VehicleState) {
+    advisoryInlet = nil
     lastPlanningResult = result
     var verdict = TAEMCaptureEvaluator.assess(result, state: state, configuration: configuration)
     verdict.plan = nil; lastCapture = verdict
@@ -433,20 +449,14 @@ public final class LandingMissionController {
         let currentPlanner = HACPlanningEngine(configuration: configuration,
           atmosphere: atmosphere.corrected(environment),
           aerodynamics: aerodynamics.scaled(lift: context.liftScale, drag: context.dragScale))
-        let preview = currentPlanner.plan(
-          from: state, allowDirect: !hacContext().onSpiral, preview: true,
-          controlSnapshot: controlSnapshot, previousTarget: limiter.previous, targetLimiter: limiter, context: context)
-        let result: PlanningResult
-        if let candidate = preview.plan,
-           MM305Admission.shouldQualifyPreview(state, plan: candidate, configuration: configuration) {
-          result = currentPlanner.plan(from: state, allowDirect: !hacContext().onSpiral, preview: false,
-            controlSnapshot: controlSnapshot, previousTarget: limiter.previous, targetLimiter: limiter, context: context)
-        } else {
-          result = preview
-        }
-        lastPlanningResult = result
+        if let inlet = entry.advisoryInlet, inlet.sourceTime <= state.time,
+          state.time-inlet.sourceTime <= 2*configuration.guidance.entryReplanInterval,
+          inlet.state.time >= state.time {
+          let result = currentPlanner.plan(from: inlet.state,
+            allowDirect: !context.onSpiral, preview: true, context: context)
+          lastPlanningResult = result; advisoryPlan = result.plan; advisoryInlet = inlet
+        } else { advisoryPlan = nil; advisoryInlet = nil }
         lastPlanAttempt = state.time
-        acceptTerminal(result, state: state)
       }
       if phase == .acquisition || phase == .headingAlignment {
         if state.time - (nominalEnergyPoint?.time ?? -.infinity) >= configuration.guidance.terminalReplanInterval {
@@ -700,6 +710,9 @@ public final class LandingMissionController {
       d.mm305Violations = Array(capture.violations.prefix(6))
     }
     d.mm305PlanAccepted = plan != nil
+    d.advisoryInletTime = advisoryInlet?.state.time
+    d.advisorySourceTime = advisoryInlet?.sourceTime
+    d.advisoryInletModel = advisoryInlet?.model
     d.advisoryPlanID = advisoryPlan?.identifier
     d.advisoryPlanFeasible = advisoryPlan?.assessment.feasible
     // Publish only the priced prefix of an advisory. Unpriced geometry is not

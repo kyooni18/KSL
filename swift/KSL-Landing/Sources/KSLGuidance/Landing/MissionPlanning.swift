@@ -19,6 +19,7 @@ public struct MissionPlanningRequest: Sendable {
   public var taemRecovery = false
   public var taemIncumbent: [TAEMCommandSegment]? = nil
   public var dynamicsRevision: UInt64? = nil
+  public var terminalInlet: TAEMAdvisoryInlet? = nil
 
   /// Preserve one immutable flight snapshot, but hand each independent worker
   /// only the work it owns. This also preserves the historical plan API.
@@ -30,7 +31,8 @@ public struct MissionPlanningRequest: Sendable {
   public func terminalOnly() -> Self {
     .init(time: time, entry: nil, terminalState: terminalState, controls: controls,
       previousTarget: previousTarget, targetLimiter: targetLimiter, approach: approach, environment: environment,
-      hac: hac, taemRecovery: taemRecovery, taemIncumbent: taemIncumbent, dynamicsRevision: dynamicsRevision)
+      hac: hac, taemRecovery: taemRecovery, taemIncumbent: taemIncumbent, dynamicsRevision: dynamicsRevision,
+      terminalInlet: terminalInlet)
   }
 }
 
@@ -42,6 +44,7 @@ public struct MissionPlanningProposal: Codable, Sendable {
   public var approach: ApproachPlanningProposal?
   /// Nil in historical records, which must retain their conservative time rule.
   public var dynamicsRevision: UInt64? = nil
+  public var terminalInlet: TAEMAdvisoryInlet? = nil
 }
 
 public struct RecordedPlanningProposal: Sendable {
@@ -94,12 +97,14 @@ public actor MissionPlanningWorker {
       let planner = HACPlanningEngine(configuration: configuration,
         atmosphere: atmosphere.corrected(request.environment), aerodynamics: model)
       let preview = planner.plan(from: $0, allowDirect: request.hac?.onSpiral != true, preview: true,
-        controlSnapshot: request.controls, previousTarget: request.previousTarget, targetLimiter: request.targetLimiter, context: request.hac)
+        controlSnapshot: request.terminalInlet == nil ? request.controls : nil,
+        previousTarget: request.terminalInlet == nil ? request.previousTarget : nil,
+        targetLimiter: request.terminalInlet == nil ? request.targetLimiter : nil, context: request.hac)
       // The preexisting worker only ever returned previews, while MM305's
       // actual ownership contract requires a successful closed-loop stop.
       // Qualify only an inlet that has passed the cheap physical/geometry
       // gate; do not spend three complete landings on rejected advisories.
-      if let candidate = preview.plan, !Task.isCancelled,
+      if request.terminalInlet == nil, let candidate = preview.plan, !Task.isCancelled,
          MM305Admission.shouldQualifyPreview($0, plan: candidate, configuration: configuration) {
         return planner.plan(from: $0, allowDirect: request.hac?.onSpiral != true, preview: false,
           controlSnapshot: request.controls, previousTarget: request.previousTarget, targetLimiter: request.targetLimiter, context: request.hac)
@@ -109,7 +114,7 @@ public actor MissionPlanningWorker {
     let entryResult = !Task.isCancelled && request.terminalState == nil
       ? request.entry.map { entry.plan($0) } : nil
     return .init(time: request.time, entry: entryResult, terminal: terminalResult,
-      dynamicsRevision: request.dynamicsRevision)
+      dynamicsRevision: request.dynamicsRevision, terminalInlet: request.terminalInlet)
   }
   /// Serialization stays on the planning actor, outside the urgent loop.
   public func recordedPlan(_ request: MissionPlanningRequest) throws -> RecordedPlanningProposal {

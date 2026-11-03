@@ -7,6 +7,7 @@ import KSLPhysics
 /// the TAEM capture evaluator. The predicted ground track is retained so the
 /// actual trajectory can later be compared with the prediction.
 public struct EntryCaptureForecast: Codable, Sendable {
+  public var advisoryInlet: TAEMAdvisoryInlet? = nil
   public var suggestedObjective: EntryCaptureObjective?
   public var objective: EntryCaptureObjective?
   public let createdAt: Double
@@ -234,6 +235,7 @@ public final class EntryCaptureForecaster {
       violations: violations, terminalTime: end.time, terminalAltitude: p.height,
       terminalMach: end.aerodynamics.mach, terminalAlong: p.along, terminalCross: p.cross,
       maximumDynamicPressure: maxQ, maximumLoad: maxLoad, capture: capture, track: track)
+    if handedOff { result.advisoryInlet = .init(sourceTime:state.time,state:end,model:"native-MM304-handoff") }
     result.crossAim = memory.crossAim
     result.objective = memory.objective ?? EntryCaptureObjective.seed(configuration: c,
       atmosphere: atmosphere, frame: frame, crossAim: memory.crossAim, time: state.time)

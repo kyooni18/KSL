@@ -1,0 +1,45 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 1]
+[1 / 54] KSLCore
+[2 / 28] KSLGuidance
+[4 / 30] KSLGuidance
+[15 / 23] ksl-landing-product
+[21 / 26] SimulationTests-product
+[21 / 27] GuidanceTests-product
+[26 / 28] GuidanceTests-product
+Build complete! (2.75초)
+Test Suite 'Selected tests' started at 2026-11-03 16:23:27.117.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-03 16:23:27.118.
+Test Suite 'TAEMAdvisoryInletTests' started at 2026-11-03 16:23:27.118.
+Test Case '-[GuidanceTests.TAEMAdvisoryInletTests testEntryAdvisoryStartsAtPredictedOwnershipEndWithoutEarlyControlTransfer]' started.
+Test Case '-[GuidanceTests.TAEMAdvisoryInletTests testEntryAdvisoryStartsAtPredictedOwnershipEndWithoutEarlyControlTransfer]' passed (0.057 seconds).
+Test Case '-[GuidanceTests.TAEMAdvisoryInletTests testNormalGlidePreferenceAndNoFreeReversalWithinUnqualifiedEvidence]' started.
+Test Case '-[GuidanceTests.TAEMAdvisoryInletTests testNormalGlidePreferenceAndNoFreeReversalWithinUnqualifiedEvidence]' passed (0.002 seconds).
+Test Suite 'TAEMAdvisoryInletTests' passed at 2026-11-03 16:23:27.177.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.059 (0.059) seconds
+Test Suite 'TAEMAdvisoryOwnershipTests' started at 2026-11-03 16:23:27.177.
+Test Case '-[GuidanceTests.TAEMAdvisoryOwnershipTests testActualUnqualifiedAdvisoryDrivesLocalCurveWithoutClaimingCompleteForecast]' started.
+Test Case '-[GuidanceTests.TAEMAdvisoryOwnershipTests testActualUnqualifiedAdvisoryDrivesLocalCurveWithoutClaimingCompleteForecast]' passed (0.235 seconds).
+Test Suite 'TAEMAdvisoryOwnershipTests' passed at 2026-11-03 16:23:27.413.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.235 (0.235) seconds
+Test Suite 'TAEMMainstreamIntegrationTests' started at 2026-11-03 16:23:27.413.
+Test Case '-[GuidanceTests.TAEMMainstreamIntegrationTests testDefaultMissionIssuesCoupledRecoveryAndDefaultWorkerRunsCommandSearch]' started.
+Test Case '-[GuidanceTests.TAEMMainstreamIntegrationTests testDefaultMissionIssuesCoupledRecoveryAndDefaultWorkerRunsCommandSearch]' passed (0.283 seconds).
+Test Case '-[GuidanceTests.TAEMMainstreamIntegrationTests testScheduleCursorUsesMeasuredEpochAndDoesNotLoseTerminalHandoff]' started.
+Test Case '-[GuidanceTests.TAEMMainstreamIntegrationTests testScheduleCursorUsesMeasuredEpochAndDoesNotLoseTerminalHandoff]' passed (0.001 seconds).
+Test Suite 'TAEMMainstreamIntegrationTests' passed at 2026-11-03 16:23:27.697.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.284 (0.284) seconds
+Test Suite 'TAEMRecoveryRefreshTests' started at 2026-11-03 16:23:27.697.
+Test Case '-[GuidanceTests.TAEMRecoveryRefreshTests testMM305WorkerRefreshesGeometryFromEachRecordedStateWithoutCertifyingIt]' started.
+Test Case '-[GuidanceTests.TAEMRecoveryRefreshTests testMM305WorkerRefreshesGeometryFromEachRecordedStateWithoutCertifyingIt]' passed (0.564 seconds).
+Test Case '-[GuidanceTests.TAEMRecoveryRefreshTests testRecordedUnattainableTurnCannotSpendReservedRecoverySupport]' started.
+Test Case '-[GuidanceTests.TAEMRecoveryRefreshTests testRecordedUnattainableTurnCannotSpendReservedRecoverySupport]' passed (0.003 seconds).
+Test Suite 'TAEMRecoveryRefreshTests' passed at 2026-11-03 16:23:28.264.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.567 (0.567) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-03 16:23:28.264.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 1.145 (1.146) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 16:23:28.264.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 1.145 (1.147) seconds
+MM304_ADVISORY_INLET sourceUT 18580.042133812938 handoffUT 18628.342133813992 height 27005.074512782576 speed 877.2227172851562 glideDeparture 1.1715807455717158e-18
+RECORDED_RECOVERY_SUPPORT requested Vector2(x: 8.213886187490417, y: -49.88000594668125) joint Vector2(x: 2.6723375078669576, y: -7.342186960026102) reserved Vector2(x: 7.813392164222266, y: -1.164286161098222e-07) bank -8.537736462515939e-07

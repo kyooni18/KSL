@@ -479,10 +479,9 @@ public final class HACPlanningEngine {
     candidates.sort {
       // Prefer an assessed feasible route, but retain all advisory routes as
       // a fallback when the entire family is infeasible.
-      if $0.assessment.feasible != $1.assessment.feasible { return $0.assessment.feasible }
-      let leftComplete = $0.assessment.predictionComplete == true
-      let rightComplete = $1.assessment.predictionComplete == true
-      if leftComplete != rightComplete { return leftComplete }
+      if let preferred = HACAdvisoryPreference.prefers($0, over: $1,
+        incumbentSide: context?.previousSpiral?.side,
+        maximumGlide: c.taemGlideAngle ?? c.outerGlideAngle) { return preferred }
       return Self.ranksAhead(feasible: $0.assessment.feasible, cost: fitCost($0),
         ofFeasible: $1.assessment.feasible, cost: fitCost($1))
     }

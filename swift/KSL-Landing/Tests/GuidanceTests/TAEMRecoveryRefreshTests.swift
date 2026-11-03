@@ -60,6 +60,11 @@ final class TAEMRecoveryRefreshTests: XCTestCase {
       let fresh = try XCTUnwrap(proposal.terminal?.plan)
       XCTAssertEqual(fresh.createdAt, s.time)
       XCTAssertNotEqual(fresh.identifier, previous?.identifier)
+      if let previous, fresh.assessment.airborneFeasible != true,
+        previous.assessment.airborneFeasible != true {
+        XCTAssertEqual(fresh.spiral?.side, previous.spiral?.side,
+          "Equally unqualified regeneration preserves the chosen winding")
+      }
       let position = RunwayFrame(runway: c.runway, planet: c.planet).coordinates(of: s.position)
       XCTAssertEqual(try XCTUnwrap(fresh.stations.first).position.x, position.along, accuracy: 1e-6)
       XCTAssertEqual(try XCTUnwrap(fresh.stations.first).position.y, position.cross, accuracy: 1e-6)
