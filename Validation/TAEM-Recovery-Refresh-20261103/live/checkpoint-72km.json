@@ -1,0 +1,15 @@
+{
+  "status": "saved-and-file-verified",
+  "name": "ksl-20261103T063436Z-recovery-refresh-live-descent-72km",
+  "path": "/Users/kyooni18/Library/Application Support/Steam/steamapps/common/Kerbal Space Program/saves/shuttletester/ksl-20261103T063436Z-recovery-refresh-live-descent-72km.sfs",
+  "sha256": "d05907070408b705d31335dc4fd2de63aee0d2650c936226f579ca10ef04000a",
+  "bytes": 320384,
+  "saveUT": 18011.022133800518,
+  "savedVesselAltitudeASL": 72001.81985700817,
+  "savedVesselHeaderLastUT": 18011.002133800517,
+  "savedVesselSituation": "SUB_ORBITAL",
+  "savedVesselPersistentID": "961889008",
+  "sourceRevision": "06a41f465c97a32ebc9e55f239747a7d77fb30a9",
+  "controlsChanged": false,
+  "verificationNote": "Save exists at descending72km crossing. SFS header altitude72001.82m; strict below72000 assertion was an overly narrow verifier, not failed save. Original watcher error retained."
+}

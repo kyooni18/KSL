@@ -1,0 +1,38 @@
+{
+  "revision": "06a41f465c97a32ebc9e55f239747a7d77fb30a9",
+  "authorization": "User: fix, rerun, create 72km checkpoint",
+  "initialInspection": {
+    "ut": 634.3600244138547,
+    "identity": {
+      "body": "Kerbin",
+      "name": "STS",
+      "partCount": 26,
+      "serverVersion": "0.6.0"
+    },
+    "propulsion": {
+      "availableThrust": 120000,
+      "dryMass": 21508.20262690835,
+      "evidence": "measured",
+      "specificImpulse": 345,
+      "thrustDirectionBody": {
+        "x": 0.9379881128342575,
+        "y": -1.0898121093048805e-06,
+        "z": 0.3466674201312264
+      }
+    }
+  },
+  "executableSHA256": "76e5c1232cb8802ed542ef6f6a2be21e760cf300bb3393fb15d807a9885ae52d",
+  "configurationSHA256": "a07cd9929f4cc0e0060519b8777a30f3c273bf37e7d6fb21b87b916b3684ee2a",
+  "sourcePatchSHA256": "b6ab850917b1d24873b7e78278de32fe1c22db1ca35df1e128cc2f999e6efcdc",
+  "resources": {
+    "KSL-Landing_KSLPhysics.bundle/Contents/Info.plist": "a958b2317b1982bab813b32d2e237b9fe0c661b01f520d3422dc7547fa515faa",
+    "KSL-Landing_KSLPhysics.bundle/Contents/Resources/STSAerodynamics.csv": "6853ae2cfa0a0da9b9daf329238550c68f3e9e335f8ed47175be4fd4dcac9f71",
+    "KSL-Landing_KSLPhysics.bundle/Contents/Resources/KerbinCurves.json": "86a0ca44975b882dbdd1e7510e0fff5b7d0be1698297a19203fbca5fad7fc1ca"
+  },
+  "flightMode": "default-refreshed-support-constrained-recovery",
+  "saveOperations": {
+    "load": "ksl-20261013T164958Z-sts-85km-10deg-orbit",
+    "create": "unique descending 72km ASL checkpoint"
+  },
+  "normalEntryGates": true
+}

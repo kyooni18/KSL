@@ -24,12 +24,21 @@ try:
    if h>72000:armed=True
    if descending_crossing(previous, {'ut':ut,'altitudeASL':h}):
     before={'ut':ut,'altitudeASL':h,'verticalSpeed':vs,'mass':v.mass,'partCount':len(v.parts.all),'paused':c.krpc.paused,'railsWarp':sc.rails_warp_factor}
-    sc.save(name)
+    save_error = None
+    try:sc.save(name)
+    except Exception as e:save_error = str(e)
     deadline=time.monotonic()+15
     while not save.exists() and time.monotonic()<deadline:time.sleep(.1)
     if not save.exists():raise RuntimeError('Save RPC returned but checkpoint file missing')
     raw=save.read_bytes();match=re.search(rb'\bUT = ([^\r\n]+)',raw)
-    result={'status':'saved','name':name,'path':str(save),'sha256':hashlib.sha256(raw).hexdigest(),'saveUT':float(match.group(1)) if match else None,'before':before,'previous':previous,'after':{'ut':sc.ut,'altitudeASL':v.flight().mean_altitude},'sourceRevision':json.loads((run/'provenance.json').read_text())['revision'],'controlsChanged':False,'verticalSpeedReferenceFrame':'body-fixed; crossing also checked by decreasing measured ASL altitude'}
+    headers=re.findall(rb'\bVESSEL\s*\{([^{}]*)',raw)
+    header=next(hd for hd in headers if re.search(rb'(?m)^\s*name = STS\s*$',hd))
+    altitude_match=re.search(rb'(?m)^\s*alt = ([^\r\n]+)',header)
+    saved_altitude=float(altitude_match.group(1))
+    # KSP's saved vessel header is sampled separately from Flight. Retain its
+    # exact altitude and epoch; saveUT must bracket the measured crossing.
+    assert previous['ut'] <= float(match.group(1)), 'Save predates the observed crossing interval'
+    result={'status':'saved','name':name,'path':str(save),'sha256':hashlib.sha256(raw).hexdigest(),'saveUT':float(match.group(1)) if match else None,'before':before,'previous':previous,'after':{'ut':sc.ut,'altitudeASL':v.flight().mean_altitude},'sourceRevision':json.loads((run/'provenance.json').read_text())['revision'],'controlsChanged':False,'savedVesselAltitudeASL':saved_altitude,'saveRPCError':save_error,'verticalSpeedReferenceFrame':'body-fixed; crossing also checked by decreasing measured ASL altitude'}
     (run/'checkpoint-72km.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps(result),flush=True);break
    previous={'ut':ut,'altitudeASL':h,'verticalSpeed':vs}

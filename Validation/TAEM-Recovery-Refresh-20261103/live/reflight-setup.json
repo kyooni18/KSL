@@ -1,0 +1,10 @@
+{
+  "authorization": "User: fix, rerun, create 72km checkpoint",
+  "sourceSave": "/Users/kyooni18/Library/Application Support/Steam/steamapps/common/Kerbal Space Program/saves/shuttletester/ksl-20261013T164958Z-sts-85km-10deg-orbit.sfs",
+  "sourceSaveSHA256": "000c1c8e1ea539d9ebd9cb11955cd0608b8d45cd456895d1aa42fcf0654b9fe5",
+  "initialUT": 634.3600244138547,
+  "previousControllerPID": 27658,
+  "previousControllerStoppedBeforeLoad": true,
+  "checkpointReference": "descending 72000 m ASL, body-fixed",
+  "originalSaveOverwritten": false
+}

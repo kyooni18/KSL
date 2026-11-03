@@ -19,3 +19,11 @@ Four existing checks also pass, covering advisory ownership, unconstrained joint
 The corrected mission-specific 72km watcher uses explicit body-fixed Flight data and a descending ASL crossing determined by consecutive altitude/UT samples, without a vertical-speed sign gate. Replaying its exact trigger against the previous recorded descent detects one crossing, from 72,005.618 m to 71,998.720 m. This replay does not call save or change KSP. The authorized live rerun must verify the actual save file and its altitude separately.
 
 Evidence: `Validation/TAEM-Recovery-Refresh-20261103`. Six focused tests passed. Live landing readiness remains unqualified before the rerun.
+
+## Authorized live checkpoint
+
+Run `runs/20261103T063436Z-recovery-refresh-live` uses immutable source `06a41f465c97a32ebc9e55f239747a7d77fb30a9`. The previous controller was stopped before the preserved original orbital save was loaded. Fresh preflight was UT 634.360024, approximately 85 km orbit, 26 parts and zero throttle.
+
+The descending 72 km save exists in the current Steam `shuttletester` save directory as `ksl-20261103T063436Z-recovery-refresh-live-descent-72km.sfs`, 320,384 bytes, SHA256 `d05907070408b705d31335dc4fd2de63aee0d2650c936226f579ca10ef04000a`. Save UT is 18011.022133800518; STS persistent ID 961889008 is suborbital, with saved header altitude 72,001.819857 m ASL and header epoch 18011.002133800517. The original watcher's strict saved-header-altitude-below-72000 assertion flagged this two-metre offset. That was a verification false negative, not a missing save: the file was independently read and verified. The watcher now preserves exact file altitude and checks time bracketing instead of assuming separate KSP header/Flight snapshots are simultaneous. The original error artifact remains in the run directory. No pause or flight-control change was made for the save.
+
+The flight was still in atmospheric entry when this checkpoint record was added. This establishes the replay checkpoint, not a landing outcome.
