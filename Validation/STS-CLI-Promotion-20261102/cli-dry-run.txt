@@ -1,0 +1,11 @@
+Run directory: /Users/kyooni18/Code/KSL/runs/20261102T032532Z-sts-kerbin
+12:25:32 Mission 20261102T032532Z-sts-kerbin: dry-run mm304 -> complete
+12:25:32 landing: start /Users/kyooni18/Code/KSL/swift/KSL-Landing/bin/landing_backend (KSP_LANDER_MODEL_PROFILE=sts-taem, configuration Configuration/sts-taem.json)
+12:25:32 landing: connect to kRPC 127.0.0.1:50000
+12:25:32 landing: inspect and close Benjee STS payload bay before deorbit/reentry
+12:25:32 landing: verified direct-control handoff (SAS off, zero throttle, 1x warp)
+12:25:32 landing: engageReentry from MM304 Entry
+12:25:32 Mission holding: dry run: plan validated, nothing flown
+
+Result: HOLDING at MM304 Entry — dry run: plan validated, nothing flown
+Phases: MM304 Entry

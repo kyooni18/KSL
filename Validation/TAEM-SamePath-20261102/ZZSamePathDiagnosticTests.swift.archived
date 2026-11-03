@@ -1,0 +1,70 @@
+import XCTest
+import KSLCore
+import KSLPhysics
+import KSLControl
+@testable import KSLGuidance
+final class ZZSamePathDiagnosticTests:XCTestCase {
+ func testRecordedHandoff() throws {
+  let root="/Users/kyooni18/Code/KSL/"
+  let c=try JSONDecoder().decode(MissionConfiguration.self,from:Data(contentsOf:URL(fileURLWithPath:root+"runs/20261102T040424-mm304-shooting-live-72km/configuration.json")))
+  let s=try JSONDecoder().decode(VehicleState.self,from:Data(contentsOf:URL(fileURLWithPath:root+"Validation/TAEM-Planned-20261102/handoff.json")))
+  let atm=try AtmosphericModelEngine(planet:c.planet),aero=try AerodynamicsEngine(referenceArea:c.vehicle.referenceArea)
+  let nep=try XCTUnwrap(NominalEnergyPointSolver(configuration:c,atmosphere:atm,aerodynamics:aero).solve(from:s))
+  let taem=TAEMGuidanceEngine(configuration:c,atmosphere:atm,aerodynamics:aero)
+  let target=taem.update(s,nep:nep,liftGain:1,dragGain:1,attainableAlphaCeiling:nil,pitchResponseSeconds:6,rollResponseSeconds:6)
+  print("PLANNED TAEM",taem.status,target)
+  XCTAssertTrue(taem.status.descentPlanFits)
+  XCTAssertEqual(target.desiredHeight,s.position.length-c.planet.radius,accuracy:1)
+  let controller=FlightController(configuration:c)
+  let records=try String(contentsOfFile:root+"runs/20261102T040424-mm304-shooting-live-72km/live-sts-flight.jsonl",encoding:.utf8)
+  var previous:Double?
+  for line in records.split(separator:"\n") {
+    let record=try JSONDecoder().decode(FlightRecord.self,from:Data(line.utf8))
+    if record.state.time>=s.time {break}
+    if let previous { _ = try controller.command(state:record.state,solution:record.guidance,dt:record.state.time-previous) }
+    previous=record.state.time
+  }
+  let plant=ShuttlePhysicsEngine(configuration:c,atmosphere:atm,aerodynamics:aero,
+    initialControls:s.appliedControls ?? .init(),initialState:s,
+    pitchBalancingInput:controller.snapshot.predictionPitchTrim(state:s))
+  let mission=LandingMissionController(configuration:c,atmosphere:atm,aerodynamics:aero,
+    externalPlanning:true,initialPhase:.acquisition,entryReplanning:false)
+  var state=s,next=s.time
+  var rows:[[String:Double]]=[]
+  let frame=RunwayFrame(runway:c.runway,planet:c.planet)
+  while state.time-s.time<c.guidance.maximumPredictionDuration && !state.contact.isGrounded {
+    mission.controlFeedback=controller.diagnostics;mission.controlSnapshot=controller.snapshot
+    let solution=try mission.update(state)
+    let p=frame.coordinates(of:state.position)
+    if state.time-s.time < 7 {XCTAssertFalse(mission.taemStatus.downmoded)}
+    if state.time>=next {print("CHECK",state.time-s.time,mission.taemStatus.descentCheckFailure ?? "passed",mission.taemStatus.predictedNEPEnergy as Any)}
+    if state.time>=next {
+      next+=2
+      rows.append(["t":state.time-s.time,"h":p.height,"along":p.along,"cross":p.cross,
+        "v":state.aerodynamics.airspeed,"alpha":degrees(state.aerodynamics.angleOfAttack),
+        "bank":degrees(state.aerodynamics.bank),"commandAlpha":degrees(solution.target.angleOfAttack),
+        "commandBank":degrees(solution.target.bank),"referenceHeight":mission.taemStatus.referenceHeight,
+        "range":mission.taemStatus.range,"turn":mission.taemStatus.remainingTurn,
+        "phase":mission.taemStatus.phase == .headingAlignment ? 1 : 0, "downmoded":mission.taemStatus.downmoded ? 1 : 0, "side":Double(mission.taemStatus.side),
+        "energy":mission.taemStatus.energyHeight,"emin":mission.taemStatus.minimumEnergy,
+        "minQ":mission.taemStatus.minimumDynamicPressure,"q":state.aerodynamics.dynamicPressure,
+        "mass":state.mass,"lift":state.aerodynamics.lift,"drag":state.aerodynamics.drag,
+        "gamma":degrees(state.flightPathAngle),"verticalSpeed":state.verticalSpeed,
+        "horizontalSpeed":state.horizontalSpeed,"pitchInput":state.appliedControls?.pitch ?? 0,
+        "rollInput":state.appliedControls?.roll ?? 0,
+        "maxLiftAccel":aero.liftSolution(acceleration:0,mass:state.mass,
+          dynamicPressure:state.aerodynamics.dynamicPressure,mach:state.aerodynamics.mach,
+          minimumAlpha:0,maximumAlpha:c.vehicle.maximumAngleOfAttack,
+          gear:state.systems.gearDown).maximumAcceleration])
+    }
+    if solution.phase == .approach || solution.phase == .preflare || solution.phase == .flare {
+      print("FINAL RECOVERY",state.time-s.time,p,state.aerodynamics.airspeed);break
+    }
+    let command=try controller.command(state:state,solution:solution,dt:c.guidance.controlInterval)
+    state=try plant.advance(state,command:command,duration:c.guidance.controlInterval)
+  }
+  try JSONEncoder().encode(rows).write(to:URL(fileURLWithPath:root+"Validation/TAEM-SamePath-20261102/continuation.json"))
+  let premature=try JSONDecoder().decode(VehicleState.self,from:Data(contentsOf:URL(fileURLWithPath:root+"Validation/TAEM-Planned-20261102/premature-final.json")))
+  XCTAssertFalse(ApproachGuidanceEngine(configuration:c,atmosphere:atm,aerodynamics:aero).recoveryDue(premature))
+ }
+}

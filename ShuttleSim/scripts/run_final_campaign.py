@@ -86,11 +86,9 @@ def make_cases(n, seed, mirror=True, ld_band=None, speed=(140.0, 220.0), along_r
             continue
         cross = rng.uniform(0.0, 250.0)
         herr = rng.uniform(-6.0, 6.0)
-        lift = rng.uniform(0.88, 1.12)
-        drag = rng.uniform(0.9, 1.1)
         aoa = rng.uniform(2.0, 6.0)
         base = dict(along=along, height=height, speed=speed_, fpa=-glide, aoa=aoa,
-                    lift_scale=lift, drag_scale=drag, ld_required=ld)
+                    ld_required=ld)
         cases.append(dict(base, cross=cross, heading_err=herr))
         if mirror and len(cases) < n:
             cases.append(dict(base, cross=-cross, heading_err=-herr, mirror_of=len(cases) - 1))
@@ -159,8 +157,7 @@ def run_case(c, args, scen_dir):
                                   c["heading_err"], c["aoa"]))
     cmd = [sys.executable, str(SIM / "scripts/run_guidance.py"), "--scenario", str(scen),
            "--engage", "engageFinalTest", "--label", name, "--no-mirror", "--quiet-progress",
-           "--skip-build", "--max-sim-time", str(args.max_sim_time),
-           "--plant-lift-scale", repr(c["lift_scale"]), "--plant-drag-scale", repr(c["drag_scale"])]
+           "--skip-build", "--max-sim-time", str(args.max_sim_time)]
     if args.direct_control:
         cmd.append("--direct-control")
     t0 = time.time()
@@ -220,7 +217,6 @@ def main():
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--jobs", type=int, default=6)
     ap.add_argument("--direct-control", action="store_true")
-    ap.add_argument("--nominal-plant", action="store_true", help="lift/drag scale 1 (model = plant)")
     ap.add_argument("--max-sim-time", type=float, default=240.0)
     ap.add_argument("--sink-gate", type=float, default=3.0)
     ap.add_argument("--speed-lo", type=float, default=0.85 * 75.0)
@@ -245,9 +241,6 @@ def main():
     subprocess.run(["cmake", "--build", str(SIM / "build"), "-j4"], check=True, stdout=subprocess.DEVNULL)
     cases = make_cases(args.cases, args.seed, ld_band=args.ld_band, speed=args.speed_range,
                        along_range=args.along_range, glide_range=args.glide_range)
-    if args.nominal_plant:
-        for c in cases:
-            c["lift_scale"] = c["drag_scale"] = 1.0
     head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
     dirty = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=no"],
                            capture_output=True, text=True).stdout.strip()
@@ -267,9 +260,8 @@ def main():
             s = r["summary"]
             c = r["case"]
             e = r.get("end_state") or {}
-            print("%3d %-26s along %6.0f h %5.0f V %4.0f LD %.2f x %+5.0f L%.2f D%.2f | td %s sink %s V %s at %s stop %s | end x %s a %s" % (
-                c["id"], r["class"][:26], c["along"], c["height"], c["speed"], c["ld_required"], c["cross"], c["lift_scale"],
-                c["drag_scale"], s.get("on_runway"),
+            print("%3d %-26s along %6.0f h %5.0f V %4.0f LD %.2f x %+5.0f | td %s sink %s V %s at %s stop %s | end x %s a %s" % (
+                c["id"], r["class"][:26], c["along"], c["height"], c["speed"], c["ld_required"], c["cross"], s.get("on_runway"),
                 "%.2f" % s["touchdown_sink_mps"] if s.get("touchdown_sink_mps") is not None else "-",
                 "%.1f" % s["touchdown_speed_mps"] if s.get("touchdown_speed_mps") is not None else "-",
                 "%.0f" % s["touchdown_along_m"] if s.get("touchdown_along_m") is not None else "-",

@@ -113,8 +113,7 @@ def recoverable_periapsis_target(desired_periapsis, burn_altitude,
 
 def periapsis_burn_margin(current_periapsis, burn_altitude, apoapsis_altitude):
     """Use a fine Pe target only at a real apsis of an already safe orbit."""
-    if (current_periapsis >= MIN_BURN_ALTITUDE and
-            abs(burn_altitude-apoapsis_altitude) <= 100.0):
+    if abs(burn_altitude-apoapsis_altitude) <= 100.0:
         return 100.0
     return 5000.0
 
@@ -394,7 +393,7 @@ def plan_exact(sc, vessel, args, min_lead, tolerance_alt=100.0, tolerance_inc=0.
     to_rh, _ = choose_frame_map(r_k, v_k, mu, math.degrees(orbit.inclination))
     r0, v0 = to_rh(r_k), to_rh(v_k)
     deadline = None
-    if orbit.periapsis_altitude < MIN_BURN_ALTITUDE:
+    if orbit.periapsis_altitude <= body.atmosphere_depth:
         # never wait through a periapsis pass inside the atmosphere
         deadline = orbit.time_to_periapsis - 20.0
     solution = om.solve_one_burn(
@@ -665,20 +664,37 @@ def _trim(conn, sc, vessel, args):
         nodes = []
         base = o0
         if o0.apoapsis_altitude < args.apoapsis-TOL:
-            ut_a = now + max(10.0, min_lead, (MIN_BURN_ALTITUDE+1500.0-flight.mean_altitude) /
-                             max(flight.vertical_speed, 20.0))
+            # The next valid prograde trim must occur above the configured burn
+            # floor. In a descending orbit, vertical_speed-based extrapolation
+            # can place the node BELOW the floor even though a safe ascending
+            # opportunity exists before the next apoapsis.
+            ut_a = now + max(10.0, min_lead)
+            if not high_enough(o0, ut_a):
+                step = max(5.0, min(30.0, o0.period / 120.0))
+                latest = ut_a + o0.period
+                while ut_a < latest and not high_enough(o0, ut_a):
+                    ut_a += step
+                if not high_enough(o0, ut_a):
+                    raise RuntimeError('No burn window above the orbit-trim altitude floor')
             xa = solve(lambda x: vessel.control.add_node(ut_a, prograde=x),
                        lambda orb: orb.apoapsis_altitude-args.apoapsis, 0.0, 300.0)
             na = vessel.control.add_node(ut_a, prograde=xa)
+            if na.orbit.periapsis_altitude <= o0.body.atmosphere_depth:
+                na.remove()
+                raise RuntimeError('Apoapsis trim would lower periapsis into the atmosphere')
             na.goal = ('ap', args.apoapsis)
             nodes.append(na)
             base = na.orbit
+            # Replan from the ACTUAL orbit after the apoapsis correction. The
+            # original future apoapsis changes when this node is executed; a
+            # speculative second node can wrongly veto a safe first burn.
+            return nodes, base
         pe_ok = abs(base.periapsis_altitude-args.periapsis) < TOL
         inc_ok = abs(math.degrees(base.inclination)-args.inclination) < 0.02
         if not (pe_ok and inc_ok):
             ut_b = base.ut_at_true_anomaly(math.pi)
             earliest = (nodes[-1].ut+60.0) if nodes else now+max(30.0, min_lead)
-            pe_unsafe = base.periapsis_altitude < MIN_BURN_ALTITUDE
+            pe_unsafe = base.periapsis_altitude <= base.body.atmosphere_depth
             if ut_b < earliest or (pe_unsafe and ut_b-earliest > 0.5*base.period):
                 # Never wait a whole orbit with the periapsis in the air: a burn a
                 # little past the apoapsis costs a few percent, a periapsis pass at

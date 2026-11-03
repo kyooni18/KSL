@@ -1,0 +1,29 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 3] KSLRuntime
+[2 / 4] KSLRuntime
+[4 / 6] KSLRuntime
+[10 / 10] ksl-landing-product
+[13 / 21] IntegrationTests-product
+[15 / 23] SimulationTests-product
+[17 / 23] IntegrationTests-product
+[22 / 24] IntegrationTests-product
+[26 / 26] ksl-landing-product
+Build complete! (3.81초)
+Test Suite 'Selected tests' started at 2026-11-02 12:25:55.475.
+Test Suite 'IntegrationTests.xctest' started at 2026-11-02 12:25:55.476.
+Test Suite 'OperatorConfigurationTests' started at 2026-11-02 12:25:55.476.
+Test Case '-[IntegrationTests.OperatorConfigurationTests testCompleteSTSConfigurationAndEveryLeafDisposition]' started.
+Test Case '-[IntegrationTests.OperatorConfigurationTests testCompleteSTSConfigurationAndEveryLeafDisposition]' passed (0.006 seconds).
+Test Case '-[IntegrationTests.OperatorConfigurationTests testPartialUpdatePreservesExplicitConnectionAndMission]' started.
+Test Case '-[IntegrationTests.OperatorConfigurationTests testPartialUpdatePreservesExplicitConnectionAndMission]' passed (0.001 seconds).
+Test Case '-[IntegrationTests.OperatorConfigurationTests testSupportedSTSProfilePreservesFlownEntryAndLandingSettings]' started.
+Test Case '-[IntegrationTests.OperatorConfigurationTests testSupportedSTSProfilePreservesFlownEntryAndLandingSettings]' passed (0.001 seconds).
+Test Case '-[IntegrationTests.OperatorConfigurationTests testUnknownFieldsWrongTypesAndForbiddenPropulsionAreRejected]' started.
+Test Case '-[IntegrationTests.OperatorConfigurationTests testUnknownFieldsWrongTypesAndForbiddenPropulsionAreRejected]' passed (0.001 seconds).
+Test Suite 'OperatorConfigurationTests' passed at 2026-11-02 12:25:55.485.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.008 (0.009) seconds
+Test Suite 'IntegrationTests.xctest' passed at 2026-11-02 12:25:55.485.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.008 (0.009) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 12:25:55.485.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.008 (0.010) seconds

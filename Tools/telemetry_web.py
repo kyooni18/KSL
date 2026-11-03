@@ -30,6 +30,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
+# Support both direct script execution and Tools.telemetry_web package imports.
+if __package__:
+    from .native_flight_status import NativeFlightFollower
+    from . import archive_native_swift_flight as native_swift_archive
+else:
+    from native_flight_status import NativeFlightFollower
+    import archive_native_swift_flight as native_swift_archive
+
 try:
     import krpc  # type: ignore
 except ImportError:  # Simulator/replay modes intentionally do not require kRPC.
@@ -913,6 +921,21 @@ def _displayable_entry_prediction(exact: dict[str, Any],
 
 
 def apply_exact_trajectory_geometry(snapshot: dict[str, Any], exact: dict[str, Any], terminal: dict[str, Any], configuration: dict[str, Any]) -> bool:
+    exact_server = exact.get("server") if isinstance(exact.get("server"), dict) else {}
+    if exact_server.get("source") == "ksl-landing native Swift flight log":
+        # Swift MM304/TAEM geometry is already the exact controller prediction
+        # or plan. The legacy Python readiness gate does not apply to these
+        # distinct, explicitly labeled native forecast/advisory layers.
+        for field in ("predictedTrajectory", "referenceTrajectory", "plannedTrajectory",
+                      "projectedTAEMTrajectory"):
+            geometry = _trajectory_points(exact.get(field))
+            snapshot[field] = copy.deepcopy(geometry) if geometry is not None else []
+        snapshot["planProvisional"] = exact.get("planProvisional") is True
+        snapshot["planProvisionalKind"] = exact.get("planProvisionalKind")
+        tick = optional_number(exact.get("tickSequence"))
+        if tick is not None:
+            snapshot["trajectoryRevision"] = int(tick)
+        return True
     predicted = _trajectory_points(exact.get("predictedTrajectory"))
     reference = _trajectory_points(exact.get("referenceTrajectory"))
     if predicted is None and reference is None:
@@ -1383,17 +1406,83 @@ def build_orbital_trajectory(
     }
 
 
-def read_swift_live_mirror(root: Path, max_age: float = 3.0) -> dict[str, Any] | None:
-    """Mirror built from the newest fresh `ksl-landing fly` log (runs/live-*/live.jsonl)."""
+def native_swift_runway_track(track: Any, configuration: dict[str, Any]) -> list[dict[str, Any]]:
+    """Project MM304's actual sparse runway-chart forecast into geographic 3D.
+
+    Track rows are [UT, runway along, runway right, altitude above runway,
+    speed, AoA, bank]. The same azimuthal-equidistant chart is used by the
+    Swift RunwayFrame, not a flat-Earth degree-per-metre approximation.
+    """
+    runway = configuration.get("runway") if isinstance(configuration, dict) else None
+    planet = configuration.get("planet") if isinstance(configuration, dict) else None
+    if not isinstance(runway, dict) or not isinstance(planet, dict) or not isinstance(track, list):
+        return []
+    lat, lon = optional_number(runway.get("latitude")), optional_number(runway.get("longitude"))
+    heading = optional_number(runway.get("heading"))
+    elevation = optional_number(runway.get("elevation"))
+    radius = optional_number(planet.get("radius"))
+    if None in (lat, lon, heading, elevation, radius) or radius <= 0:
+        return []
+    origin = {"latitude": math.degrees(lat), "longitude": math.degrees(lon)}
+    points: list[dict[str, Any]] = []
+    for raw in track[:512]:
+        if not isinstance(raw, list) or len(raw) < 4:
+            continue
+        ut, along, cross, height = (optional_number(value) for value in raw[:4])
+        if None in (ut, along, cross, height) or (points and ut <= points[-1]["ut"]):
+            continue
+        east = along * math.sin(heading) + cross * math.cos(heading)
+        north = along * math.cos(heading) - cross * math.sin(heading)
+        geographic = local_point(origin, east, north, elevation + height, radius=radius)
+        if all(optional_number(geographic.get(k)) is not None for k in ("latitude", "longitude", "altitude")):
+            geographic.update({"ut": ut, "phase": "MM304 FORECAST", "kind": "prediction"})
+            points.append(geographic)
+    return points if len(points) >= 2 else []
+
+
+def native_swift_reference_track(track: Any, *, advisory: bool = False) -> list[dict[str, Any]]:
+    """Preserve the exact terminal planner's output; do not create a fake HAC."""
+    if not isinstance(track, list):
+        return []
+    points: list[dict[str, Any]] = []
+    for raw in track[:512]:
+        if not isinstance(raw, list) or len(raw) < 5:
+            continue
+        values = [optional_number(x) for x in raw[:5]]
+        if any(x is None for x in values) or (points and values[0] <= points[-1]["ut"]):
+            continue
+        ut, lat, lon, altitude, speed = values
+        if not -90 <= lat <= 90 or not -180 <= lon <= 180:
+            continue
+        points.append({"ut": ut, "latitude": lat, "longitude": lon,
+                       "altitude": altitude, "speed": speed,
+                       "phase": "MM305 ADVISORY" if advisory else "MM305 REFERENCE",
+                       "kind": "advisory" if advisory else "reference"})
+    return points if len(points) >= 2 else []
+
+
+def read_swift_live_mirror(root: Path, max_age: float = 1800.0) -> dict[str, Any] | None:
+    """Mirror the active native Swift flight log, regardless of its run prefix.
+
+    New deorbit campaigns write runs/deorbit-*/live.jsonl, not runs/live-*/.
+    The native log's current guidance and commands are authoritative; a KSP
+    observer without the exact source should report OBSERVE, not make a plan up.
+    """
     try:
-        logs = [p for p in (root / "runs").glob("live-*/live.jsonl") if time.time() - p.stat().st_mtime <= max_age]
+        logs = [
+            path for path in (root / "runs").glob("*/live*.jsonl")
+            if time.time() - path.stat().st_mtime <= max_age
+        ]
         if not logs:
             return None
-        path = max(logs, key=lambda p: p.stat().st_mtime)
+        path = max(logs, key=lambda candidate: candidate.stat().st_mtime)
         with path.open("rb") as handle:
             handle.seek(0, 2)
             size = handle.tell()
-            handle.seek(max(0, size - 400_000))
+            # A new MM304 forecast publishes its sampled path once, while the
+            # next control ticks retain the same forecast epoch without copying
+            # the whole path. Keep enough recent records to recover that epoch.
+            handle.seek(max(0, size - 1_600_000))
             lines = handle.read().splitlines()
         record = None
         for raw in reversed(lines):
@@ -1401,7 +1490,7 @@ def read_swift_live_mirror(root: Path, max_age: float = 3.0) -> dict[str, Any] |
                 value = json.loads(raw)
             except (UnicodeDecodeError, json.JSONDecodeError):
                 continue
-            if isinstance(value, dict) and isinstance(value.get("guidance"), dict):
+            if isinstance(value, dict) and isinstance(value.get("guidance"), dict) and isinstance(value.get("state"), dict):
                 record = value
                 break
     except OSError:
@@ -1409,22 +1498,108 @@ def read_swift_live_mirror(root: Path, max_age: float = 3.0) -> dict[str, Any] |
     if record is None:
         return None
     guidance = record["guidance"]
+    state = record["state"]
+    source_ut = optional_number(state.get("time"))
+    if source_ut is None:
+        return None
     target = guidance.get("target") if isinstance(guidance.get("target"), dict) else {}
     entry = guidance.get("entry") if isinstance(guidance.get("entry"), dict) else {}
-    deg = lambda v: math.degrees(v) if isinstance(v, (int, float)) and math.isfinite(v) else None  # noqa: E731
+    capture = guidance.get("capture") if isinstance(guidance.get("capture"), dict) else {}
+    deg = lambda value: math.degrees(value) if optional_number(value) is not None else None  # noqa: E731
     aoa, bank, gamma = deg(target.get("angleOfAttack")), deg(target.get("bank")), deg(target.get("desiredFlightPath"))
     applied = record.get("command") if isinstance(record.get("command"), dict) else {}
-    native_phase = str(guidance.get("phase") or "").upper() or "GUIDANCE"
-    phase = {"ACQUISITION": "MM305 TAEM ACQUISITION", "HEADINGALIGNMENT": "MM305 HAC",
-             "APPROACH": "FINAL"}.get(native_phase, native_phase)
-    capture = guidance.get("capture") or {}
-    reference = [{"ut": point[0], "latitude": point[1], "longitude": point[2],
-                  "altitude": point[3], "speed": point[4], "phase": "MM305 HAC REFERENCE", "kind": "reference"}
-                 for point in capture.get("activeReference") or [] if isinstance(point, list) and len(point) >= 5]
+    native_phase = str(guidance.get("phase") or "").upper()
+    phase = {
+        "ENTRY": "MM304 ENTRY",
+        "ENTRYCOAST": "ENTRY COAST",
+        "ORBITALCOAST": "ORBIT COAST",
+        "DEORBITBURN": "DEORBIT BURN",
+        "BURNSETUP": "BURN SETUP",
+        "ACQUISITION": "MM305 TAEM ACQUISITION",
+        "HEADINGALIGNMENT": "MM305 HAC",
+        "APPROACH": "FINAL",
+    }.get(native_phase, native_phase or "GUIDANCE")
+    reference = native_swift_reference_track(capture.get("activeReference"))
+    advisory = native_swift_reference_track(capture.get("advisoryReference"), advisory=True)
+    config_path = Path(str(path) + ".configuration.json")
+    try:
+        flight_configuration = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        flight_configuration = {}
+    # Tie a sparse forecast to the exact epoch the controller still reports.
+    # An older forecast from before a replan is never an executable route.
+    forecast_track = capture.get("predictedTrack") or []
+    forecast_epoch = optional_number(capture.get("predictedAt"))
+    if not forecast_track and forecast_epoch is not None and source_ut - forecast_epoch <= 12:
+        for raw in reversed(lines):
+            if not re.search(rb'"predictedTrack"\s*:\s*\[\s*\[', raw):
+                continue
+            try:
+                earlier = json.loads(raw)
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                continue
+            older_capture = (earlier.get("guidance") or {}).get("capture") or {}
+            older_epoch = optional_number(older_capture.get("predictedAt"))
+            if older_epoch is not None and abs(older_epoch - forecast_epoch) <= 1e-3:
+                forecast_track = older_capture.get("predictedTrack") or []
+                break
+    if forecast_epoch is None or source_ut - forecast_epoch > 12:
+        forecast_track = []
+    forecast = native_swift_runway_track(forecast_track, flight_configuration)
+    provisional = bool(advisory) and not reference
+    # The displayed advisory is an actually computed, unaccepted MM305
+    # candidate, NOT the control law or a validated runway stop.
+    run_vessel = None
+    try:
+        launch = json.loads((path.parent / "launch.json").read_text(encoding="utf-8"))
+        argv = launch.get("command")
+        if isinstance(argv, list) and "--vessel" in argv:
+            run_vessel = argv[argv.index("--vessel") + 1]
+    except (OSError, json.JSONDecodeError, ValueError, IndexError):
+        pass
+    required_range = optional_number(entry.get("requiredRange"))
+    predicted_range = optional_number(entry.get("predictedRange"))
+    # The drag integral is an inverse-fitted reference, not independent reachability.
+    # The physical remaining range cannot be changed by a profile scale.
+    reference_target_range = optional_number(entry.get("referenceTargetRange"))
+    if reference_target_range is None:
+        reference_target_range = required_range  # legacy recordings only
+    reference_fit = (predicted_range - reference_target_range
+                     if predicted_range is not None and reference_target_range is not None else None)
+    range_margin = None  # a forward 3D capture plan is required for this quantity
+    observed_drag = optional_number(entry.get("observedDrag"))
+    reference_drag = optional_number(entry.get("referenceDrag"))
+    drag_error = optional_number(entry.get("dragTrackingResidual"))
+    # UI displays ACTUAL - REFERENCE acceleration, not the controller's
+    # filtered dragTrackingResidual (which can include internal feedback terms).
+    if observed_drag is not None and reference_drag is not None:
+        drag_error = observed_drag - reference_drag
+    diagnostic = str(guidance.get("diagnostic") or "Native Swift guidance active")
+    log_age_seconds = max(0.0, time.time() - path.stat().st_mtime)
+    if log_age_seconds > 3:
+        diagnostic = f"LAST RECORDED GUIDANCE ({log_age_seconds:.0f}s ago) · " + diagnostic
+    if entry:
+        mode = str(entry.get("energyAllocationMode") or "unknown")
+        diagnostic = f"MM304 {mode} · {diagnostic}"
+        if predicted_range is not None and required_range is not None:
+            diagnostic += f" · drag-reference integral {predicted_range/1000:.1f} km / geometric {required_range/1000:.1f} km"
+    terminal_ready = capture.get("mm305PlanAccepted") is True
+    warning = None
+    if entry and not terminal_ready:
+        warning = "MM305 CAPTURE UNPROVEN — DRAG-REFERENCE FIT IS NOT REACHABILITY"
+    if capture.get("mm305Advisory") and not terminal_ready:
+        warning = str(capture.get("mm305Advisory"))
+    if log_age_seconds > 3:
+        warning = f"LAST RECORDED COMMAND — {log_age_seconds:.0f}s since flight-log update" + (
+            " · " + warning if warning else "")
     return {
         "generatedAt": time.time(),
+        "sourceUT": source_ut,
+        "runVessel": run_vessel,
+        "logAgeSeconds": log_age_seconds,
         "phase": phase,
-        "statusMessage": str(guidance.get("diagnostic") or "Swift guidance running"),
+        "statusMessage": diagnostic,
+        "warningMessage": warning,
         "automationEngaged": True,
         "tickSequence": record.get("sequence"),
         "command": {
@@ -1437,15 +1612,71 @@ def read_swift_live_mirror(root: Path, max_age: float = 3.0) -> dict[str, Any] |
             "pitchDemand": applied.get("pitch"),
             "rollDemand": applied.get("roll"),
             "yawDemand": applied.get("yaw"),
+            "targetThrottle": (record.get("orbitalCommand") or {}).get("throttle"),
         },
         "capture": capture,
         "admission": guidance.get("admission"),
+        "predictedTrajectory": forecast,
         "referenceTrajectory": reference,
-        "plannedTrajectory": reference,
-        "planProvisional": bool(capture.get("mm305Advisory")),
+        "plannedTrajectory": reference if terminal_ready else [],
+        "projectedTAEMTrajectory": advisory if provisional else [],
+        "planProvisional": provisional,
+        "planProvisionalKind": "mm305-advisory" if provisional else None,
         "guidanceState": {
             "planID": capture.get("activePlanID"),
-            "terminalPathCommitted": bool(capture.get("mm305PlanAccepted")),
+            "entryPlanValid": bool(entry) and not bool(entry.get("degraded")),
+            "entryPlanTerminalReady": terminal_ready,
+            "entryPlanTargetBank": bank,
+            "entryPlanTargetAoA": aoa,
+            "entryPlanSegmentRemaining": None,
+            "entryFeedback": {
+                "valid": bool(entry),
+                "measuredDrag": observed_drag,
+                "selectedDrag": optional_number(entry.get("selectedDragAcceleration")),
+                "referenceDrag": reference_drag,
+                "dragError": drag_error,
+                "energyMargin": None,  # no independent forward-trajectory range proven
+                "predictedAchievableRange": None,
+                "dragReferenceIntegral": predicted_range,
+                "dragReferenceFitResidual": reference_fit,
+                "requiredRangeToGo": required_range,
+                "projectedCrossrangeError": entry.get("projectedCrossrange"),
+                "reversalRequested": False,
+            },
+            "nativeEntry": {
+                "energyMode": entry.get("energyAllocationMode"),
+                "predictedRange": predicted_range,
+                "requiredRange": required_range,
+                "rangeMargin": reference_fit,
+                "referenceTargetRange": reference_target_range,
+                "observedDrag": observed_drag,
+                "selectedDrag": optional_number(entry.get("selectedDragAcceleration")),
+                "referenceDrag": reference_drag,
+                "lateralDemand": optional_number(entry.get("lateralDemand")),
+                "lateralAuthority": optional_number(entry.get("lateralAuthority")),
+                "referenceBallisticCoefficient": optional_number(entry.get("referenceBallisticCoefficient")),
+                "referenceLiftToDrag": optional_number(entry.get("referenceLiftToDrag")),
+                "referencePolarEvidence": (entry.get("referencePolarEvidence")
+                    if entry.get("referencePolarEvidence") in {"measured", "identified", "provisional", "unavailable"}
+                    else None),
+                "energyReserve": entry.get("energyReserve"),
+                "jointForceAttainable": (entry.get("jointForceAttainable")
+                    if isinstance(entry.get("jointForceAttainable"), bool) else None),
+                "jointRequiredLift": optional_number(entry.get("jointRequiredLift")),
+                "jointMaximumLift": optional_number(entry.get("jointMaximumLift")),
+                "jointMaximumLateral": optional_number(entry.get("jointMaximumLateral")),
+                "jointMinimumDrag": optional_number(entry.get("jointMinimumDrag")),
+                "jointDragBudgetDeficit": optional_number(entry.get("jointDragBudgetDeficit")),
+                "energyDragBudget": optional_number(entry.get("energyDragBudget")),
+                "reversalCount": entry.get("reversalCount"),
+                "limitingReason": entry.get("limitingReason"),
+                "terminalDeficit": capture.get("mm305Deficit") or entry.get("terminalDeficit"),
+                "mm305PlanAccepted": terminal_ready,
+                "mm305MinimumRequiredLength": capture.get("mm305MinimumRequiredLength"),
+                "targetAoA": aoa,
+                "targetBank": bank,
+            } if entry else None,
+            "terminalPathCommitted": terminal_ready,
             "terminalPathCaptured": native_phase == "HEADINGALIGNMENT",
             "terminalPathRemaining": guidance.get("pathRemaining"),
             "terminalPlanCreatedAt": capture.get("activePlanCreatedAt"),
@@ -1454,18 +1685,128 @@ def read_swift_live_mirror(root: Path, max_age: float = 3.0) -> dict[str, Any] |
             "hacTurnRemaining": deg(capture.get("activeHACTurnAngle")),
             "hacTrackingError": capture.get("trackingError"),
             "hacHeadingError": deg(capture.get("referenceHeadingError")),
-            "entryPlanValid": bool(entry) and not entry.get("degraded", False),
-            "entryPlanTargetBank": bank,
-            "entryPlanTargetAoA": aoa,
             "limitingReason": entry.get("limitingReason"),
             "rangeError": entry.get("rangeError"),
-            "predictedRange": entry.get("predictedRange"),
+            "predictedRange": predicted_range,
             "desiredFlightPath": gamma,
             "desiredSpeed": target.get("desiredSpeed"),
             "violations": guidance.get("violations"),
         },
-        "server": {"source": "ksl-landing fly log", "simulation": False},
+        "server": {"source": "ksl-landing native Swift flight log", "simulation": False},
     }
+
+
+def read_swift_deorbit_plan(root: Path, max_age: float = 3600.0) -> dict[str, Any] | None:
+    """Expose the selected native Swift deorbit plan while rails warp is quiet.
+
+    The control log is intentionally silent during orbital time warp. A plan is
+    valid only for the original source epoch and vessel; it is NOT a telemetry
+    frame and carries no fabricated live controls or predicted ground path.
+    """
+    try:
+        candidates = [
+            p for p in (root / "runs").glob("*/live*.jsonl.deorbit-plan.json")
+            if not (p.parent / "live-flight.exit").exists()
+            if time.time() - p.stat().st_mtime <= max_age
+        ]
+        if not candidates:
+            return None
+        path = max(candidates, key=lambda p: p.stat().st_mtime)
+        plan = json.loads(path.read_text(encoding="utf-8"))
+        source = plan.get("source") or {}
+        window = plan.get("window") or {}
+        s_ut = optional_number(source.get("time"))
+        start = optional_number(window.get("burnStart"))
+        duration = optional_number(window.get("duration"))
+        delta_v = optional_number(window.get("deltaV"))
+        if s_ut is None or start is None or duration is None or delta_v is None:
+            return None
+        if start < s_ut or duration <= 0 or duration > 600:
+            return None
+        cases = plan.get("cases") or []
+        # The native planner now evaluates the unmodified nominal vehicle.
+        # A historical 15-plant stress matrix is neither required nor valid.
+        if len(cases) != 1 or not isinstance(cases[0], dict) or cases[0].get("index") != 0:
+            return None
+        passing = sum(case.get("passed") is True for case in cases if isinstance(case, dict))
+        # Diagnostic failed landings cannot become OMS/coast plans. A special
+        # experimental-entry-only plan, already authorized and written by the
+        # live CLI, explicitly has no runway-stop claim.
+        experimental = (cases[0].get("evidence") == "experimental-orbital-entry-only-v1"
+            and cases[0].get("burnCompleted") is True)
+        if (passing != 1 and not experimental) or cases[0].get("hardUnsafe") is True:
+            return None
+        propulsion = plan.get("propulsion") or {}
+        axis = propulsion.get("thrustDirectionBody") or {}
+        angle = None
+        if isinstance(axis, dict) and optional_number(axis.get("x")) is not None:
+            angle = math.degrees(math.acos(max(-1.0, min(1.0, float(axis["x"])))))
+        limitations = [item for item in plan.get("modelLimitations", []) if isinstance(item, str)]
+        safe_assurance = passing == 1 and not cases[0].get("hardUnsafe") and not limitations
+        return {
+            "phase": "COAST TO BURN",
+            "runScope": {
+                "sourceUT": s_ut,
+                "endUT": start + duration + 1800,
+                "vessel": "STS",
+                "minAltitude": 70000,
+            },
+            "plan": {
+                "burnUT": start + duration / 2,
+                "estimatedBurnDuration": duration,
+                "deltaV": delta_v,
+                "predictedPostBurnPeriapsisAltitude": window.get("periapsisAltitude"),
+                "executionQualified": safe_assurance,
+                "experimentalEntry": experimental,
+            },
+            "guidanceState": {
+                "nativeDeorbit": {
+                    "qualifiedCases": passing,
+                    "totalCases": len(cases),
+                    "burnStartUT": start,
+                    "burnDuration": duration,
+                    "targetDeltaV": delta_v,
+                    "plannedEntryRange": window.get("entryRange"),
+                    "measuredOMSCantDegrees": angle,
+                "nominalPassed": passing == 1,
+                "modelLimitations": limitations,
+                }
+            },
+            "statusMessage": (
+                f"Native Swift OMS plan · {delta_v:.1f} m/s · "
+                f"burn UT {start:.0f} · measured OMS cant {angle:.1f} deg"
+                if angle is not None else
+                f"Native Swift OMS plan · {delta_v:.1f} m/s · burn UT {start:.0f}"
+            ),
+            "warningMessage": (
+                f"Native OMS plan is provisional: {len(limitations)} unresolved physical-model limitations"
+                if limitations else ("Native OMS nominal route failed or unsafe" if not safe_assurance else None)
+            ),
+            "automationEngaged": True,
+            "server": {"source": "ksl-landing native Swift deorbit plan", "simulation": False},
+        }
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return None
+
+
+def native_live_log_matches_observer(exact: dict[str, Any], telemetry: dict[str, Any],
+                                     max_ut_gap: float = 5.0) -> bool:
+    """Only combine native controls with the same observed in-game epoch."""
+    scope = exact.get("runScope")
+    if isinstance(scope, dict):
+        observer_ut = optional_number(telemetry.get("ut"))
+        alt = optional_number(telemetry.get("meanAltitude"))
+        return (observer_ut is not None and alt is not None
+                and scope["sourceUT"] - 5 <= observer_ut <= scope["endUT"]
+                and alt >= scope["minAltitude"]
+                and telemetry.get("vesselName") == scope["vessel"])
+    source_ut = optional_number(exact.get("sourceUT"))
+    observer_ut = optional_number(telemetry.get("ut"))
+    known_vessel = exact.get("runVessel")
+    if known_vessel and known_vessel != telemetry.get("vesselName"):
+        return False
+    return (source_ut is None or observer_ut is None
+            or abs(source_ut - observer_ut) <= max_ut_gap)
 
 
 def read_controller_mirror(root: Path, max_age: float | None = 1.5,
@@ -1478,7 +1819,7 @@ def read_controller_mirror(root: Path, max_age: float | None = 1.5,
         except OSError:
             fresh = False
         if not fresh:
-            return read_swift_live_mirror(root)
+            return read_swift_live_mirror(root) or read_swift_deorbit_plan(root)
     try:
         if max_age is not None and time.time() - path.stat().st_mtime > max_age:
             return None
@@ -2985,6 +3326,122 @@ def _live_run_started_at(run_id: str, session: dict[str, Any], path: Path) -> fl
     return _extract_run_timestamp(run_id, {}, path)
 
 
+# Automatic native Swift flight discovery. The source journal is the durable
+# record; the compact legacy-view projection is built lazily on first replay.
+# No operator-side archive command, KSP connection or flight controller restart
+# is required. HTTP threads serialize conversion of a single log.
+_native_archive_lock = threading.Lock()
+
+
+def _native_swift_flight_source(root: Path, run_id: str) -> Path | None:
+    if not run_id or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", run_id) or run_id in {".", ".."}:
+        return None
+    run = root / "runs" / run_id
+    if not run.is_dir() or not run.resolve().is_relative_to((root / "runs").resolve()):
+        return None
+    candidates = sorted(run.glob("live*.jsonl"))
+    for file in candidates:
+        if not file.is_file() or file.stat().st_size <= 0:
+            continue
+        if Path(str(file) + ".deorbit-plan.json").is_file() or Path(str(file) + ".configuration.json").is_file():
+            return file
+    return None
+
+
+def _native_swift_flight_summaries(root: Path, seen: set[str]) -> list[dict[str, Any]]:
+    runs_root = root / "runs"
+    try:
+        directories = [p for p in runs_root.iterdir() if p.is_dir() and not p.is_symlink()]
+    except OSError:
+        return []
+    result = []
+    for directory in directories:
+        if directory.name in seen:
+            continue
+        source = _native_swift_flight_source(root, directory.name)
+        if source is None:
+            continue
+        manifest_path = directory / "telemetry-archive-manifest.json"
+        try:
+            meta = json.loads(manifest_path.read_text()) if manifest_path.is_file() else {}
+        except (OSError, ValueError):
+            meta = {}
+        if not isinstance(meta, dict):
+            meta = {}
+        last: dict[str, Any] = {}
+        try:
+            with source.open("rb") as stream:
+                stream.seek(max(0, source.stat().st_size - 80_000))
+                candidates = stream.read().splitlines()
+            for raw in reversed(candidates):
+                try:
+                    value = json.loads(raw)
+                except (UnicodeDecodeError, json.JSONDecodeError):
+                    continue
+                if isinstance(value, dict) and isinstance(value.get("state"), dict) and isinstance(value.get("guidance"), dict):
+                    last = value
+                    break
+        except OSError:
+            continue
+        phase = str((last.get("guidance") or {}).get("phase") or meta.get("lastPhase") or "")
+        contact = str((last.get("state") or {}).get("contact") or "")
+        stationary = phase in ("touchdown", "rollout", "complete") and contact == "stopped"
+        modified = source.stat().st_mtime
+        finished = stationary or time.time() - modified >= 8
+        started_text = native_swift_archive.started_at(directory)
+        try:
+            started = datetime.datetime.fromisoformat(started_text.replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            started = modified
+        started_dt = datetime.datetime.fromtimestamp(started, tz=datetime.timezone.utc)
+        result.append({
+            "runId": directory.name,
+            "sourceMode": "ksp", "mode": "native-swift-ksp",
+            "state": "finished" if finished else "running",
+            "scenario": "NATIVE SWIFT KSP", "vessel": "STS",
+            "campaignIdentity": "ksp:swift-native:" + directory.name,
+            "startedAt": started, "startedAtISO": started_dt.isoformat(),
+            "date": started_dt.strftime("%Y-%m-%d"),
+            "time": started_dt.strftime("%H:%M:%S UTC"),
+            "terminalPhase": phase.upper() if phase else None,
+            "hasReplay": True, "replayBytes": source.stat().st_size,
+            "final": meta.get("final") if isinstance(meta.get("final"), dict) else {},
+        })
+    return result
+
+
+def _ensure_native_swift_archive(root: Path, run_id: str) -> None:
+    with _native_archive_lock:
+        source = _native_swift_flight_source(root, run_id)
+        if source is None:
+            return
+        run = source.parent
+        manifest_path = run / "telemetry-archive-manifest.json"
+        vehicle = root / "FlightLogs" / (run_id + "-vehicle.jsonl")
+        planner = root / "FlightLogs" / (run_id + "-planner.jsonl")
+        manifest = {}
+        try:
+            if manifest_path.is_file():
+                manifest = json.loads(manifest_path.read_text())
+        except (OSError, ValueError):
+            pass
+        if not isinstance(manifest, dict):
+            manifest = {}
+        both_exist = vehicle.is_file() and planner.is_file()
+        # A completed touchdown replay is immutable even if the old flight
+        # process keeps writing stationary packets for hours afterward.
+        if both_exist and manifest.get("firstStoppedUT") is not None:
+            return
+        # A user-maintained legacy/archive pair without a native manifest is
+        # never overwritten by this automatic projection.
+        if both_exist and not manifest:
+            return
+        has_more = source.stat().st_size > int(number(manifest.get("sourceBytes"), 0))
+        if both_exist and not has_more:
+            return
+        native_swift_archive.archive(run, root / "FlightLogs", overwrite=both_exist)
+
+
 def list_ksp_runs(root: Path, limit: int = 250) -> list[dict[str, Any]]:
     log_root = root / "FlightLogs"
     try:
@@ -3036,7 +3493,11 @@ def list_ksp_runs(root: Path, limit: int = 250) -> list[dict[str, Any]]:
         })
         if len(result) >= max(1, limit):
             break
-    return result
+    # Native Swift logs do not have a legacy FlightLogs planner session.
+    # Discover them from the default runs directory without rewriting logs.
+    result.extend(_native_swift_flight_summaries(root, seen))
+    result.sort(key=lambda row: (number(row.get("startedAt"), 0), str(row.get("runId"))), reverse=True)
+    return result[:max(1, limit)]
 
 
 def _ksp_vehicle_telemetry(fields: dict[str, Any], ut: float | None, vessel: str | None) -> dict[str, Any]:
@@ -3137,6 +3598,13 @@ def _load_ksp_planner_records(paths: list[Path], session_id: str | None) -> tupl
 
 
 def load_ksp_replay(root: Path, run_id: str, max_frames: int = 600) -> dict[str, Any] | None:
+    # New native logs appear in the KSP REPLAY catalog as soon as their
+    # journal exists. Build or refresh their read-only replay projection on
+    # demand, retaining the full-rate source untouched on disk.
+    try:
+        _ensure_native_swift_archive(root, run_id)
+    except (OSError, ValueError, FileExistsError):
+        return None
     descriptor = _ksp_run_descriptor(root, run_id)
     if descriptor is None:
         return None
@@ -3611,6 +4079,7 @@ def guidance_state(current: dict[str, Any], terminal: dict[str, Any], ut: float)
 def collector_loop(store: SnapshotStore, root: Path, configuration: dict[str, Any], stop: threading.Event,
                    rl_output: Path | None = None) -> None:
     follower = PlannerFollower(root)
+    native_flight = NativeFlightFollower(root)
     rl_monitor = RLTrainingMonitor(root, rl_output)
     rl_status = rl_monitor.poll()
     last_rl_poll = 0.0
@@ -3933,6 +4402,8 @@ def collector_loop(store: SnapshotStore, root: Path, configuration: dict[str, An
                 "server": {"generatedAt": time.time(), "source": "kRPC observer", "reconnectDelay": 0.0},
             }
             exact = read_controller_mirror(root)
+            if exact is not None and not native_live_log_matches_observer(exact, telemetry):
+                exact = None
             if exact is not None:
                 exact_telemetry = exact.get("telemetry")
                 if isinstance(exact_telemetry, dict):
@@ -3952,9 +4423,10 @@ def collector_loop(store: SnapshotStore, root: Path, configuration: dict[str, An
                 for key in ("tickSequence", "connectionStatus", "phase", "statusMessage", "warningMessage", "automationEngaged"):
                     if exact.get(key) is not None:
                         snapshot[key] = exact[key]
+                exact_server = exact.get("server") if isinstance(exact.get("server"), dict) else {}
                 snapshot["server"] = {
                     "generatedAt": time.time(),
-                    "source": "exact-controller-snapshot",
+                    "source": str(exact_server.get("source") or "exact-controller-snapshot"),
                     "reconnectDelay": 0.0,
                 }
             # The exact controller mirror is authoritative for whether guidance
@@ -3966,6 +4438,49 @@ def collector_loop(store: SnapshotStore, root: Path, configuration: dict[str, An
                     snapshot["executingTrajectory"] = current_path
                     snapshot["executingTrajectorySource"] = follower.guidance_path_source
             apply_ksl_run_overlay(snapshot, root)
+            # Separate Swift CLI flights are not Python planner sessions.
+            # Read-only process/log follower: never arms or commands the vessel.
+            native = native_flight.poll(snapshot.get("telemetry") or {})
+            if native is not None:
+                snapshot["nativeFlight"] = native
+                if native["active"]:
+                    snapshot["phase"] = native["phase"]
+                    snapshot["statusMessage"] = native["message"]
+                    snapshot["planning"] = native["state"] == "planning"
+                    # Active planning is not active flight control.
+                    snapshot["automationEngaged"] = native["state"] in ("flight", "coast")
+                    selected_plan = native.get("plan")
+                    if isinstance(selected_plan, dict):
+                        duration = selected_plan.get("burnDuration")
+                        start = selected_plan.get("burnStartUT")
+                        snapshot["deorbitPlan"] = {
+                            "burnUT": start + duration / 2 if start is not None and duration is not None else None,
+                            "estimatedBurnDuration": duration,
+                            "deltaV": selected_plan.get("deltaV"),
+                            "predictedPostBurnPeriapsisAltitude": selected_plan.get("predictedPostBurnPeriapsisAltitude"),
+                            "executionQualified": selected_plan.get("executionQualified", False),
+                        }
+                        if isinstance(selected_plan.get("site"), dict):
+                            snapshot["site"] = selected_plan["site"]
+                        if selected_plan.get("experimentalEntry"):
+                            snapshot["warningMessage"] = "EXPERIMENTAL ENTRY ONLY: no modeled runway stop; live guidance must acquire the runway"
+                        elif selected_plan.get("modelLimitations"):
+                            snapshot["warningMessage"] = "Native OMS plan has unvalidated physical models; not a live landing certificate"
+                    if native["state"] == "coast" and (snapshot.get("telemetry") or {}).get("thrust", 0) > 1:
+                        snapshot["phase"] = "DEORBIT BURN"
+                elif native["state"] in ("ended", "rejected", "finished"):
+                    snapshot["automationEngaged"] = False
+                    snapshot["planning"] = False
+                    snapshot["phase"] = native["phase"]
+                    snapshot["statusMessage"] = native["message"]
+                    if native["state"] == "rejected":
+                        snapshot["deorbitPlan"] = None
+                        snapshot["warningMessage"] = "Nominal runway stop not achieved; OMS authorization rejected"
+                    else:
+                        snapshot["warningMessage"] = "Native process ended; independent landing confirmation required"
+                server = dict(snapshot.get("server") or {})
+                server["source"] = server.get("source", "kRPC observer") + " + Swift native flight status"
+                snapshot["server"] = server
             store.publish(snapshot)
             retry_delay = 0.5
             stop.wait(0.12)
@@ -4131,7 +4646,8 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             self.send_bytes(data, mime, cache="public, max-age=3600")
             return
 
-        if path in {"/asset/sts-n-model.json", "/asset/sts-n-model.bin"} or path.startswith("/asset/sts-n-textures/"):
+        if (path in {f"/asset/{model}-model.{ext}" for model in ("sts", "sts-n") for ext in ("json", "bin")}
+                or path.startswith("/asset/sts-textures/") or path.startswith("/asset/sts-n-textures/")):
             relative = path.removeprefix("/asset/")
             root = self.server.model_root.resolve()
             asset = (root / relative).resolve()
@@ -4141,7 +4657,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             try:
                 data = asset.read_bytes()
             except OSError as exc:
-                self.send_json({"error": f"STS-N asset unavailable: {exc}"}, HTTPStatus.NOT_FOUND)
+                self.send_json({"error": f"3D model asset unavailable: {exc}"}, HTTPStatus.NOT_FOUND)
                 return
             mime = mimetypes.guess_type(asset.name)[0] or "application/octet-stream"
             if asset.suffix == ".json":

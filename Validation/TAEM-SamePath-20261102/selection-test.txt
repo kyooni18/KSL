@@ -1,0 +1,92 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 38] KSLLanding
+[2 / 25] KSLGuidance
+[5 / 28] KSLGuidance
+[8 / 30] KSLGuidance
+[16 / 20] ksl-landing-product
+[16 / 20] GuidanceTests-product
+[23 / 24] ksl-landing-product
+Build complete! (2.66초)
+Test Suite 'Selected tests' started at 2026-11-02 09:59:17.925.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 09:59:17.926.
+Test Suite 'ZZSamePathDiagnosticTests' started at 2026-11-02 09:59:17.926.
+Test Case '-[GuidanceTests.ZZSamePathDiagnosticTests testRecordedHandoff]' started.
+Test Case '-[GuidanceTests.ZZSamePathDiagnosticTests testRecordedHandoff]' passed (9.227 seconds).
+Test Suite 'ZZSamePathDiagnosticTests' passed at 2026-11-02 09:59:27.153.
+	 Executed 1 test, with 0 failures (0 unexpected) in 9.227 (9.227) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 09:59:27.153.
+	 Executed 1 test, with 0 failures (0 unexpected) in 9.227 (9.227) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 09:59:27.153.
+	 Executed 1 test, with 0 failures (0 unexpected) in 9.227 (9.228) seconds
+PLANNED TAEM TAEMStatus(phase: KSLGuidance.TAEMPhase.acquisition, side: 1, remainingTurn: 6.312976107231663, range: 52216.20869652884, energyHeight: 52923.68875680495, nominalEnergy: 201542.76544048192, minimumEnergy: 50614.748669223176, referenceHeight: 26388.20198701818, referenceDynamicPressure: 3115.793085514554, minimumDynamicPressure: 0.0, finalRadius: 3000.0, growth: 0.07599088773175333, downmoded: false, insufficientEnergy: false, descentPlanFits: true, descentCheckFailure: Optional("negativeNormalLift"), predictedNEPEnergy: nil) GuidanceTarget(angleOfAttack: 0.03839908222526781, bank: -0.16541331016306215, desiredSpeed: 738.3985493325365, desiredHeight: 26456.641987018178, desiredFlightPath: -0.12193678313117381, gearDown: false, speedbrakeFraction: nil)
+CHECK 0.0 negativeNormalLift nil
+CHECK 0.1999999998952262 negativeNormalLift nil
+CHECK 0.2999999998428393 negativeNormalLift nil
+CHECK 0.3999999997904524 negativeNormalLift nil
+CHECK 0.4999999997380655 negativeNormalLift nil
+CHECK 0.5999999996856786 negativeNormalLift nil
+CHECK 0.6999999996332917 negativeNormalLift nil
+CHECK 0.7999999995809048 negativeNormalLift nil
+CHECK 0.899999999528518 negativeNormalLift nil
+CHECK 0.999999999476131 negativeNormalLift nil
+CHECK 1.0999999994237442 negativeNormalLift nil
+CHECK 1.1999999993713573 negativeNormalLift nil
+CHECK 1.2999999993189704 negativeNormalLift nil
+CHECK 1.3999999992665835 negativeNormalLift nil
+CHECK 1.4999999992141966 negativeNormalLift nil
+CHECK 1.5999999991618097 negativeNormalLift nil
+CHECK 1.6999999991094228 negativeNormalLift nil
+CHECK 1.799999999057036 negativeNormalLift nil
+CHECK 1.899999999004649 negativeNormalLift nil
+CHECK 1.999999998952262 negativeNormalLift nil
+CHECK 2.099999998899875 negativeNormalLift nil
+CHECK 2.1999999988474883 negativeNormalLift nil
+CHECK 2.2999999987951014 negativeNormalLift nil
+CHECK 2.3999999987427145 negativeNormalLift nil
+CHECK 2.4999999986903276 negativeNormalLift nil
+CHECK 2.5999999986379407 negativeNormalLift nil
+CHECK 2.699999998585554 negativeNormalLift nil
+CHECK 2.799999998533167 negativeNormalLift nil
+CHECK 2.89999999848078 negativeNormalLift nil
+CHECK 2.999999998428393 negativeNormalLift nil
+CHECK 3.0999999983760063 negativeNormalLift nil
+CHECK 3.1999999983236194 negativeNormalLift nil
+CHECK 3.2999999982712325 negativeNormalLift nil
+CHECK 3.3999999982188456 negativeNormalLift nil
+CHECK 3.4999999981664587 negativeNormalLift nil
+CHECK 3.599999998114072 negativeNormalLift nil
+CHECK 3.699999998061685 negativeNormalLift nil
+CHECK 3.799999998009298 negativeNormalLift nil
+CHECK 3.899999997956911 negativeNormalLift nil
+CHECK 3.999999997904524 negativeNormalLift nil
+CHECK 4.099999997852137 negativeNormalLift nil
+CHECK 4.19999999779975 negativeNormalLift nil
+CHECK 4.2999999977473635 negativeNormalLift nil
+CHECK 4.399999997694977 negativeNormalLift nil
+CHECK 4.49999999764259 negativeNormalLift nil
+CHECK 4.599999997590203 negativeNormalLift nil
+CHECK 4.699999997537816 negativeNormalLift nil
+CHECK 4.799999997485429 negativeNormalLift nil
+CHECK 4.899999997433042 negativeNormalLift nil
+CHECK 4.999999997380655 negativeNormalLift nil
+CHECK 5.099999997328268 negativeNormalLift nil
+CHECK 5.1999999972758815 negativeNormalLift nil
+CHECK 5.299999997223495 negativeNormalLift nil
+CHECK 5.399999997171108 negativeNormalLift nil
+CHECK 5.499999997118721 negativeNormalLift nil
+CHECK 5.599999997066334 negativeNormalLift nil
+CHECK 5.699999997013947 negativeNormalLift nil
+CHECK 5.79999999696156 negativeNormalLift nil
+CHECK 5.899999996909173 negativeNormalLift nil
+CHECK 5.999999996856786 negativeNormalLift nil
+CHECK 6.099999996804399 negativeNormalLift nil
+CHECK 6.1999999967520125 negativeNormalLift nil
+CHECK 6.299999996699626 negativeNormalLift nil
+CHECK 6.399999996647239 negativeNormalLift nil
+CHECK 6.499999996594852 negativeNormalLift nil
+CHECK 6.599999996542465 negativeNormalLift nil
+CHECK 6.699999996490078 negativeNormalLift nil
+CHECK 6.799999996437691 negativeNormalLift nil
+CHECK 6.899999996385304 negativeNormalLift nil
+CHECK 6.999999996332917 negativeNormalLift nil

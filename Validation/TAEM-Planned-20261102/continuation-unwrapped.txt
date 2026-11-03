@@ -1,0 +1,44 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 15] KSLGuidance
+[2 / 25] KSLGuidance
+[4 / 27] KSLGuidance
+[10 / 33] KSLRuntime
+[12 / 35] KSLGuidance
+[14 / 36] KSLRuntime
+[17 / 39] KSLSimulation
+[19 / 40] KSLSimulation
+[22 / 45] KSLLanding
+[31 / 47] SimulationTests-product
+[32 / 48] ksl-landing-product
+[35 / 47] SimulationTests-product
+[46 / 55] ksl-landing-product
+[47 / 55] GuidanceTests-product
+[50 / 58] GuidanceTests-product
+[50 / 58] SimulationTests-product
+[58 / 64] IntegrationTests-product
+[63 / 65] GuidanceTests-product
+[67 / 67] ksl-landing-product
+Build complete! (4.81초)
+Test Suite 'Selected tests' started at 2026-11-02 04:31:36.405.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 04:31:36.406.
+Test Suite 'TAEMTransitionTests' started at 2026-11-02 04:31:36.406.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' passed (0.001 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' passed (0.006 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary]' passed (0.000 seconds).
+Test Suite 'TAEMTransitionTests' passed at 2026-11-02 04:31:36.414.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.007 (0.008) seconds
+Test Suite 'ZZScratchPlannedTAEMTests' started at 2026-11-02 04:31:36.414.
+Test Case '-[GuidanceTests.ZZScratchPlannedTAEMTests testRecordedHandoff]' started.
+Test Case '-[GuidanceTests.ZZScratchPlannedTAEMTests testRecordedHandoff]' passed (52.335 seconds).
+Test Suite 'ZZScratchPlannedTAEMTests' passed at 2026-11-02 04:32:28.749.
+	 Executed 1 test, with 0 failures (0 unexpected) in 52.335 (52.335) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 04:32:28.749.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 52.342 (52.343) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 04:32:28.749.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 52.342 (52.344) seconds
+PLANNED TAEM TAEMStatus(phase: KSLGuidance.TAEMPhase.acquisition, side: 1, remainingTurn: 6.312848965136574, range: 74895.09732913437, energyHeight: 52923.68875680495, nominalEnergy: 248128.5142373039, minimumEnergy: 146958.85136985852, referenceHeight: 26388.201987018187, referenceDynamicPressure: 3115.793085514554, minimumDynamicPressure: 3257.656155625886, finalRadius: 6609.454585183046, growth: 0.07599088773175333, downmoded: false, insufficientEnergy: true, descentPlanFits: true) GuidanceTarget(angleOfAttack: 0.2806345350270968, bank: -0.29685447517894203, desiredSpeed: 738.3985493325365, desiredHeight: 26456.641987018185, desiredFlightPath: -0.12193678313117311, gearDown: false, speedbrakeFraction: nil)
+FINAL RECOVERY 550.799999711453 RunwayCoordinates(along: 22054.383323870265, cross: 22261.624589933726, height: 961.433974295333) 41.02688668910441

@@ -42,10 +42,12 @@ const displayablePlannedTrajectory = (source) => {
   if(isOrbitMode(source)&&source?.deorbitPlan?.executionQualified===true&&completeTrajectory(deorbitPath))return deorbitPath;
   if(isTerminalPhase(source?.phase)){
     if(terminalReferenceDisplayable(source)&&completeTrajectory(source?.referenceTrajectory))return source.referenceTrajectory;
+    if(completeTrajectory(source?.plannedTrajectory))return source.plannedTrajectory;
     return displayableCommittedTAEMExecution(source);
   }
-  const allowed=entryPlanDisplayable(source);
-  if(allowed&&completeTrajectory(source?.plannedTrajectory))return source.plannedTrajectory;
+  // Display the currently selected MM304 segment even before a valid terminal
+  // acquisition is established. The overlay identifies provisional status.
+  if(completeTrajectory(source?.plannedTrajectory))return source.plannedTrajectory;
   return [];
 };
 const displayableReferenceTrajectory = (source) => terminalReferenceDisplayable(source) && completeTrajectory(source?.referenceTrajectory) ? source.referenceTrajectory : [];
@@ -252,20 +254,28 @@ function createGpuMesh(device, mesh, label) {
   return {vertex,index,indexCount:indices.length};
 }
 
-async function loadSTSNModel(device) {
-  const metadataResponse=await fetch("/asset/sts-n-model.json",{cache:"no-store"});
-  if(!metadataResponse.ok)throw new Error(`STS-N model metadata ${metadataResponse.status}`);
+function modelIdForVessel(value) {
+  const name=String(value||"").trim().toUpperCase();
+  if(/^STS-N(?:$|[^A-Z0-9])/.test(name))return "sts-n";
+  if(/^STS(?:$|[^A-Z0-9])/.test(name))return "sts";
+  return null;
+}
+
+async function loadCraftModel(device,modelId) {
+  if(modelId!=="sts"&&modelId!=="sts-n")throw new Error("Unknown vessel model");
+  const metadataResponse=await fetch(`/asset/${modelId}-model.json`,{cache:"no-store"});
+  if(!metadataResponse.ok)throw new Error(`${modelId.toUpperCase()} metadata ${metadataResponse.status}`);
   const metadata=await metadataResponse.json();
-  if(metadata?.format!=="stsn-webgpu-5")throw new Error("Unsupported STS-N model format");
-  const binaryResponse=await fetch(metadata.binary||"/asset/sts-n-model.bin",{cache:"no-store"});
-  if(!binaryResponse.ok)throw new Error(`STS-N model data ${binaryResponse.status}`);
+  if(metadata?.format!=="stsn-webgpu-5"||metadata?.ship?.toUpperCase()!==modelId.toUpperCase())throw new Error(`Invalid ${modelId} model identity`);
+  const binaryResponse=await fetch(metadata.binary||`/asset/${modelId}-model.bin`,{cache:"no-store"});
+  if(!binaryResponse.ok)throw new Error(`${modelId.toUpperCase()} mesh ${binaryResponse.status}`);
   const binary=await binaryResponse.arrayBuffer();
   const vertexOffset=num(metadata.vertexByteOffset),vertexLength=num(metadata.vertexByteLength);
   const indexOffset=num(metadata.indexByteOffset),indexLength=num(metadata.indexByteLength);
-  if(vertexLength<=0||indexLength<=0||indexOffset+indexLength>binary.byteLength)throw new Error("Invalid STS-N model buffer");
+  if(vertexLength<=0||indexLength<=0||indexOffset+indexLength>binary.byteLength)throw new Error(`Invalid ${modelId} mesh buffer`);
   const vertices=new Float32Array(binary.slice(vertexOffset,vertexOffset+vertexLength));
   const indices=new Uint32Array(binary.slice(indexOffset,indexOffset+indexLength));
-  return {metadata,gpu:createGpuMesh(device,{vertices,indices},"sts-n-craft")};
+  return {metadata,gpu:createGpuMesh(device,{vertices,indices},`${modelId}-craft`)};
 }
 
 function createTextureFromRGBA(device, rgba) {
@@ -340,7 +350,8 @@ struct Out { @builtin(position) position:vec4<f32>, @location(0) n:vec3<f32>, @l
   let mode=u.light.w;
   let lambert=max(dot(normalize(i.n),normalize(u.light.xyz)),0.0);
   let isPlanet=mode>2.5;
-  let baseLight=0.055+0.945*lambert;
+  // The operator needs to see the craft even on Kerbin's nightside.
+  let baseLight=0.70+0.30*lambert;
   let planetLight=0.24+0.86*lambert;
   let illumination=select(select(baseLight,planetLight,isPlanet),1.0,mode>1.5&&mode<2.5);
   let sampled=textureSample(tex,smp,i.uv);
@@ -370,7 +381,7 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
   context.configure({device,format,alphaMode:"opaque"});
 
   const MSAA_SAMPLES=4;
-  let visible=false,snapshot=null,frame=0,yaw=.78,pitch=.36,distance=110,autoCamera=true,lastCameraTarget=null,autoCameraTarget=null,autoCameraDistance=null,lastRenderTime=0,depthTexture=null,msaaTexture=null,depthWidth=0,depthHeight=0;
+  let visible=false,snapshot=null,frame=0,yaw=.78,pitch=.36,distance=110,autoCamera=true,overviewMode=false,lastCameraTarget=null,autoCameraTarget=null,autoCameraDistance=null,lastRenderTime=0,depthTexture=null,msaaTexture=null,depthWidth=0,depthHeight=0;
   const pointers=new Map(); let lastPointer=null,pinchDistance=0;
   const wrapAngle=(value)=>{let angle=num(value)%360;if(angle>180)angle-=360;if(angle<-180)angle+=360;return angle;};
   const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
@@ -430,8 +441,10 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
   const kerbin=await loadKerbinTexture(device);
   const planetMesh=createGpuMesh(device,sphereMesh(),"kerbin");
   const sunMesh=createGpuMesh(device,sphereMesh(32,16,1),"kerbol");
-  const craft=await loadSTSNModel(device);
-  const craftLength=num(craft.metadata?.craftSize?.length,num(craft.metadata?.bounds?.length,1)),craftSpan=num(craft.metadata?.craftSize?.span,num(craft.metadata?.bounds?.span,1));
+  // Models are lazy-loaded per observed vessel. Never render STS-N geometry
+  // for STS (or vice versa) while a different mesh is being fetched.
+  let craft=null,craftGroups=[],craftLength=22,craftSpan=14,activeModelId=null;
+  const craftCache=new Map(),craftLoads=new Map();
 
   function solidState(texture) {
     const uniform=device.createBuffer({size:176,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST});
@@ -446,13 +459,40 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
   const textureCache=new Map();
   async function materialTexture(url){
     if(!url)return whiteTexture;
-    if(!textureCache.has(url))textureCache.set(url,loadImageTexture(device,url,[255,255,255,255]));
+    if(!textureCache.has(url))textureCache.set(url,loadImageTexture(device,url,[255,255,255,255],Math.min(2048,device.limits.maxTextureDimension2D)));
     return (await textureCache.get(url)).texture;
   }
-  const craftGroups=[];
-  for(const group of craft.metadata?.groups||[]){
-    const texture=await materialTexture(group.texture);
-    craftGroups.push({...group,state:solidState(texture)});
+  function installModel(modelId){
+    const ready=craftCache.get(modelId);
+    craft=ready||null;
+    craftGroups=ready?.groups||[];
+    craftLength=num(ready?.metadata?.craftSize?.length,num(ready?.metadata?.bounds?.length,22));
+    craftSpan=num(ready?.metadata?.craftSize?.span,num(ready?.metadata?.bounds?.span,14));
+  }
+  function ensureModel(modelId){
+    if(!modelId||craftCache.has(modelId)||craftLoads.has(modelId))return;
+    const loading=(async()=>{
+      const model=await loadCraftModel(device,modelId);
+      const groups=[];
+      for(const group of model.metadata.groups||[]){
+        const texture=await materialTexture(group.texture);
+        groups.push({...group,state:solidState(texture)});
+      }
+      return {...model,groups};
+    })();
+    craftLoads.set(modelId,loading);
+    loading.then((loaded)=>{
+      craftCache.set(modelId,loaded);craftLoads.delete(modelId);
+      if(activeModelId===modelId)installModel(modelId);
+      requestRender();
+    }).catch((error)=>{
+      craftLoads.delete(modelId);
+      if(activeModelId===modelId){
+        statusEl.textContent=`${modelId.toUpperCase()} MODEL ERROR`;
+        metaEl.textContent=String(error?.message||error);
+        statusEl.parentElement?.classList.add("alert");
+      }
+    });
   }
 
   function lineState(color) {
@@ -494,6 +534,13 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
   function cameraFrame(t, width, height, visualLift=0) {
     if (!finite(t?.latitude) || !finite(t?.longitude)) return null;
     const orbital=snapshot?.orbitalTrajectory||[];
+    if(!overviewMode){
+      // At a true 1:1 model scale, a 900-km orbit overview makes a 22-m
+      // shuttle less than one screen pixel. Default to a craft-tracking view;
+      // the overview button retains the full orbit/entry corridor view.
+      return {target:planetPoint({latitude:num(t.latitude),longitude:num(t.longitude),altitude:num(t.meanAltitude)},visualLift),
+        distance:Math.max(52,craftLength*2.65),horizon:null,focusCount:1,mode:"SHIP"};
+    }
     if(!snapshot?.orbitalTrajectoryMeta?.underThrust&&completeInertialTrajectory(orbital)&&orbital.length>=8){const ow=orbital.map((q)=>planetPoint({latitude:num(q.inertialLatitude),longitude:num(q.inertialLongitude),altitude:q.altitude},0));if(ow.length>=8){const vf=47*DEG,hf=2*Math.atan(Math.tan(vf/2)*(width/Math.max(1,height))),lf=Math.max(8*DEG,Math.min(vf,hf)/2),extent=ow.reduce((m,q)=>Math.max(m,vLength(q)),KERBIN_RADIUS*1.03),fit=extent/Math.max(.1,Math.sin(lf))*1.08;return{target:[0,0,0],distance:Math.max(900000,Math.min(2400000,fit)),horizon:null,focusCount:ow.length,mode:"ORBIT"};}}
     const phase=String(snapshot?.phase||"").toUpperCase();
     const finalApproach=/PREFLARE|FINAL|FLARE|TOUCHDOWN|ROLLOUT/.test(phase);
@@ -740,6 +787,12 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
     if(!visible)return;
     const {width,height}=resize();
     const t=snapshot?.telemetry||{};
+    const requestedModel=modelIdForVessel(t.vesselName);
+    if(requestedModel!==activeModelId){
+      activeModelId=requestedModel;
+      installModel(activeModelId);
+    }
+    if(activeModelId&&!craft)ensureModel(activeModelId);
     const hasPose=finite(t.latitude)&&finite(t.longitude);
     const visualLift=0;
     const frameState=hasPose?cameraFrame(t,width,height,visualLift):null;
@@ -770,21 +823,26 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
     const planetModel=matIdentity(); writeSolid(planetState,matMul(vp,planetModel),planetModel,[1,1,1,1],[-1,-1],[.75,1],false,lightDir,false,true);
     const sunWorld=sunModel(lightDir); writeSolid(sunState,matMul(vp,sunWorld),sunWorld,[1,.91,.63,1],[1,1],[0,0],false,lightDir,true);
     const craftModel=hasPose?bodyMatrix(t,visualLift):matIdentity();
-    if(hasPose)for(const group of craftGroups)writeSolid(group.state,matMul(vp,craftModel),craftModel,group.color||[1,1,1,1],group.uvScale||[1,1],group.uvOffset||[0,0],Boolean(group.translucent),lightDir);
+    if(hasPose&&craft)for(const group of craftGroups)writeSolid(group.state,matMul(vp,craftModel),craftModel,group.color||[1,1,1,1],group.uvScale||[1,1],group.uvOffset||[0,0],Boolean(group.translucent),lightDir);
 
-    const planned=displayablePlannedTrajectory(snapshot),reference=displayableReferenceTrajectory(snapshot),actual=trailForZoom(snapshot?.actualTrajectory||[],t,distance),orbital=!snapshot?.orbitalTrajectoryMeta?.underThrust&&completeInertialTrajectory(snapshot?.orbitalTrajectory)?snapshot.orbitalTrajectory:[];
+    const planned=displayablePlannedTrajectory(snapshot),reference=displayableReferenceTrajectory(snapshot);
+    const mm304Raw=snapshot?.guidanceState?.mm304?.plan?.trajectory;
+    const mm304=Array.isArray(mm304Raw)?mm304Raw.filter(r=>Array.isArray(r)&&r.length>=4).map(r=>({ut:r[0],latitude:r[1],longitude:r[2],altitude:r[3]})):[];
+    const forecast=completeTrajectory(mm304)?mm304:(completeTrajectory(snapshot?.predictedTrajectory)?snapshot.predictedTrajectory:[]);
+    const projected=completeTrajectory(snapshot?.projectedTAEMTrajectory)?snapshot.projectedTAEMTrajectory:[];
+    const actual=trailForZoom(snapshot?.actualTrajectory||[],t,distance),orbital=!snapshot?.orbitalTrajectoryMeta?.underThrust&&completeTrajectory(snapshot?.orbitalTrajectory)?snapshot.orbitalTrajectory:[];
     const orbitMode=isOrbitMode(snapshot),burn=burnWindow3D(snapshot),apoapsis=orbitPOI(snapshot,"ap"),periapsis=orbitPOI(snapshot,"pe");
     const orbitEpoch=num(snapshot?.orbitalTrajectoryMeta?.generatedAtUT,-1).toFixed(2);
-    updateLine(lines.orbit,orbital,vp,false,`orbit:${orbitEpoch}:${trajectoryFingerprint(orbital)}`,true);
+    updateLine(lines.orbit,overviewMode?orbital:[],vp,false,`orbit:${overviewMode}:${orbitEpoch}:${trajectoryFingerprint(orbital)}`);
     updateLine(lines.planned,planned,vp,false,`plan:${trajectoryFingerprint(planned)}`);
-    updateLine(lines.predicted,[],vp,false,"pred:hidden");
+    updateLine(lines.predicted,trajectoryFingerprint(forecast)===trajectoryFingerprint(planned)?[]:forecast,vp,false,`mm304:${trajectoryFingerprint(forecast)}`);
     updateLine(lines.reference,reference,vp,false,`ref:${trajectoryFingerprint(reference)}`);
-    updateLine(lines.projected,[],vp,false,"proj:hidden");
-    updateLine(lines.actual,actual,vp,false,`actual:${trajectoryFingerprint(actual)}`);
-    updateLine(lines.burn,orbitMode?burn.points:[],vp,true,`burn:${orbitEpoch}:${num(snapshot?.deorbitPlan?.burnUT,-1).toFixed(2)}:${burn.points.length}`,true);
+    updateLine(lines.projected,projected,vp,false,`taem:${trajectoryFingerprint(projected)}`);
+    updateLine(lines.actual,overviewMode?actual:[],vp,false,`actual:${overviewMode}:${trajectoryFingerprint(actual)}`);
+    updateLine(lines.burn,overviewMode&&orbitMode?burn.points:[],vp,true,`burn:${overviewMode}:${orbitEpoch}:${num(snapshot?.deorbitPlan?.burnUT,-1).toFixed(2)}:${burn.points.length}`);
     const poiSize=Math.max(3500,Math.min(30000,distance*.012));
-    updateLine(lines.apoapsis,orbitMode?poiSpike(apoapsis,poiSize):[],vp,false,`ap:${orbitEpoch}:${num(apoapsis?.ut,-1).toFixed(2)}:${poiSize.toFixed(0)}`,true);
-    updateLine(lines.periapsis,orbitMode?poiSpike(periapsis,poiSize):[],vp,false,`pe:${orbitEpoch}:${num(periapsis?.ut,-1).toFixed(2)}:${poiSize.toFixed(0)}`,true);
+    updateLine(lines.apoapsis,overviewMode&&orbitMode?poiSpike(apoapsis,poiSize):[],vp,false,`ap:${overviewMode}:${orbitEpoch}:${num(apoapsis?.ut,-1).toFixed(2)}:${poiSize.toFixed(0)}`);
+    updateLine(lines.periapsis,overviewMode&&orbitMode?poiSpike(periapsis,poiSize):[],vp,false,`pe:${overviewMode}:${orbitEpoch}:${num(periapsis?.ut,-1).toFixed(2)}:${poiSize.toFixed(0)}`);
 
     const runway=runwayGeometry(snapshot?.site);
     const runwayKey=`runway:${num(snapshot?.site?.latitude,-99).toFixed(5)}:${num(snapshot?.site?.longitude,-99).toFixed(5)}:${num(snapshot?.site?.runwayHeading,-1).toFixed(1)}:${num(snapshot?.site?.runwayLength,2500).toFixed(0)}:${num(snapshot?.site?.runwayWidth,70).toFixed(0)}`;
@@ -814,7 +872,7 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
     pass.setVertexBuffer(0,sunMesh.vertex);pass.setIndexBuffer(sunMesh.index,"uint32");pass.setBindGroup(0,sunState.bind);pass.drawIndexed(sunMesh.indexCount);
 
     if(!orbitMode&&runwaySurfaceGpu?.indexCount){pass.setVertexBuffer(0,runwaySurfaceGpu.vertex);pass.setIndexBuffer(runwaySurfaceGpu.index,"uint32");pass.setBindGroup(0,runwaySurfaceState.bind);pass.drawIndexed(runwaySurfaceGpu.indexCount);}
-    if(hasPose){
+    if(hasPose&&craft){
       pass.setVertexBuffer(0,craft.gpu.vertex);pass.setIndexBuffer(craft.gpu.index,"uint32");
       for(const group of craftGroups){if(group.translucent||num(group.indexCount)<=0)continue;pass.setBindGroup(0,group.state.bind);pass.drawIndexed(num(group.indexCount),1,num(group.firstIndex));}
       pass.setPipeline(alphaPipeline);
@@ -828,29 +886,42 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
 
     const altitude=finite(t.meanAltitude)?`${(num(t.meanAltitude)/1000).toFixed(1)} km`:"—";
     const phase=String(snapshot?.phase||"FLIGHT").toUpperCase();
-    const cameraMode=autoCamera?(frameState?.mode==="ORBIT"?"AUTO ORBIT":"AUTO FLIGHT"):"MANUAL";
+    const cameraMode=autoCamera?(frameState?.mode==="ORBIT"?"AUTO ORBIT":frameState?.mode==="SHIP"?"AUTO CRAFT":"AUTO ROUTE"):"MANUAL";
     if(orbitMode){
       const plan=snapshot?.deorbitPlan,burnDuration=plan&&finite(plan.estimatedBurnDuration)?Math.max(0,num(plan.estimatedBurnDuration)):0,burnStart=plan&&finite(plan.burnUT)?num(plan.burnUT)-burnDuration*.5:null,toBurn=finite(burnStart)&&finite(t.ut)?num(burnStart)-num(t.ut):null;
       const powered=thrustRatio>.002;
-      statusEl.textContent=`${powered?"DEORBIT BURN":plan?"ORBIT / DEORBIT":"ORBIT"} · ${cameraMode}`;
+      statusEl.textContent=`${activeModelId?.toUpperCase()||"VESSEL"} · ${powered?"DEORBIT BURN":plan?"ORBIT / DEORBIT":"ORBIT"} · ${cameraMode}`;
       const warpRate=finite(t.timeWarpRate)?Math.max(1,num(t.timeWarpRate)):1,decel=finite(t.deceleration)?Math.max(0,num(t.deceleration)):null;
       metaEl.textContent=`V ${finite(t.orbitalSpeed)?Math.round(num(t.orbitalSpeed))+" M/S":"—"} · AP ${formatDistance(t.apoapsisAltitude).toUpperCase()} ${countdownText(t.timeToApoapsis)} · PE ${formatDistance(t.periapsisAltitude).toUpperCase()} ${countdownText(t.timeToPeriapsis)}${plan?` · BURN ${countdownText(toBurn)}`:""} · W ${warpRate.toFixed(warpRate<10?1:0)}×${decel!==null?` · DECEL ${decel.toFixed(2)} M/S²`:""}`;
-      metaEl.title=`Instantaneous osculating orbit${snapshot?.orbitalTrajectoryMeta?.underThrust?" under current thrust":""} · ${powered?"animated engine plume active":"engines off"} · AP/PE markers use live orbital timing · ${num(craft.metadata?.partCount)} real parts · ${craftLength.toFixed(1)}m × ${craftSpan.toFixed(1)}m`;
+      metaEl.title=`${activeModelId?.toUpperCase()||"UNKNOWN"} model · instantaneous osculating orbit${snapshot?.orbitalTrajectoryMeta?.underThrust?" under current thrust":""} · ${powered?"engine plume active":"engines off"} · AP/PE markers · ${craft?num(craft.metadata?.partCount)+" source parts":"model loading"} · ${craftLength.toFixed(1)}m × ${craftSpan.toFixed(1)}m`;
     }else{
       const orbitLabel=orbital.length>=2?(snapshot?.orbitalTrajectoryMeta?.endReason==="atmosphere-interface"?" · VAC ARC":" · OSC ORBIT"):"";
-      statusEl.textContent=`${phase} · ${cameraMode}`;
+      statusEl.textContent=`${activeModelId?.toUpperCase()||"VESSEL"} · ${phase} · ${cameraMode}`;
       metaEl.textContent=`ALT ${altitude.toUpperCase()} · VIEW ${formatDistance(distance).toUpperCase()}${orbitLabel}`;
-      metaEl.title=`${autoCamera?"Auto-framing flight corridor":"Manual orbit locked to live shuttle"} · qualified plan / committed TAEM route ${planned.length} · committed reference ${reference.length} · zoom-limited actual trail ${actual.length} · ${num(craft.metadata?.partCount)} real parts · ${craftLength.toFixed(1)}m × ${craftSpan.toFixed(1)}m · model scale 1:1${kerbin.real?"":" · map fallback"}`;
+      metaEl.title=`${activeModelId?.toUpperCase()||"UNKNOWN"} model · ${autoCamera?"Auto-framing":"Manual orbit"} · MM304 forecast ${forecast.length} · provisional/committed plan ${planned.length} · TAEM projection ${projected.length} · actual ${actual.length} · ${craft?num(craft.metadata?.partCount)+" source parts":"model loading"} · ${craftLength.toFixed(1)}m × ${craftSpan.toFixed(1)}m · scale 1:1${kerbin.real?"":" · map fallback"}`;
     }
+    if(!activeModelId){statusEl.textContent="UNKNOWN VESSEL · MODEL HIDDEN";}
+    else if(!craft){statusEl.textContent=`${activeModelId.toUpperCase()} · MODEL LOADING`;}
     statusEl.parentElement?.classList.remove("alert");
     if(orbitMode&&lines.plume.count>1)requestRender();
   }
 
+  const viewModeButton=canvas.parentElement?.querySelector("#scene3d-view-mode");
+  function resetAutoCamera(){
+    autoCamera=true;autoCameraTarget=null;autoCameraDistance=null;
+    lastRenderTime=0;yaw=.78;pitch=.36;distance=110;requestRender();
+  }
+  viewModeButton?.addEventListener("click",()=>{
+    overviewMode=!overviewMode;
+    viewModeButton.textContent=overviewMode?"FOLLOW CRAFT":"ROUTE OVERVIEW";
+    viewModeButton.setAttribute("aria-pressed",String(overviewMode));
+    resetAutoCamera();
+  });
   function point(event){const r=canvas.getBoundingClientRect();return{x:event.clientX-r.left,y:event.clientY-r.top};}
   function enterManualCamera(){autoCamera=false;}
-  canvas.title="3D flight corridor · drag to orbit around shuttle · wheel/pinch to zoom · double-click to restore auto-frame";
+  canvas.title="3D shuttle · drag to orbit · wheel/pinch to zoom · double-click to restore auto-frame";
   canvas.addEventListener("wheel",event=>{if(!visible)return;event.preventDefault();enterManualCamera();distance=Math.max(8,Math.min(2400000,distance*Math.exp(event.deltaY*.0022)));requestRender();},{passive:false});
-  canvas.addEventListener("dblclick",()=>{autoCamera=true;autoCameraTarget=null;autoCameraDistance=null;lastRenderTime=0;yaw=.78;pitch=.36;distance=110;requestRender();});
+  canvas.addEventListener("dblclick",resetAutoCamera);
   canvas.addEventListener("pointerdown",event=>{if(event.pointerType==="mouse"&&event.button!==0)return;event.preventDefault();enterManualCamera();canvas.setPointerCapture(event.pointerId);const p=point(event);pointers.set(event.pointerId,p);lastPointer=p;canvas.style.cursor="grabbing";if(pointers.size===2){const[a,b]=[...pointers.values()];pinchDistance=Math.hypot(a.x-b.x,a.y-b.y);}});
   canvas.addEventListener("pointermove",event=>{if(!pointers.has(event.pointerId))return;event.preventDefault();const p=point(event);pointers.set(event.pointerId,p);if(pointers.size>=2){const[a,b]=[...pointers.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(pinchDistance>0)distance=Math.max(8,Math.min(2400000,distance*pinchDistance/d));pinchDistance=d;}else if(lastPointer){yaw-=(p.x-lastPointer.x)*.006;pitch=Math.max(-1.15,Math.min(1.15,pitch+(p.y-lastPointer.y)*.005));lastPointer=p;}requestRender();});
   function release(event){pointers.delete(event.pointerId);if(pointers.size===1)lastPointer=[...pointers.values()][0];else if(!pointers.size){lastPointer=null;pinchDistance=0;canvas.style.cursor="grab";}requestRender();}

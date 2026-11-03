@@ -1,0 +1,508 @@
+commit da7cfffa057cff05c3adced0b9b88e2b77324f7e
+Author:     kyooni18 <kyooni0118@gmail.com>
+AuthorDate: Mon Nov 2 04:44:31 2026 +0900
+Commit:     kyooni18 <kyooni0118@gmail.com>
+CommitDate: Mon Nov 2 04:44:31 2026 +0900
+
+    Guard high-altitude Final takeover and preserve planned TAEM winding
+
+diff --git a/swift/KSL-Landing/Sources/KSLGuidance/Approach/ApproachGuidanceEngine.swift b/swift/KSL-Landing/Sources/KSLGuidance/Approach/ApproachGuidanceEngine.swift
+index 6dde2ce..021fc37 100644
+--- a/swift/KSL-Landing/Sources/KSLGuidance/Approach/ApproachGuidanceEngine.swift
++++ b/swift/KSL-Landing/Sources/KSLGuidance/Approach/ApproachGuidanceEngine.swift
+@@ -33,6 +33,12 @@ public final class ApproachGuidanceEngine {
+   public func invalidatePrediction() { outer.invalidatePrediction() }
+   public func planningRequest() -> ApproachPlanningRequest? { outer.request() }
+   public func accept(_ proposal: ApproachPlanningProposal) { outer.accept(proposal) }
++  /// Unqualified last-chance takeover is altitude-based. Merely crossing
++  /// the NEP's horizontal station at high altitude is not Final capture.
++  public func recoveryDue(_ state: VehicleState) -> Bool {
++    let nepHeight = profile.reference(along: -configuration.guidance.finalDistance).height
++    return frame.coordinates(of: state.position).height <= nepHeight && state.verticalSpeed < 0
++  }
+   public func canCapture(_ state: VehicleState) -> Bool {
+     let p = frame.coordinates(of: state.position)
+     let reference = profile.reference(along: p.along)
+diff --git a/swift/KSL-Landing/Sources/KSLGuidance/Landing/LandingMissionController.swift b/swift/KSL-Landing/Sources/KSLGuidance/Landing/LandingMissionController.swift
+index e59b02c..591c783 100644
+--- a/swift/KSL-Landing/Sources/KSLGuidance/Landing/LandingMissionController.swift
++++ b/swift/KSL-Landing/Sources/KSLGuidance/Landing/LandingMissionController.swift
+@@ -415,8 +415,7 @@ public final class LandingMissionController {
+           nominalEnergyPoint = (state.time, nepSolver.solve(from: state, trimAlphaCeiling: attainableAlphaCeiling)
+             ?? nominalEnergyPoint?.point)
+         }
+-        let nepAlong = -configuration.guidance.finalDistance
+-        if let nep = nominalEnergyPoint?.point, !(taem.status.phase == .headingAlignment && p.along >= nepAlong) {
++        if let nep = nominalEnergyPoint?.point, !approach.recoveryDue(state) {
+           let target = taem.update(state, nep: nep, liftGain: authority.liftEffectiveness,
+             dragGain: authority.dragEffectiveness, attainableAlphaCeiling: attainableAlphaCeiling,
+             pitchResponseSeconds: controlFeedback?.pitchResponseSeconds,
+@@ -425,15 +424,19 @@ public final class LandingMissionController {
+           var violations: [ConstraintViolation] = []
+           if s.insufficientEnergy {
+             violations.append(.init(.insufficientEnergy,
+-              "TAEM energy below the best-L/D line to the NEP; flying the front-side q bound",
++              "TAEM energy below best-L/D envelope; planned descent remains unqualified",
+               value: s.energyHeight, limit: s.minimumEnergy))
+           }
++          if !s.descentPlanFits {
++            violations.append(.init(.invalidGeometry,
++              "No TAEM descent plan fits the configured glide and geometry limits; continuing recovery"))
++          }
+           raw = .init(phase: s.phase == .headingAlignment ? .headingAlignment : .acquisition,
+             target: target, violations: violations, pathRemaining: s.range,
+-            diagnostic: "TAEM phase=\(s.phase.rawValue) side=\(s.side) hacTurn=\(degrees(s.remainingTurn)) deg rpred=\(s.range) m E=\(s.energyHeight) m EN=\(s.nominalEnergy) m EMIN=\(s.minimumEnergy) m href=\(s.referenceHeight) m qref=\(s.referenceDynamicPressure) Pa qmin=\(s.minimumDynamicPressure) Pa rf=\(s.finalRadius) m growth=\(s.growth) m/rad2 downmoded=\(s.downmoded)")
+-        } else {
+-          // Past the NEP on the HAC without a Final capture (or no solved
+-          // NEP): only the Final law can finish the landing; it says so.
++            diagnostic: "TAEM phase=\(s.phase.rawValue) side=\(s.side) hacTurn=\(degrees(s.remainingTurn)) deg rpred=\(s.range) m E=\(s.energyHeight) m EN=\(s.nominalEnergy) m EMIN=\(s.minimumEnergy) m href=\(s.referenceHeight) m qref=\(s.referenceDynamicPressure) Pa qmin=\(s.minimumDynamicPressure) Pa rf=\(s.finalRadius) m growth=\(s.growth) m/rad2 downmoded=\(s.downmoded) descentFits=\(s.descentPlanFits)")
++        } else if approach.recoveryDue(state) {
++          // Below the configured Final inlet height, keep a best-effort
++          // landing owner even if normal NEP capture was not achieved.
+           hacCompleted = true
+           raw = approach.update(
+             state, previousPhase: phase, liftEffectiveness: authority.liftEffectiveness, dragEffectiveness: authority.dragEffectiveness,
+@@ -441,7 +444,16 @@ public final class LandingMissionController {
+             identifiedTrimCeiling: attainableAlphaCeiling)
+           raw.violations.append(.init(.invalidGeometry,
+             nominalEnergyPoint?.point == nil ? "No solved NEP; Final law flies without TAEM references"
+-              : "HAC ended without measured Final capture; Final law continues unqualified"))
++              : "Below Final inlet height without measured capture; Final recovery unqualified"))
++        } else {
++          // A missing NEP at altitude is a planning failure, not permission
++          // to apply the runway flare/final law to a high-energy vehicle.
++          raw = .init(phase: .acquisition,
++            target: .init(angleOfAttack: aerodynamics.bestGlideAlpha(mach: state.aerodynamics.mach,
++              maximumAlpha: attainableAlphaCeiling ?? configuration.vehicle.maximumAngleOfAttack,
++              dynamicPressure: state.aerodynamics.dynamicPressure), bank: 0,
++              desiredHeight: p.height + configuration.runway.elevation),
++            violations: [.init(.invalidGeometry, "No solved NEP; retaining TAEM best-glide recovery")])
+         }
+       } else {
+         let target = entry.update(state, synchronousPlanning: !externalPlanning,
+diff --git a/swift/KSL-Landing/Sources/KSLGuidance/TAEM/TAEMDescentReference.swift b/swift/KSL-Landing/Sources/KSLGuidance/TAEM/TAEMDescentReference.swift
+new file mode 100644
+index 0000000..42a8eaa
+--- /dev/null
++++ b/swift/KSL-Landing/Sources/KSLGuidance/TAEM/TAEMDescentReference.swift
+@@ -0,0 +1,30 @@
++import Foundation
++import KSLCore
++
++/// A runway-relative altitude plan fixed at acquisition/downmode, not a new
++/// altitude step every guidance tick. d is remaining ground-track distance.
++struct TAEMDescentReference {
++  let distance: Double
++  let startHeight: Double
++  let endHeight: Double
++  let startSlope: Double
++  let endSlope: Double
++  private var a: Double { 2*endHeight-2*startHeight+distance*(endSlope+startSlope) }
++  private var b: Double { -3*endHeight+3*startHeight-distance*(2*endSlope+startSlope) }
++  func sample(_ remaining: Double) -> (height: Double, slope: Double, curvature: Double) {
++    let x=clamp(remaining/distance,0,1)
++    return (((a*x+b)*x+distance*endSlope)*x+endHeight,
++      (3*a*x*x+2*b*x+distance*endSlope)/distance,
++      (6*a*x+2*b)/(distance*distance))
++  }
++  func fits(maximumGlide: Double) -> Bool {
++    // The derivative is quadratic. Endpoints and its one stationary point
++    // exactly bound the planned slope; no sampled optimistic path length.
++    var points=[0.0,1.0]
++    if a != 0 {let x = -b/(3*a);if x>0 && x<1 {points.append(x)}}
++    return points.allSatisfy {
++      let slope=sample($0*distance).slope
++      return slope>=0 && slope<=tan(maximumGlide)+Double.ulpOfOne*16
++    }
++  }
++}
+diff --git a/swift/KSL-Landing/Sources/KSLGuidance/TAEM/TAEMGuidanceEngine.swift b/swift/KSL-Landing/Sources/KSLGuidance/TAEM/TAEMGuidanceEngine.swift
+index 6213129..9f153f4 100644
+--- a/swift/KSL-Landing/Sources/KSLGuidance/TAEM/TAEMGuidanceEngine.swift
++++ b/swift/KSL-Landing/Sources/KSLGuidance/TAEM/TAEMGuidanceEngine.swift
+@@ -20,36 +20,23 @@ public struct TAEMStatus: Codable, Sendable {
+   public var minimumEnergy = 0.0
+   public var referenceHeight = 0.0
+   public var referenceDynamicPressure = 0.0
+-  /// Front-side bound: q at which best-L/D AoA carries the turn load.
++  /// Support bound: q at attainable CL for the planned normal/turn demand.
+   public var minimumDynamicPressure = 0.0
+   public var finalRadius = 0.0
+   public var growth = 0.0
+   /// Latched one-time low-energy downmode to the shorter HAC (OHALRT).
+   public var downmoded = false
+   public var insufficientEnergy = false
++  public var descentPlanFits = false
+ }
+ 
+-/// Shuttle TAEM (JSC-16522 / 80-FM-29, 1980) for the KSL vehicle. MM304
+-/// hands over at the TAEM interface on Mach; TAEM then owns the vehicle to
+-/// the NEP and never waits for an offline path certificate:
+-/// - every cycle it predicts the ground track (acquisition, tangent leg,
+-///   spiral HAC ending tangent to the centerline at the NEP), RPRED;
+-/// - altitude, energy and dynamic-pressure references are functions of
+-///   RPRED. They are not tabulated Shuttle constants: the nominal line is
+-///   integrated outward from the solved NEP with this vehicle's measured
+-///   polar: the minimum line flies best L/D (the front-side q bound), the
+-///   nominal flies that q with the configured aerodynamic uncertainty as
+-///   margin, and both ramp to the NEP q over the NEP glide's speed gain;
+-/// - AoA tracks the altitude reference, bounded so q stays inside
+-///   [front-side q, configured maximum q] (TGNZC's QBMNNZ/QBMXNZ limits).
+-///   Speed is held by q, never bled to dissipate energy;
+-/// - excess energy above EN flies an S-turn (TGTRAN), and the overhead HAC
+-///   (up to one full loop) is preferred at selection; energy below the
+-///   minimum line downmodes once to the shorter HAC (OHALRT);
+-/// - acquisition banks toward the HAC tangent, heading alignment follows the
+-///   spiral radius and its rate (TGPHIC).
+-/// The configured vehicle has no identified speedbrake drag, so the
+-/// speedbrake channel of TGSBC is not flown.
++/// TAEM recovery to the NEP, using JSC-16522 phase/energy-envelope concepts.
++/// Ground track and a measured-state-to-NEP descent profile are committed at
++/// acquisition/downmode. Measured angular progress preserves HAC winding.
++/// Lift, bank and pressure remain bounded by the vehicle model/configuration.
++/// The legacy EN/EMIN q-scheduled curves are advisory energy envelopes; they
++/// do not certify the new Hermite descent path. A profile that fits geometric
++/// slope limits can still fail energy or closed-loop capture validation.
+ final class TAEMGuidanceEngine {
+   private let configuration: MissionConfiguration
+   private let atmosphere: AtmosphericModelEngine
+@@ -65,6 +52,9 @@ final class TAEMGuidanceEngine {
+   private var geometryAdapted = false
+   private var lines: (time: Double, side: Int, turn: Double, nominal: TAEMEnergyLine, minimum: TAEMEnergyLine)?
+   private var sTurnSign = 0.0
++  private var hacPolarAngle: Double?
++  private var captureTurn: Double?
++  private var descent: TAEMDescentReference?
+ 
+   init(configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine, aerodynamics: AerodynamicsEngine) {
+     self.configuration = configuration; self.atmosphere = atmosphere; aero = aerodynamics
+@@ -75,6 +65,13 @@ final class TAEMGuidanceEngine {
+ 
+   func reset() {
+     status = .init(); geometry = nil; geometryAdapted = false; lines = nil; sTurnSign = 0
++    captureTurn = nil; descent = nil; hacPolarAngle = nil
++  }
++
++  /// Ground position repeats every winding. Only measured angular progress
++  /// can distinguish the overhead pass from the final pass at that position.
++  static func advanceTurn(_ remaining: Double, from previousPolar: Double, to polar: Double) -> Double {
++    max(0, remaining + wrapAngle(polar-previousPolar))
+   }
+ 
+   // MARK: Geometry (TGXHAC / GTP)
+@@ -346,11 +343,20 @@ final class TAEMGuidanceEngine {
+     let energy = energyModel.height(state)
+     status.energyHeight = energy
+ 
++    // A completed winding high above the NEP needs another recovery plan;
++    // crossing the runway station cannot turn altitude into a Final capture.
++    if status.phase == .headingAlignment, p.along >= nepAlong, p.height > nep.height,
++      status.remainingTurn*max(status.finalRadius,c.guidance.minimumHACRadius)
++        <= vh*c.guidance.controlInterval {
++      status.phase = .acquisition; lines = nil; captureTurn = nil; descent = nil; hacPolarAngle = nil
++    }
++
+     // HAC size: final radius flies the NEP airspeed, the spiral grows so a
+     // full loop's entry radius flies the reference speed there, both at the
+     // uncertainty-reserved bank and never below the configured minimum.
+     prepareGeometry(nep: nep, gravity: g, adapt: status.phase != .headingAlignment)
+-    let rf = geometry!.finalRadius, growth = geometry!.growth
++    var rf = geometry!.finalRadius
++    let growth = geometry!.growth
+ 
+     // Ground track for each HAC side and winding (GTP).
+     struct Track {
+@@ -370,19 +376,57 @@ final class TAEMGuidanceEngine {
+       return .init(side: side, turn: turn, range: leg.length + Self.spiralLength(hac, to: turn),
+         tangent: entry, hac: hac, arc: leg.arc, arcLoad: leg.load)
+     }
+-    var candidates: [Track] = []
+-    for side in [1, -1] {
+-      guard let probe = spiral(side: side, finalRadius: rf, growth: growth, turn: 2 * .pi) else { continue }
+-      for turn in Self.tangencies(of: probe, from: point, maximumTurn: 2 * .pi) {
+-        if let t = track(side: side, turn: turn) { candidates.append(t) }
++    // outerGlideAngle belongs to Final. With no TAEM-specific constraint,
++    // the descent planner may use the full descending geometric domain;
++    // actual commands still obey q/load/lift/bank/actuator limits below.
++    let glideLimit = c.guidance.taemGlideAngle ?? (.pi / 2)
++    func descentPlan(for t: Track) -> TAEMDescentReference {
++      .init(distance: max(vh*c.guidance.controlInterval,t.range),startHeight:p.height,
++        endHeight:nep.height,startSlope:max(0,-tan(state.flightPathAngle)),
++        endSlope:max(0,-tan(nep.flightPathAngle)))
++    }
++    // Include a full overhead winding beyond the tangent, and enough
++    // winding to price the altitude loss at the configured glide limit.
++    // Search remains bounded by the configured maximum path length.
++    let descentDistance=max(0,p.height-nep.height)/tan(glideLimit)
++    let maximumTurn=min(SpiralHAC.maximumTurnAngle,c.guidance.maximumPathLength/rf,
++      2 * .pi + max(2 * .pi,descentDistance/rf))
++    func tracks() -> [Track] {
++      var result: [Track] = []
++      for side in [1,-1] {
++        guard let probe=spiral(side:side,finalRadius:rf,growth:growth,turn:maximumTurn) else {continue}
++        for turn in Self.tangencies(of:probe,from:point,maximumTurn:maximumTurn) {
++          if let t=track(side:side,turn:turn),t.range<=c.guidance.maximumPathLength {result.append(t)}
++        }
+       }
++      return result
++    }
++    var candidates=tracks()
++    if lines == nil, !candidates.contains(where:{descentPlan(for:$0).fits(maximumGlide:glideLimit)}) {
++      // A cubic Hermite slope is a quadratic Bezier. Keeping its middle
++      // derivative control point <= tan(glide) gives a sufficient distance,
++      // derived from height loss and the two endpoint slopes.
++      let required=max(descentDistance,3*max(0,p.height-nep.height) /
++        (tan(glideLimit)+max(0,-tan(state.flightPathAngle))+max(0,-tan(nep.flightPathAngle))))
++      for _ in 0...Double.significandBitCount {
++        guard let overhead=candidates.filter({$0.turn>=2 * .pi})
++          .min(by:{abs($0.range-required)<abs($1.range-required)}) else {break}
++        if descentPlan(for:overhead).fits(maximumGlide:glideLimit) {break}
++        let next=max(c.guidance.minimumHACRadius,rf+(required-overhead.range)/overhead.turn)
++        guard next<=c.guidance.maximumHACRadius,abs(next-rf)>Double.ulpOfOne*rf else {break}
++        rf=next;candidates=tracks()
++      }
++      geometry!.finalRadius=rf
++      geometryAdapted=true
+     }
+ 
+     // On the HAC: follow the measured remaining angle on the latched spiral.
+-    if status.phase == .headingAlignment, let current = spiral(side: status.side, finalRadius: rf,
+-      growth: growth, turn: max(status.remainingTurn, 1e-3) + .pi / 2) {
+-      let turn = current.fittedRemainingAngle(at: point)
+-      status.remainingTurn = min(status.remainingTurn, max(0, turn))
++    if status.phase == .headingAlignment {
++      let polar=atan2(nepAlong-point.x,rf-Double(status.side)*point.y)
++      if let previous=hacPolarAngle {
++        status.remainingTurn=Self.advanceTurn(status.remainingTurn,from:previous,to:polar)
++      }
++      hacPolarAngle=polar
+       if let latched = spiral(side: status.side, finalRadius: rf, growth: growth, turn: max(1e-6, status.remainingTurn)) {
+         candidates = [.init(side: status.side, turn: status.remainingTurn,
+           range: Self.spiralLength(latched, to: status.remainingTurn), tangent: point, hac: latched)]
+@@ -412,9 +456,12 @@ final class TAEMGuidanceEngine {
+     // Selection (overhead default, below). Latched; one low-energy downmode.
+     // The side is latched once chosen (only the downmode changes it); the
+     // winding follows the measured geometry on that side.
+-    var selected = lines == nil ? nil : candidates.filter {
+-      $0.side == status.side && abs($0.turn - status.remainingTurn) < .pi / 2
+-    }.min { abs($0.turn - status.remainingTurn) < abs($1.turn - status.remainingTurn) }
++    var selected: Track?
++    if lines != nil, status.phase != .headingAlignment, let captureTurn {
++      selected=track(side:status.side,turn:captureTurn)
++    } else if lines != nil {
++      selected=candidates.first
++    }
+     // Never jump to another winding: past the tangency, keep this one.
+     if lines != nil, selected == nil, let t = track(side: status.side, turn: max(status.remainingTurn, 1e-3)) {
+       selected = t
+@@ -424,12 +471,17 @@ final class TAEMGuidanceEngine {
+       // else the longest still above its minimum line (the downmode test);
+       // the shortest only when none is.
+       var best: Track?, fallback: Track?
+-      for t in candidates.sorted(by: { $0.range > $1.range }) {
++      let fitting=candidates.filter {descentPlan(for:$0).fits(maximumGlide:glideLimit)}
++      let options=fitting.isEmpty ? candidates:fitting
++      for t in options.sorted(by: { $0.range > $1.range }) {
+         refreshLines(for: t)
+         if energy >= lines!.nominal.sample(t.range).energy { best = t; break }
+         if fallback == nil, energy >= lines!.minimum.sample(t.range).energy { fallback = t }
+       }
+-      selected = best ?? fallback ?? candidates.min { $0.range < $1.range }
++      selected = best ?? fallback ?? (fitting.isEmpty
++        ? options.max {$0.range<$1.range} : options.min {$0.range<$1.range})
++      captureTurn=selected!.turn
++      descent=descentPlan(for:selected!)
+       refreshLines(for: selected!)
+     } else if state.time - lines!.time >= c.guidance.terminalReplanInterval
+       || lines!.side != selected!.side || abs(lines!.turn - selected!.turn) > radians(10) {
+@@ -439,11 +491,15 @@ final class TAEMGuidanceEngine {
+     var t = selected!
+     if status.phase != .headingAlignment, !status.downmoded,
+        energy < lines!.minimum.sample(t.range).energy,
+-       let shorter = candidates.filter({ $0.range < t.range }).min(by: { $0.range < $1.range }) {
++       let shorter = candidates.filter({ $0.range < t.range && descentPlan(for:$0).fits(maximumGlide:glideLimit) }).min(by: { $0.range < $1.range }) {
+       status.downmoded = true; t = shorter; refreshLines(for: t)
++      captureTurn=t.turn; descent=descentPlan(for:t)
+     }
+     status.side = t.side; status.remainingTurn = t.turn; status.range = t.range
+     status.finalRadius = rf; status.growth = growth
++    if descent == nil {descent=descentPlan(for:t)}
++    status.descentPlanFits=descent!.fits(maximumGlide:glideLimit)
++    let planned=descent!.sample(t.range)
+     let nominal = lines!.nominal.sample(t.range), minimum = lines!.minimum.sample(t.range)
+     status.nominalEnergy = nominal.energy; status.minimumEnergy = minimum.energy
+     status.insufficientEnergy = energy < minimum.energy
+@@ -464,6 +520,9 @@ final class TAEMGuidanceEngine {
+       // circle of acquisition-radius turning must fit before the tangent.
+       if toTangent.length <= vh * rollTime {
+         status.phase = .headingAlignment
++        let polar=atan2(nepAlong-point.x,rf-Double(t.side)*point.y)
++        status.remainingTurn=max(0,t.turn+wrapAngle(polar-t.turn))
++        hacPolarAngle=polar
+       } else if energy > sTurnEnergy, toTangent.length > 2 * .pi * acquisitionRadius + vh * rollTime {
+         status.phase = .sTurn
+         sTurnSign = -Double(t.side)
+@@ -481,14 +540,17 @@ final class TAEMGuidanceEngine {
+     case .sTurn:
+       lateral = sTurnSign * support * tan(geometryBank)
+     case .acquisition:
+-      lateral = 2 * vh * sin(clamp(headingError, -.pi / 2, .pi / 2)) / rollTime
++      // Pure pursuit to the committed join, with at least the measured
++      // roll response distance. A distant join is not a six-second turn.
++      let pursuitTime=max(rollTime,toTangent.length/vh)
++      lateral = 2 * vh * sin(clamp(headingError, -.pi / 2, .pi / 2)) / pursuitTime
+     case .headingAlignment:
+       let center = Vector2(nepAlong, Double(t.side) * rf)
+       let radial = point - center
+       let r = radial.length, rdot = velocity.dot(radial) / max(1, r)
+       let reference = t.hac.radius(at: t.turn)
+       let rdotReference = -vh * 2 * growth * t.turn / max(1, reference)
+-      let omega = 1 / rollTime
++      let omega = 1 / max(rollTime,reference/vh)
+       let centripetal = max(0, vh * vh - rdot * rdot) / max(1, reference)
+       lateral = Double(t.side) * (centripetal + omega * omega * (r - reference) + 2 * omega * (rdot - rdotReference))
+     }
+@@ -505,7 +567,15 @@ final class TAEMGuidanceEngine {
+       gear: state.systems.gearDown)
+     let bestLift = aero.coefficients(mach: a.mach, alpha: bestAlpha, dynamicPressure: a.dynamicPressure,
+       gear: state.systems.gearDown).lift * liftGain
+-    let frontQ = g * turnLoad * state.mass / max(1e-9, aero.referenceArea * bestLift)
++    // Price minimum q for the planned normal acceleration, not an assumed
++    // level turn. A descending capture need not dive to a 1-g best-L/D q.
++    let normalReference=max(0,support+speed*vh*planned.curvature/(1+planned.slope*planned.slope))
++    let attainableNormal = aero.liftSolution(acceleration: 0,mass:state.mass,
++      dynamicPressure:a.dynamicPressure,mach:a.mach,minimumAlpha:max(0,v.minimumAngleOfAttack),
++      maximumAlpha:ceiling,gear:state.systems.gearDown).maximumAcceleration * liftGain
++    let supportCoefficient = a.dynamicPressure > 0
++      ? max(bestLift,attainableNormal*state.mass/(a.dynamicPressure*aero.referenceArea)) : bestLift
++    let frontQ = normalReference * turnLoad * state.mass / max(1e-9,aero.referenceArea*supportCoefficient*(1-v.aerodynamicUncertainty))
+     func height(atDynamicPressure q: Double) -> Double {
+       var lo = 0.0, hi = maximumReferenceHeight
+       for _ in 0..<28 {
+@@ -520,8 +590,10 @@ final class TAEMGuidanceEngine {
+       }
+       return lo
+     }
+-    let frontHeight = height(atDynamicPressure: frontQ)
+-    let targetHeight = min(frontHeight, max(nominal.height, height(atDynamicPressure: v.maximumDynamicPressure)))
++    // A committed altitude plan is not permission to consume its last
++    // kinetic energy chasing height. Retain enough q for attainable lift.
++    let supportHeight=height(atDynamicPressure:frontQ)
++    let targetHeight = min(supportHeight,max(planned.height,height(atDynamicPressure:v.maximumDynamicPressure)))
+     let targetDensity = atmosphere.sample(position: frame.position(along: p.along, cross: p.cross,
+       height: targetHeight), time: state.time).density
+     let targetPosition = frame.position(along: p.along, cross: p.cross, height: targetHeight)
+@@ -531,18 +603,18 @@ final class TAEMGuidanceEngine {
+     status.minimumDynamicPressure = frontQ
+     status.referenceDynamicPressure = commandedQ
+     status.referenceHeight = targetHeight
+-    let glide = c.guidance.taemGlideAngle ?? c.guidance.outerGlideAngle
++    let glide = glideLimit
+     let dragAcceleration = a.measuredForces ? a.drag / max(1, state.mass)
+       : aero.coefficients(mach: a.mach, alpha: a.angleOfAttack, dynamicPressure: a.dynamicPressure,
+           gear: state.systems.gearDown).drag * a.dynamicPressure * aero.referenceArea / max(1, state.mass)
+     // Feedforward: HREF's own descent while tracking it (range closes at
+     // the ground speed), else the steady glide at the present drag.
+-    let tracksReference = targetHeight == nominal.height
+-    let feedforward = tracksReference ? -vh * lines!.nominal.slope(t.range)
++    let tracksReference = targetHeight == planned.height
++    let feedforward = tracksReference ? -vh * planned.slope
+       : -speed * clamp(dragAcceleration / g, 0, 1)
+     let desiredRate = feedforward + (targetHeight - p.height) / (2 * tau)
+     let gamma = clamp(asin(clamp(desiredRate / speed, -1, 1)), -glide, glide)
+-    var vertical = support + speed * (gamma - state.flightPathAngle) / tau
++    var vertical = (tracksReference ? normalReference : support) + speed * (gamma - state.flightPathAngle) / tau
+     // Hard q bounds (QBMNNZ/QBMXNZ) for a state far off the target.
+     // In still air qdot/q = V*gammaSin*dln(rho)/dh
+     //                         - 2*(D/m + geff*gammaSin)/V.
+@@ -561,8 +633,12 @@ final class TAEMGuidanceEngine {
+       let fractionalRate = log(q / a.dynamicPressure) / tau
+       return asin(clamp((fractionalRate + 2 * dragAcceleration / speed) / coefficient, -1, 1))
+     }
++    // Preserve actual support/pressure protection, with the planned normal
++    // demand and attainable CL above rather than a blanket level-flight q.
++    // This can steepen an energy-starved descent beyond the nominal profile;
++    // holding its glide angle while stalled would command maximum incidence.
+     if a.dynamicPressure < frontQ {
+-      vertical = min(vertical, support + speed * (pressureBound(frontQ) - state.flightPathAngle) / tau)
++      vertical = min(vertical,support+speed*(pressureBound(frontQ)-state.flightPathAngle)/tau)
+     } else if a.dynamicPressure > v.maximumDynamicPressure {
+       vertical = max(vertical, support + speed * (pressureBound(v.maximumDynamicPressure) - state.flightPathAngle) / tau)
+     }
+@@ -572,7 +648,13 @@ final class TAEMGuidanceEngine {
+     let maximumLift = min(v.maximumLoadFactor * 9.80665, aero.liftSolution(acceleration: 0, mass: state.mass,
+       dynamicPressure: a.dynamicPressure, mach: a.mach, minimumAlpha: floorAlpha, maximumAlpha: ceiling,
+       gear: state.systems.gearDown).maximumAcceleration * liftGain * (1 - v.aerodynamicUncertainty))
++    let cannotHoldReference = vertical > attainableNormal && p.height < targetHeight
++      && a.dynamicPressure < frontQ
+     vertical = clamp(vertical, 0, maximumLift)
++    // A nearly ballistic descent has little lift to tilt. Do not turn a
++    // small lateral correction into a near-limit roll solely because the
++    // planned vertical component is small; defer that correction instead.
++    if support > 0, vertical < support {lateral *= vertical/support}
+     let lateralLimit = min(sqrt(max(0, maximumLift * maximumLift - vertical * vertical)),
+       vertical * tan(v.maximumBank))
+     lateral = clamp(lateral, -lateralLimit, lateralLimit)
+@@ -580,8 +662,11 @@ final class TAEMGuidanceEngine {
+     let solution = aero.liftSolution(acceleration: total / max(1e-9, liftGain), mass: state.mass,
+       dynamicPressure: a.dynamicPressure, mach: a.mach, minimumAlpha: floorAlpha, maximumAlpha: ceiling,
+       gear: state.systems.gearDown)
+-    let alpha = solution.alpha
+-    let bank = total > 0 ? atan2(lateral, vertical) : 0
++    // If even maximum lift cannot hold a reference above the aircraft, more
++    // incidence only spends range. Best L/D is the attainable recovery;
++    // retain q/load protections and defer the turn until support returns.
++    let alpha = cannotHoldReference ? bestAlpha : solution.alpha
++    let bank = cannotHoldReference ? 0 : (total > 0 ? atan2(lateral, vertical) : 0)
+     let gear = state.systems.gearDown || p.height <= (c.guidance.gearDeploymentAltitude ?? 1500)
+     return .init(angleOfAttack: alpha, bank: bank,
+       desiredSpeed: sqrt(2 * commandedQ / density),
+diff --git a/swift/KSL-Landing/Tests/GuidanceTests/TAEMTransitionTests.swift b/swift/KSL-Landing/Tests/GuidanceTests/TAEMTransitionTests.swift
+new file mode 100644
+index 0000000..2f7e4e0
+--- /dev/null
++++ b/swift/KSL-Landing/Tests/GuidanceTests/TAEMTransitionTests.swift
+@@ -0,0 +1,43 @@
++import XCTest
++import KSLCore
++import KSLPhysics
++@testable import KSLGuidance
++
++final class TAEMTransitionTests: XCTestCase {
++  func testHorizontalNEPCrossingCannotForceHighAltitudeFinal() throws {
++    let c=MissionConfiguration(), atm=try AtmosphericModelEngine(), aero=try AerodynamicsEngine()
++    let frame=RunwayFrame(runway:c.runway,planet:c.planet)
++    let approach=ApproachGuidanceEngine(configuration:c,atmosphere:atm,aerodynamics:aero)
++    func state(height:Double)->VehicleState {
++      let position=frame.position(along: -c.guidance.finalDistance+100,cross:0,height:height)
++      let velocity=frame.direction(at:.init(-c.guidance.finalDistance+100,0),tangent:.init(1,0))*400-position.normalized*80
++      return .init(time:100,position:position,velocity:velocity,
++        attitude:.windAttitude(position:position,airVelocity:velocity,alpha:radians(15),bank:0))
++    }
++    XCTAssertFalse(approach.recoveryDue(state(height:25_000)))
++    XCTAssertFalse(approach.recoveryDue(state(height:15_543)))
++    let profile=ApproachProfile(configuration:c)
++    XCTAssertTrue(approach.recoveryDue(state(height:profile.reference(along:-c.guidance.finalDistance).height)))
++  }
++
++  func testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary() {
++    let remaining=2 * Double.pi+0.03
++    let next=TAEMGuidanceEngine.advanceTurn(remaining,from:0.03,to:-0.01)
++    XCTAssertEqual(next,2 * Double.pi-0.01,accuracy:1e-12)
++    XCTAssertGreaterThan(next,Double.pi)
++    XCTAssertEqual(TAEMGuidanceEngine.advanceTurn(0.01,from:0.01,to:-0.01),0)
++  }
++
++  func testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes() {
++    let short=TAEMDescentReference(distance:33_360,startHeight:26_388,endHeight:962,
++      startSlope:0.2,endSlope:tan(radians(24)))
++    XCTAssertFalse(short.fits(maximumGlide:radians(24)))
++    let planned=TAEMDescentReference(distance:80_000,startHeight:26_388,endHeight:962,
++      startSlope:0.2,endSlope:tan(radians(24)))
++    XCTAssertTrue(planned.fits(maximumGlide:radians(24)))
++    XCTAssertEqual(planned.sample(planned.distance).height,planned.startHeight,accuracy:1e-8)
++    XCTAssertEqual(planned.sample(planned.distance).slope,planned.startSlope,accuracy:1e-10)
++    XCTAssertEqual(planned.sample(0).height,planned.endHeight,accuracy:1e-8)
++    XCTAssertEqual(planned.sample(0).slope,planned.endSlope,accuracy:1e-10)
++  }
++}

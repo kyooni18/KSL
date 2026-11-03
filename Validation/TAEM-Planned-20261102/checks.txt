@@ -1,0 +1,49 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 647]
+[Planning deferred tasks]
+[5 / 66]
+[11 / 43] KSLGuidance
+[13 / 45] KSLGuidance
+[17 / 50] KSLLanding
+[25 / 58] KSLGuidance
+[27 / 58] KSLSimulation
+[36 / 56] KSLLanding
+[36 / 56] ksl-landing-product
+[36 / 56] SimulationTests-product
+[48 / 85] IntegrationTests-product
+[60 / 85] SimulationTests-product
+[67 / 87] IntegrationTests-product
+[70 / 87] IntegrationTests-product
+[73 / 88] KSLLanding
+[77 / 88] GuidanceTests-product
+[78 / 87] GuidanceTests-product
+[78 / 87] SimulationTests-product
+[80 / 88] IntegrationTests-product
+[82 / 88] GuidanceTests-product
+[84 / 88] IntegrationTests-product
+[86 / 90] IntegrationTests-product
+[86 / 90] GuidanceTests-product
+Build complete! (6.19초)
+Test Suite 'Selected tests' started at 2026-11-02 04:23:48.912.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 04:23:48.913.
+Test Suite 'TAEMTransitionTests' started at 2026-11-02 04:23:48.913.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' passed (0.001 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' passed (0.005 seconds).
+Test Suite 'TAEMTransitionTests' passed at 2026-11-02 04:23:48.919.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'ZZScratchPlannedTAEMTests' started at 2026-11-02 04:23:48.919.
+Test Case '-[GuidanceTests.ZZScratchPlannedTAEMTests testRecordedHandoff]' started.
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/GuidanceTests/ZZScratchPlannedTAEMTests.swift:15: error: -[GuidanceTests.ZZScratchPlannedTAEMTests testRecordedHandoff] : XCTAssertTrue failed
+Test Case '-[GuidanceTests.ZZScratchPlannedTAEMTests testRecordedHandoff]' failed (1.134 seconds).
+Test Suite 'ZZScratchPlannedTAEMTests' failed at 2026-11-02 04:23:50.053.
+	 Executed 1 test, with 1 failure (0 unexpected) in 1.134 (1.134) seconds
+Test Suite 'GuidanceTests.xctest' failed at 2026-11-02 04:23:50.053.
+	 Executed 3 tests, with 1 failure (0 unexpected) in 1.140 (1.140) seconds
+Test Suite 'Selected tests' failed at 2026-11-02 04:23:50.053.
+	 Executed 3 tests, with 1 failure (0 unexpected) in 1.140 (1.141) seconds
+PLANNED TAEM TAEMStatus(phase: KSLGuidance.TAEMPhase.acquisition, side: 1, remainingTurn: 0.001, range: 33360.26569960324, energyHeight: 52923.68875680495, nominalEnergy: 72074.88439829723, minimumEnergy: 38240.06796073028, referenceHeight: 26388.20198701818, referenceDynamicPressure: 3115.793085514554, minimumDynamicPressure: 0.0, finalRadius: 3000.0, growth: 0.07599088773175333, downmoded: false, insufficientEnergy: false, descentPlanFits: false) GuidanceTarget(angleOfAttack: 0.08573139472219947, bank: -1.1104109147401346, desiredSpeed: 738.3985493325365, desiredHeight: 26456.641987018178, desiredFlightPath: -0.12193678313117369, gearDown: false, speedbrakeFraction: nil)
+Note: Some test targets reported failures:
+  - GuidanceTests (XCTest)

@@ -1,0 +1,49 @@
+import XCTest
+import KSLCore
+import KSLPhysics
+@testable import KSLGuidance
+final class ZZLiveOvershootDiagnosisTests: XCTestCase {
+  func testRecordedAuthorityHistory() throws {
+    let root = "/Users/kyooni18/Code/KSL/"
+    let c = try JSONDecoder().decode(MissionConfiguration.self, from: Data(contentsOf: URL(fileURLWithPath: root+"runs/20261102T020820Z-taem-reference-control-72km/configuration.json")))
+    let aero = try AerodynamicsEngine(referenceArea: c.vehicle.referenceArea)
+    let atmosphere = try AtmosphericModelEngine(planet: c.planet)
+    let engine = TAEMGuidanceEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+    let estimator = AerodynamicAuthorityEstimator(model: aero)
+    let data = try String(contentsOfFile: root+"runs/20261102T020820Z-taem-reference-control-72km/live-sts-flight.jsonl", encoding: .utf8)
+    var start: Double?, next = 0.0
+    var incidence = AttainableIncidenceMonitor()
+    var previousFeedback: ControlDiagnostics?, previousAlpha: Double?
+    for line in data.split(separator: "\n") {
+      guard let record = try? JSONDecoder().decode(FlightRecord.self, from: Data(line.utf8)) else { continue }
+      let s = record.state, a = s.aerodynamics
+      estimator.observe(s)
+      incidence.observe(time: s.time, measuredAlpha: a.angleOfAttack, commandedAlpha: previousAlpha,
+        feedback: previousFeedback, fallbackResponseSeconds: c.guidance.pathLookaheadTime)
+      let ceiling = incidence.combined(with: previousFeedback?.trimEvidence == .identified ? previousFeedback?.trimAlphaCeiling : nil)
+      defer { previousFeedback = record.control; previousAlpha = record.guidance.target.angleOfAttack }
+      if record.guidance.phase == .entry { continue }
+      if start == nil { start = s.time }
+      let t = s.time-start!
+      if t > 151 { break }
+      if t < 0.11, let capture = record.guidance.capture,
+        let height = capture.nominalEnergyHeight, let speed = capture.nominalEnergyAirspeed,
+        let gamma = capture.nominalEnergyFlightPath {
+        let nep = NominalEnergyPoint(along: -c.guidance.finalDistance, height: height,
+          flightPathAngle: gamma, airspeed: speed, predictedTouchdownSpeed: c.vehicle.landingSpeed)
+        _ = engine.update(s, nep: nep, liftGain: estimator.liftEffectiveness,
+          dragGain: estimator.dragEffectiveness, attainableAlphaCeiling: ceiling,
+          pitchResponseSeconds: nil, rollResponseSeconds: nil)
+        print("GEOMETRY REPLAY", t, "ceiling",ceiling as Any, engine.status.growth, engine.status.range, engine.status.minimumEnergy)
+      }
+      if t < next { continue }
+      next += 30
+      let alpha = aero.bestGlideAlpha(mach: a.mach, maximumAlpha: c.vehicle.maximumAngleOfAttack, dynamicPressure: a.dynamicPressure)
+      let best = aero.coefficients(mach: a.mach, alpha: alpha, dynamicPressure: a.dynamicPressure).lift
+        * a.dynamicPressure*aero.referenceArea*estimator.liftEffectiveness/s.mass
+      let support = (c.planet.gravitationalParameter/s.position.squaredLength-s.horizontalSpeed*s.horizontalSpeed/s.position.length)*cos(s.flightPathAngle)
+      print("AUTH", t, "liftGain", estimator.liftEffectiveness, "dragGain", estimator.dragEffectiveness,
+        "bestAlpha", degrees(alpha), "bestLift",best,"support",support,"turnAllowance",sqrt(max(0,best*best-support*support)),"bankCommand",degrees(record.guidance.target.bank))
+    }
+  }
+}

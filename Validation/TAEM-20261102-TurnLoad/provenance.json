@@ -1,0 +1,7 @@
+{
+  "revision": "d0af127eb82f26a11c213a791c36ecb8780d258c",
+  "executable": "/Users/kyooni18/Code/KSL/swift/KSL-Landing/.build/release/ksl-landing",
+  "sha256": "010d770c9e5f8e79cc40df9a81977efd7ccc18535ef83c7337591faf550b2da9",
+  "command": "sim.sh 72km 5 12",
+  "liveKSPCommanded": false
+}

@@ -50,13 +50,13 @@ body { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF
 small { display: block; color: var(--muted); font-size: 9px; font-weight: 650; letter-spacing: .08em; line-height: 1.2; margin-bottom: 3px; }
 
 .map-strip { grid-template-columns: 1fr auto; }
-.legend { display: flex; gap: 12px; align-items: center; color: var(--muted); }
+.legend { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; color: var(--muted); }
 .legend span { display: flex; gap: 5px; align-items: center; white-space: nowrap; }
 .swatch { width: 12px; height: 2px; background: currentColor; display: inline-block; }
 .swatch.actual { color: var(--cyan); }
 .swatch.orbit { height: 0; background: transparent; border-top: 2px dashed currentColor; color: var(--cyan); opacity: .72; }
 .swatch.predicted { color: var(--green); }
-.swatch.taem-projected { height: 0; background: transparent; border-top: 2px dashed currentColor; color: var(--green); }
+.swatch.taem-projected { height: 0; background: transparent; border-top: 2px dashed currentColor; color: var(--cyan); }
 .swatch.planned { color: var(--orange); }
 .swatch.burn { height: 0; background: transparent; border-top: 3px solid var(--orange); box-shadow: 0 0 5px rgba(255,155,82,.35); }
 .map-wrap { position: relative; aspect-ratio: 2 / 1; min-height: 250px; background: #0d1012; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(102,216,239,.03); }
@@ -100,6 +100,7 @@ small { display: block; color: var(--muted); font-size: 9px; font-weight: 650; l
 .scene3d-panel { position: relative; height: 380px; border-top: 1px solid var(--line); background: #080a0c; overflow: hidden; }
 .scene3d-panel[hidden] { display: none !important; }
 #scene3d-canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.scene3d-view-mode { position: absolute; z-index: 4; left: 10px; top: 8px; background: rgba(3,7,9,.84); font-size: 10px; }
 .scene3d-overlay { position: absolute; z-index: 3; right: 10px; top: 8px; display: block; pointer-events: none; font-size: 9px; font-weight: 700; letter-spacing: .055em; text-shadow: 0 1px 2px #000; }
 .scene3d-state { display: grid; justify-items: end; gap: 2px; padding: 4px 6px; border: 1px solid rgba(165,221,235,.12); border-radius: 5px; background: rgba(3,7,9,.42); }
 .scene3d-state .muted { text-align: right; }
@@ -113,6 +114,15 @@ small { display: block; color: var(--muted); font-size: 9px; font-weight: 650; l
 
 .guidance-panel { padding-bottom: 0; }
 .guidance-head { min-height: 58px; padding: 10px 12px; border-bottom: 1px solid var(--line); display: grid; gap: 4px; }
+.native-flight-status { border-bottom: 1px solid var(--line); padding: 9px 12px 10px; }
+.native-flight-status[hidden] { display: none; }
+.native-flight-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 11px; font-weight: 700; letter-spacing: .03em; }
+.native-flight-grid { display: grid; grid-template-columns: 1.15fr 1.2fr 1fr; gap: 10px; margin-top: 8px; }
+.native-flight-grid > div { min-width: 0; }
+.native-flight-grid small { display: block; color: var(--muted); font-size: 9px; margin-bottom: 4px; }
+.native-flight-grid b { display: block; font-size: 12px; line-height: 1.25; overflow-wrap: anywhere; }
+.native-flight-message { margin-top: 7px; font-size: 11px; overflow-wrap: anywhere; }
+@media (max-width: 520px) { .native-flight-grid { grid-template-columns: 1fr 1fr; } .native-flight-grid > div:last-child { grid-column: 1 / -1; } }
 .mode-line { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }
 .chip { padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; color: var(--muted); font-size: 9px; letter-spacing: .06em; }
 .chip.good { color: var(--green); border-color: rgba(114,241,154,.35); }

@@ -135,8 +135,17 @@
     return terminalReferenceDisplayable(source) && Array.isArray(source?.referenceTrajectory)
       ? source.referenceTrajectory : [];
   };
-  const displayableProjectedTAEMTrajectory = (source) => entryPlanDisplayable(source) && Array.isArray(source?.projectedTAEMTrajectory)
-    ? source.projectedTAEMTrajectory : [];
+  const displayableProjectedTAEMTrajectory = (source) => {
+    const points=source?.projectedTAEMTrajectory;
+    if (!Array.isArray(points) || trajectoryCount(points)<2) return [];
+    // The native Swift controller publishes its unaccepted MM305 candidate as
+    // an advisory, independently of the MM304 terminal-ready certification.
+    // Display that actual candidate, explicitly distinguished from a committed
+    // TAEM/HAC plan. Never fabricate a nominal capture or landing trajectory.
+    if (source?.planProvisionalKind === "mm305-advisory" && source?.planProvisional === true)
+      return points;
+    return entryPlanDisplayable(source) ? points : [];
+  };
   const replayMetadata = (source) => {
     const archived = source?.replay;
     if (archived && archived.active === true && /replay/i.test(String(archived.sourceMode || ""))) return archived;
@@ -1158,7 +1167,9 @@
     const predicted = futurePredictionTrajectory(snapshot);
     const planned = displayableGuidanceTrajectory(snapshot);
     const planLabel = $("map-plan-label");
-    if (planLabel) planLabel.textContent = g.energyLaw?.active === true ? "LAW REF" : mapUsesLiveProjection(snapshot) ? "GUIDANCE" : "PLAN";
+    if (planLabel) planLabel.textContent = snapshot?.planProvisional === true ? "PLAN · PROVISIONAL" : g.energyLaw?.active === true ? "LAW REF" : mapUsesLiveProjection(snapshot) ? "GUIDANCE" : "PLAN";
+    const taemLabel = $("map-taem-label");
+    if (taemLabel) taemLabel.textContent = snapshot?.planProvisionalKind === "mm305-advisory" ? "TAEM ADVISORY" : "TAEM PROJ";
     const orbital = trajectoryCount(snapshot?.deorbitPlan?.trajectory) >= 2
       ? [] : (snapshot?.orbitalTrajectory || []);
     const orbitMeta = snapshot?.orbitalTrajectoryMeta || {};
@@ -1352,6 +1363,43 @@
   }
 
   const mm304Timeline = [];
+  function updateNativeEntry() {
+    const block = document.getElementById("native-entry-block");
+    if (!block) return;
+    const data = snapshot?.guidanceState?.nativeEntry;
+    const phase = String(snapshot?.phase || "").toUpperCase();
+    const shown = data && /ENTRY|MM304/.test(phase);
+    block.hidden = !shown;
+    if (!shown) return;
+    const set = (id, value) => { const item = document.getElementById(id); if (item) item.textContent = value; };
+    const km = (value) => finite(value) ? (n(value) / 1000).toFixed(1) + " km" : "—";
+    const accel = (value) => finite(value) ? n(value).toFixed(2) : "—";
+    const margin = finite(data.rangeMargin) ? n(data.rangeMargin) / 1000 : null;
+    set("native-entry-mode", String(data.energyMode || "—").replaceAll("-", " "));
+    set("native-entry-predicted", km(data.predictedRange));
+    set("native-entry-required", km(data.requiredRange));
+    set("native-entry-margin", finite(data.rangeMargin) ? (margin >= 0 ? "+" : "") + margin.toFixed(1) + " km" : "—");
+    set("native-entry-drag", accel(data.observedDrag) + " / " + accel(data.selectedDrag) + " / " + accel(data.referenceDrag) + " m/s²");
+    set("native-entry-lateral", accel(data.lateralDemand) + " / " + accel(data.lateralAuthority) + " m/s²");
+    const evidence = String(data.referencePolarEvidence || "");
+    set("native-entry-polar-source", evidence === "measured" ? "FLIGHT-CALIBRATED" : evidence === "identified" ? "IDENTIFIED" : evidence === "provisional" ? "PROVISIONAL" : "—");
+    set("native-entry-ballistic", finite(data.referenceBallisticCoefficient) ? Math.round(n(data.referenceBallisticCoefficient)).toLocaleString() : "—");
+    set("native-entry-lift-drag", finite(data.referenceLiftToDrag) ? n(data.referenceLiftToDrag).toFixed(2) : "—");
+    const jointStatus = data.jointForceAttainable === true ? "STATICALLY ATTAINABLE" :
+      data.jointForceAttainable === false ? "UNATTAINABLE DEMAND" : "NOT EVALUATED";
+    set("native-entry-joint-force", jointStatus + (finite(data.jointRequiredLift) && finite(data.jointMaximumLift)
+      ? " · " + accel(data.jointRequiredLift) + " / " + accel(data.jointMaximumLift) + " m/s²" : ""));
+    set("native-entry-joint-drag", (finite(data.jointMinimumDrag) ? accel(data.jointMinimumDrag) : "N/A") +
+      " / " + accel(data.energyDragBudget) + " m/s²");
+    set("native-entry-reversals", finite(data.reversalCount) ? String(Math.trunc(n(data.reversalCount))) : "—");
+    set("native-entry-terminal", data.mm305PlanAccepted ? "CAPTURE PLAN ACCEPTED" : "NOT CAPTURED");
+    set("native-entry-limit", String(data.terminalDeficit || data.limitingReason || "—"));
+    const chip = document.getElementById("native-entry-state");
+    if (chip) { chip.textContent = data.mm305PlanAccepted ? "READY" : "UNPROVEN"; chip.className = "chip " + (data.mm305PlanAccepted ? "good" : "warn"); }
+    const marginEl = document.getElementById("native-entry-margin");
+    if (marginEl) marginEl.className = finite(data.rangeMargin) && n(data.rangeMargin) < 0 ? "bad" : "";
+  }
+
   function updateMm304() {
     const block = document.getElementById("mm304-block");
     if (!block) return;
@@ -1407,6 +1455,8 @@
     const orbital = snapshot?.orbitalTrajectory || [];
     const orbitMeta = snapshot?.orbitalTrajectoryMeta || {};
     const planned = displayablePlannedTrajectory(snapshot);
+    const projectedTAEM = displayableProjectedTAEMTrajectory(snapshot);
+    const forecastMM304 = futurePredictionTrajectory(snapshot);
     const site = snapshot?.site || {};
     const t = snapshot?.telemetry || {};
     const orbitMode = isOrbitMode(snapshot);
@@ -1423,17 +1473,24 @@
     }
 
     const orbitalSegments = drawPath(orbital, width, height, c.cyan, 1.45, [8,6], 1.2, .58);
-    // Keep the map focused on what the vehicle has flown and the path guidance
-    // selected. Raw forecasts can change on every planner update and obscure the
-    // selected route with several plausible-looking alternatives.
+    // Route evidence is layered: orange is the selected command plan, green
+    // is the MM304 prediction, blue dashed is a TAEM projection (not certified
+    // HAC feasibility). Do not turn a provisional path into a landing claim.
     const plannedSegments = drawPath(planned, width, height, c.orange, 2.8, [], 1.4, 1);
+    if (forecastMM304.length >= 2 && forecastMM304 !== planned)
+      drawPath(forecastMM304, width, height, c.green, 1.45, [7, 5], 1.0, .65);
+    if (projectedTAEM.length >= 2)
+      drawPath(projectedTAEM, width, height, c.cyan, 1.9, [3, 5], 1.0, .85);
     const burnSegments = orbitMode && burn.points.length >= 2 ? drawPath(burn.points, width, height, c.orange, 3.0, [], 3.2, 1) : [];
     drawPath(actual, width, height, c.cyan, 2.0, [], 1.8, .90);
     const mm304Track = mm304Trajectory(snapshot);
     if (mm304Track.length >= 2) {
       drawPath(mm304Track, width, height, c.green, 1.8, [6, 5], 1.0, .9);
-      drawEndpointMarker(mm304Track[mm304Track.length - 1], width, height, c.green, "MM304 HANDOFF", t.ut);
+      drawEndpointMarker(mm304Track[mm304Track.length - 1], width, height, c.green, "MM304 FORECAST END", t.ut);
     }
+    if (projectedTAEM.length >= 2)
+      drawEndpointMarker(projectedTAEM[projectedTAEM.length - 1], width, height, c.cyan,
+        snapshot?.planProvisionalKind === "mm305-advisory" ? "TAEM ADVISORY END" : "TAEM PROJECTION", t.ut);
 
     drawChevrons(orbitalSegments, c.cyan, 120, .42);
     if (burnSegments.length) drawChevrons(burnSegments, c.orange, 46, .92);
@@ -1511,6 +1568,51 @@
     const terminalPhase = isTerminalPhase(phase);
     const orbitMode = isOrbitMode(snapshot);
     const plan = snapshot.deorbitPlan && typeof snapshot.deorbitPlan === "object" ? snapshot.deorbitPlan : null;
+    // The native Swift CLI is a separate guidance owner. Its progress is
+    // read from the exact running PID and logs, not the legacy Python planner.
+    const native = !isReplaySnapshot(snapshot) && snapshot.nativeFlight?.source?.startsWith("Swift native")
+      ? snapshot.nativeFlight : null;
+    const nativePanel = $("native-flight-status");
+    if (nativePanel) {
+      nativePanel.hidden = !native;
+      if (native) {
+        const status = String(native.state || "unknown").toUpperCase();
+        const stateChip = $("native-flight-state");
+        stateChip.textContent = status;
+        stateChip.className = `chip ${["ended", "rejected"].includes(native.state) ? "bad" : ["planning", "preparing"].includes(native.state) ? "warn" : "good"}`;
+        const evaluated = Array.isArray(native.runway?.evaluated) ? native.runway.evaluated : [];
+        const concise = (value) => String(value || "").replace(/^KSC Runway /i, "RWY ");
+        $("native-flight-runway").textContent = native.state === "rejected"
+          ? "AUTO · NONE QUALIFIED"
+          : native.runway?.selected ? `AUTO · ${concise(native.runway.selected)}`
+          : `AUTO · ${evaluated.length ? evaluated.map(concise).join(" / ") + " (evaluating)" : "evaluating"}`;
+        const stageLabels = {
+          "experimental-orbital-entry-search": "Measured OMS entry search",
+          "experimental-orbital-entry-screen": "Entry geometry checks",
+          "orbital-window-search": "Orbital windows",
+          "shared-MM304-TAEM-forecast": "Entry / TAEM forecast",
+          "native-orbit-to-rollout": "Nominal full-route model",
+          "native-case-started": "Offline model running",
+          "native-rollout-progress": "Offline rollout forecast",
+        };
+        const progress = native.progress || {};
+        const stage = stageLabels[progress.stage] || String(progress.stage || "Waiting for plan").replaceAll("-", " ");
+        $("native-flight-progress").textContent = native.state === "planning"
+          ? `${stage}${finite(progress.candidate) && n(progress.candidate) > 0 ? " · candidate " + n(progress.candidate).toFixed(0) : ""}${finite(progress.simulatedElapsed) ? " · SIM T+" + duration(progress.simulatedElapsed) : ""}`
+          : native.phase || status;
+        const model = native.plan;
+        const assurance = !model ? "NOT EVALUATED" : model.experimentalEntry ? "RESEARCH · ENTRY ONLY" : !model.nominalPassed ? "NOMINAL FAIL"
+          : model.hardUnsafe ? "SAFETY REJECT" : model.modelLimitations?.length
+            ? `UNVALIDATED · ${model.modelLimitations.length} LIMITS` : model.executionQualified ? "NOMINAL QUALIFIED" : "REVIEW";
+        $("native-flight-assurance").textContent = assurance;
+        setTone("native-flight-assurance", !model ? "" : model.executionQualified ? "good" : "warn");
+        $("native-flight-message").textContent = native.message || "Waiting for native flight report";
+        const notes = Array.isArray(model?.modelLimitations) ? model.modelLimitations.join(" · ") : "";
+        setTitle("native-flight-assurance", notes || "One nominal physical plant; no artificial lift, drag or thrust dispersions");
+        setTitle("native-flight-runway", native.runway?.selected
+          ? "Selected by KSL automatic runway planner" : "KSL is comparing reciprocal runways; no selection committed");
+      }
+    }
     const predictedCount = trajectoryCount(futurePredictionTrajectory(snapshot));
     const plannedCount = trajectoryCount(displayablePlannedTrajectory(snapshot));
     const referenceCount = trajectoryCount(displayableReferenceTrajectory(snapshot));
@@ -1732,7 +1834,8 @@
       ? `Instantaneous osculating orbit ${orbitalCount} pts${orbitMeta.underThrust ? " · recomputed under thrust" : ""}${plan ? ` · deorbit burn ${countdown(toBurn)}` : ""}`
       : `Geometry source ${source} · actual ${actualCount} pts · orbit ${orbitalCount} pts · predicted ${predictedCount} pts · proven plan ${plannedCount} pts · committed reference ${referenceCount} pts · TAEM projection ${projectedCount} pts${snapshot.plannerLog ? ` · ${snapshot.plannerLog}` : ""}`);
 
-    $("guidance-phase").textContent = orbitMode ? (/DEORBIT BURN/.test(phase) ? "DEORBIT BURN" : plan ? "ORBIT / DEORBIT" : "ORBIT") : phase;
+    $("guidance-phase").textContent = native?.active && native.state === "planning" ? "AUTO RUNWAY PLANNING"
+      : orbitMode ? (/DEORBIT BURN/.test(phase) ? "DEORBIT BURN" : plan ? "ORBIT / DEORBIT" : "ORBIT") : phase;
     const entryFeedback = /ENTRY|MM304/.test(phase) && g.entryFeedback?.valid === true
       ? g.entryFeedback : null;
     const energyLaw = terminalPhase && g.energyLaw?.active === true ? g.energyLaw : null;
@@ -1747,7 +1850,8 @@
       orbitalStatus.push(`AP ${distance(t.apoapsisAltitude)} ${countdown(t.timeToApoapsis)}`);
       orbitalStatus.push(`PE ${distance(t.periapsisAltitude)} ${countdown(t.timeToPeriapsis)}`);
       if (finite(t.timeWarpRate) && n(t.timeWarpRate)>1) orbitalStatus.push(warp(t));
-      smartStatus = orbitalStatus.join(" · ");
+      smartStatus = native?.active && ["planning", "preparing"].includes(native.state)
+        ? native.message : orbitalStatus.join(" · ");
     } else {
       const statusParts = [];
       if (finalControl) {
@@ -1760,7 +1864,7 @@
         if (finite(g.terminalReferenceFPA) && finite(t.flightPathAngle)) statusParts.push(`FPA ${fmtSigned(t.flightPathAngle,1,"°")}/${fmtSigned(g.terminalReferenceFPA,1,"°")}`);
         statusParts.push(trajectoryLabel("REF", referenceCount));
       } else if (entryFeedback) {
-        statusParts.push(`DRAG ${fmt(entryFeedback.measuredDrag,2)}/${fmt(entryFeedback.referenceDrag,2)} m/s²`);
+        statusParts.push(`DRAG ACT/CMD/REF ${fmt(entryFeedback.measuredDrag,2)}/${fmt(entryFeedback.selectedDrag,2)}/${fmt(entryFeedback.referenceDrag,2)} m/s²`);
         if (finite(entryFeedback.energyMargin)) statusParts.push(`RANGE ΔR ${signedDistance(entryFeedback.energyMargin)}`);
         if (finite(entryFeedback.projectedCrossrangeError)) statusParts.push(`PROJECTED XTK ${signedDistance(entryFeedback.projectedCrossrangeError)}`);
         if (entryFeedback.reversalRequested) statusParts.push("REVERSAL REQUESTED");
@@ -1794,7 +1898,8 @@
       else if (candidatePlanCount >= 2) { planChip = "ARCHIVE CANDIDATE"; planTone = "warn"; }
       else { planChip = "REPLAY STATUS ONLY"; }
     } else if (orbitMode) {
-      if (engineOn) { planChip = "DEORBIT BURN"; planTone = "good"; }
+      if (native?.active && native.state === "planning") { planChip = "AUTO RWY SEARCH"; planTone = "warn"; }
+      else if (engineOn) { planChip = "DEORBIT BURN"; planTone = "good"; }
       else if (burnComplete) { planChip = "BURN COMPLETE"; planTone = "good"; }
       else if (burnWindowMissed) { planChip = "BURN WINDOW MISSED"; planTone = "warn"; }
       else if (plan) {
@@ -1876,8 +1981,8 @@
     setTitle("taem-energy", entryPlanProven ? `Proven plan TAEM ΔE ${specificEnergy(g.entryPlanTAEMEnergyError)}${finite(t.predictedTAEMEnergyError) ? ` · current forecast ${specificEnergy(t.predictedTAEMEnergyError)}` : ""}` : `Forecast TAEM ΔE ${specificEnergy(t.predictedTAEMEnergyError)} · no proven entry plan`);
 
     if (entryFeedback) {
-      setTitle("taem-range", `Closed-loop range margin ${signedDistance(entryFeedback.energyMargin)} · achievable ${distance(entryFeedback.predictedAchievableRange)} · required ${distance(entryFeedback.requiredRangeToGo)}; this is a distance, not specific energy`);
-      setTitle("taem-energy", `Measured drag ${fmt(entryFeedback.measuredDrag,2," m/s²")} · reference ${fmt(entryFeedback.referenceDrag,2," m/s²")} · error ${fmtSigned(entryFeedback.dragError,2," m/s²")}`);
+      setTitle("taem-range", "MM305 reachability unproven without a forward-trajectory capture; drag-reference integral " + distance(entryFeedback.dragReferenceIntegral) + " is not achievable range");
+      setTitle("taem-energy", `Measured drag ${fmt(entryFeedback.measuredDrag,2," m/s²")} · selected command ${fmt(entryFeedback.selectedDrag,2," m/s²")} · reference ${fmt(entryFeedback.referenceDrag,2," m/s²")} · error ${fmtSigned(entryFeedback.dragError,2," m/s²")}`);
       setTitle("plan-valid", "Closed-loop entry feedback is active; this does not certify a terminal runway route");
       $("segment-remaining").textContent = "FEEDBACK";
       $("reversal").textContent = entryFeedback.reversalRequested ? "REQUESTED" : "NONE";
@@ -1919,7 +2024,7 @@
         const overlay = $("scene3d-status").parentElement;
         overlay?.classList.remove("alert");
         $("scene3d-status").textContent = "3D LOADING";
-        scene3dLoading = import("/scene3d.js?v=20261010-authoritative-taem-4")
+        scene3dLoading = import("/scene3d.js?v=20261101-sts-dual-model-routes-1")
           .then((module) => module.createTelemetry3D({
             canvas: $("scene3d-canvas"),
             statusEl: $("scene3d-status"),
@@ -2267,7 +2372,7 @@
   }
 
   function render() {
-    updateText(); updateMm304(); drawNavball();
+    updateText(); updateNativeEntry(); updateMm304(); drawNavball();
     if (document.body.classList.contains("launch-page")) { drawLaunchMap(); drawLaunchAltitude(); drawLaunch3d(); }
     else drawMap();
   }

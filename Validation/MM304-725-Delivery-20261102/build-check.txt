@@ -1,0 +1,105 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 647]
+[Planning deferred tasks]
+[1 / 22] PhysicsTests-product
+[5 / 54] KSLCore
+[7 / 56] KSLCore
+[9 / 58] KSLCore
+[17 / 71] KSLCore
+[22 / 76] KSLKRPC
+[24 / 77] KSLCore
+[27 / 77] KSLControl
+[31 / 83] SimulationTests-product
+[34 / 86] KSLKRPC
+[39 / 84] KSLDiagnostics
+[41 / 86] KSLControl
+[44 / 87] CoreTests-product
+[47 / 90] KSLPhysics
+[57 / 98] ControlTests-product
+[57 / 98] CoreTests-product
+[59 / 99] KSLGuidance
+[69 / 110] KSLGuidance
+[70 / 111] ControlTests-product
+[72 / 116] PhysicsTests-product
+[75 / 116] ControlTests-product
+[78 / 116] ControlTests-product
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Sources/KSLGuidance/Entry/EntryDragReference.swift:60:28: warning: immutable value 'e' was never used; consider replacing with '_' or removing it [#NoUsage]
+ 58 |                referenceRangeScale: Double = 1,
+ 59 |                objective: EntryCaptureObjective, maximumAlpha: Double) -> EntryDiagnostics {
+ 60 |     let c = configuration, e = c.entrySettings, a = s.aerodynamics
+    |                            `- warning: immutable value 'e' was never used; consider replacing with '_' or removing it [#NoUsage]
+ 61 |     let targetAltitude = objective.altitude, targetSpeed = objective.speed
+ 62 |     let speed = a.airspeed, height = s.position.length - c.planet.radius
+
+[#NoUsage]: <https://docs.swift.org/compiler/documentation/diagnostics/no-usage>
+[78 / 116]
+[84 / 115] KSLGuidance
+[84 / 118] KSLRuntime
+[89 / 121] CoreTests-product
+[89 / 121] KSLGuidance
+[98 / 135] KSLRuntime
+[99 / 135] KSLRuntime
+[100 / 135] KSLRuntime
+[102 / 135] PhysicsTests-product
+[104 / 137] PhysicsTests-product
+[107 / 143] ControlTests-product
+[111 / 140] KSLGuidance
+[112 / 140] KSLRuntime
+[115 / 143] KSLGuidance
+[118 / 144] GuidanceTests-product
+[118 / 144] KSLSimulation
+[123 / 149] KSLRuntime
+[123 / 149] ControlTests-product
+[127 / 155] ControlTests-product
+[134 / 168] GuidanceTests-product
+[135 / 168] GuidanceTests-product
+[136 / 168] GuidanceTests-product
+[140 / 176] ksl-landing-product
+[142 / 176] GuidanceTests-product
+[143 / 184] ksl-landing-product
+[145 / 184] ksl-landing-product
+[146 / 184] ksl-landing-product
+[147 / 184] ksl-landing-product
+[150 / 184] GuidanceTests-product
+[155 / 184] KSLLanding
+[156 / 184] KSLLanding
+[158 / 184] KSLLanding
+[159 / 184] GuidanceTests-product
+[160 / 184]
+[163 / 184] KSLRuntime-product
+[167 / 183] KSLLanding
+[167 / 183] GuidanceTests-product
+[167 / 183] ksl-landing-product
+[167 / 183] KSLLanding
+[167 / 183] ksl-landing-product
+[170 / 187] IntegrationTests-product
+[177 / 199] IntegrationTests-product
+[180 / 199] SimulationTests-product
+[182 / 199] PhysicsTests-product
+[184 / 201] SimulationTests-product
+[189 / 201] IntegrationTests-product
+[196 / 206] IntegrationTests-product
+[198 / 206] IntegrationTests-product
+[199 / 208] GuidanceTests-product
+[200 / 208] IntegrationTests-product
+[202 / 208] IntegrationTests-product
+[204 / 208] ksl-landing-product
+[206 / 210] KSLLanding
+Build complete! (22.25초)
+Test Suite 'Selected tests' started at 2026-11-02 03:56:10.714.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 03:56:10.717.
+Test Suite 'EntryCaptureRecoveryTests' started at 2026-11-02 03:56:10.717.
+Test Case '-[GuidanceTests.EntryCaptureRecoveryTests testInfeasibleHACAdvisoryCannotTakeOverMM304Steering]' started.
+Test Case '-[GuidanceTests.EntryCaptureRecoveryTests testInfeasibleHACAdvisoryCannotTakeOverMM304Steering]' passed (0.010 seconds).
+Test Suite 'EntryCaptureRecoveryTests' passed at 2026-11-02 03:56:10.728.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.010 (0.011) seconds
+Test Suite 'TerminalRecoveryOwnershipTests' started at 2026-11-02 03:56:10.728.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testTAEMHandoffRequiresInterfaceRangeAndEnergyWithRecoveryDeadlines]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testTAEMHandoffRequiresInterfaceRangeAndEnergyWithRecoveryDeadlines]' passed (0.004 seconds).
+Test Suite 'TerminalRecoveryOwnershipTests' passed at 2026-11-02 03:56:10.733.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.004 (0.005) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 03:56:10.733.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.015 (0.016) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 03:56:10.733.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.015 (0.018) seconds

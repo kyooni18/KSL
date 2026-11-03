@@ -1,0 +1,25 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 647]
+[Planning deferred tasks]
+[1 / 29] KSLSimulation
+[17 / 28] GuidanceTests-product
+[30 / 41] GuidanceTests-product
+[34 / 40] GuidanceTests-product
+[36 / 40] GuidanceTests-product
+Build complete! (2.17초)
+Test Suite 'Selected tests' started at 2026-11-02 04:43:29.622.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 04:43:29.623.
+Test Suite 'TAEMTransitionTests' started at 2026-11-02 04:43:29.624.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' passed (0.001 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' passed (0.005 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary]' passed (0.000 seconds).
+Test Suite 'TAEMTransitionTests' passed at 2026-11-02 04:43:29.630.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.006 (0.007) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 04:43:29.630.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.006 (0.007) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 04:43:29.630.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.006 (0.008) seconds

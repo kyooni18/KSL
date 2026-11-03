@@ -1,0 +1,31 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 17] KSLCore-product
+[2 / 24] KSLGuidance
+[4 / 26] KSLGuidance
+[7 / 29] KSLGuidance
+[15 / 19] ksl-landing-product
+[18 / 21] GuidanceTests-product
+Build complete! (1.99초)
+Test Suite 'Selected tests' started at 2026-11-02 04:35:45.957.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 04:35:45.958.
+Test Suite 'TAEMTransitionTests' started at 2026-11-02 04:35:45.958.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' passed (0.001 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' passed (0.004 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary]' passed (0.000 seconds).
+Test Suite 'TAEMTransitionTests' passed at 2026-11-02 04:35:45.964.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds
+Test Suite 'ZZScratchPlannedTAEMTests' started at 2026-11-02 04:35:45.964.
+Test Case '-[GuidanceTests.ZZScratchPlannedTAEMTests testRecordedHandoff]' started.
+Test Case '-[GuidanceTests.ZZScratchPlannedTAEMTests testRecordedHandoff]' passed (51.103 seconds).
+Test Suite 'ZZScratchPlannedTAEMTests' passed at 2026-11-02 04:36:37.067.
+	 Executed 1 test, with 0 failures (0 unexpected) in 51.103 (51.103) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 04:36:37.067.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 51.108 (51.109) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 04:36:37.067.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 51.108 (51.110) seconds
+PLANNED TAEM TAEMStatus(phase: KSLGuidance.TAEMPhase.acquisition, side: 1, remainingTurn: 6.312848965136574, range: 74895.09732913437, energyHeight: 52923.68875680495, nominalEnergy: 248128.5142373039, minimumEnergy: 146958.85136985852, referenceHeight: 26388.201987018187, referenceDynamicPressure: 3115.793085514554, minimumDynamicPressure: 1806.2914139138493, finalRadius: 6609.454585183046, growth: 0.07599088773175333, downmoded: false, insufficientEnergy: true, descentPlanFits: true) GuidanceTarget(angleOfAttack: 0.2806345350270968, bank: -0.29685447517894203, desiredSpeed: 738.3985493325365, desiredHeight: 26456.641987018185, desiredFlightPath: -0.12193678313117311, gearDown: false, speedbrakeFraction: nil)
+FINAL RECOVERY 541.2999997164297 RunwayCoordinates(along: -10056.458376002985, cross: 20471.218654371667, height: 959.5766754757519) 41.06073001478441

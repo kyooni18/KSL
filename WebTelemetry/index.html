@@ -44,6 +44,8 @@
           <span class="orbit-only"><i class="swatch orbit"></i>ORBIT</span>
           <span class="orbit-only"><i class="swatch burn"></i>DEORBIT BURN</span>
           <span><i class="swatch planned"></i><b id="map-plan-label">PLAN</b></span>
+          <span><i class="swatch predicted"></i>MM304</span>
+          <span><i class="swatch taem-projected"></i><b id="map-taem-label">TAEM PROJ</b></span>
         </div>
         <div id="coordinates" class="muted">—</div>
       </div>
@@ -55,6 +57,7 @@
       </div>
       <div id="scene3d-panel" class="scene3d-panel" hidden>
         <canvas id="scene3d-canvas"></canvas>
+        <button id="scene3d-view-mode" class="view-toggle scene3d-view-mode" type="button" aria-pressed="false">ROUTE OVERVIEW</button>
         <div class="scene3d-overlay">
           <div class="scene3d-state"><span id="scene3d-status">3D IDLE</span><span id="scene3d-meta" class="muted"></span></div>
         </div>
@@ -90,6 +93,15 @@
         <div id="guidance-status" class="muted one-line">Waiting for telemetry</div>
       </div>
 
+      <section id="native-flight-status" class="native-flight-status" hidden aria-label="Native Swift autonomous flight status">
+        <div class="native-flight-title"><span>SWIFT · AUTONOMOUS FLIGHT</span><span id="native-flight-state" class="chip">—</span></div>
+        <div class="native-flight-grid">
+          <div><small>RUNWAY SELECTION</small><b id="native-flight-runway">—</b></div>
+          <div><small>PLAN / FLIGHT STAGE</small><b id="native-flight-progress">—</b></div>
+          <div><small>MODEL VALIDATION</small><b id="native-flight-assurance">—</b></div>
+        </div>
+        <div id="native-flight-message" class="native-flight-message muted">—</div>
+      </section>
       <div class="command-bars entry-only">
         <div class="command-row">
           <div><small>AOA</small><b id="target-aoa">—</b></div>
@@ -117,6 +129,25 @@
         <div><small id="hac-remaining-label">HAC REM</small><b id="hac-remaining">—</b></div>
         <div><small>TERMINAL</small><b id="terminal-state">—</b></div>
         <div><small id="terminal-blend-label">BLEND</small><b id="terminal-blend">—</b></div>
+      </div>
+      <div id="native-entry-block" class="mm304-block entry-only" hidden>
+        <div class="mode-line"><span>MM304 · NATIVE FLIGHT GUIDANCE</span><span id="native-entry-state" class="chip">LIVE</span></div>
+        <div class="plan-grid">
+          <div><small>ENERGY MODE</small><b id="native-entry-mode">—</b></div>
+          <div><small>DRAG-REF INTEGRAL</small><b id="native-entry-predicted">—</b></div>
+          <div><small>RANGE REQUIRED</small><b id="native-entry-required">—</b></div>
+          <div><small>DRAG-REF FIT</small><b id="native-entry-margin">—</b></div>
+          <div><small>DRAG ACT / CMD / REF</small><b id="native-entry-drag">—</b></div>
+          <div><small>LATERAL DEM / AVAIL</small><b id="native-entry-lateral">—</b></div>
+          <div><small>POLAR INPUT</small><b id="native-entry-polar-source">—</b></div>
+          <div><small>BEST-GLIDE BC (kg/m²)</small><b id="native-entry-ballistic">—</b></div>
+          <div><small>BEST-GLIDE L/D</small><b id="native-entry-lift-drag">—</b></div>
+          <div><small>STATIC FORCE SET</small><b id="native-entry-joint-force">—</b></div>
+          <div><small>JOINT DRAG MIN / BUDGET</small><b id="native-entry-joint-drag">—</b></div>
+          <div><small>REVERSALS</small><b id="native-entry-reversals">—</b></div>
+          <div><small>TERMINAL STATUS</small><b id="native-entry-terminal">—</b></div>
+          <div><small>LIMITING FACTOR</small><b id="native-entry-limit">—</b></div>
+        </div>
       </div>
       <div id="mm304-block" class="mm304-block entry-only" hidden>
         <div class="mode-line"><span>MM304 PLAN</span><span id="mm304-decision" class="chip">—</span></div>
@@ -277,6 +308,6 @@
   </aside>
 
   <script src="/runway-geometry.js?v=20260924-ksc-runway-1"></script>
-  <script src="/app.js?v=launch-console-3"></script>
+  <script src="/app.js?v=20261101-dual-model-routes-1"></script>
 </body>
 </html>

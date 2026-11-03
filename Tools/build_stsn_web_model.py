@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assemble the telemetry STS-N mesh from its real KSP craft and .mu parts."""
+"""Assemble STS and STS-N telemetry meshes from KSP crafts/saves and .mu parts."""
 from __future__ import annotations
 import argparse, hashlib, json, math, os, re, shutil, struct, subprocess, sys
 from dataclasses import dataclass, field
@@ -13,8 +13,16 @@ KSP_ROOT=Path(os.environ.get('KSP_ROOT',str(Path.home()/'Library/Application Sup
 GAME_DATA=KSP_ROOT/'GameData'
 DEFAULT_CRAFT=KSP_ROOT/'saves/JUSTLANDTHEFREAKINGSHUTTLE/Ships/SPH/STS-N.craft'
 OUT_DIR=ROOT/'Runtime'/'WebTelemetry'
+ASSET_MODEL_ID='sts-n'
 PART_CFG={
 'benjee10.shuttle.forwardFuselage':'Benjee10_shuttleOrbiter/Parts/OV_forwardFuselage.cfg',
+'benjee10.shuttle.ODS':'Benjee10_shuttleOrbiter/Parts/OV_ODS.cfg',
+'sspx-adapter-0625-125-1':'StationPartsExpansionRedux/Parts/Rigid/station-125/sspx-adapter-0625-125-1.cfg',
+'ht2.CBM.active2':'Benjee10_sharedAssets/Parts/CBM/ht2_CBM_active2.cfg',
+'SSME':'Squad/Parts/Engine/liquidEngineSSME/SSME.cfg',
+'radialDrogue':'Squad/Parts/Utility/parachuteMk12-R/parachuteMk12-R.cfg',
+'liquidEngine3.v2':'Squad/Parts/Engine/liquidEngineLV-909_v2/liquidEngineLV-909_v2.cfg',
+'externalTankCapsule':'Squad/Parts/FuelTank/FoilTanks/RadialTank_Capsule.cfg',
 'benjee10.shuttle.midFuselage':'Benjee10_shuttleOrbiter/Parts/OV_midFuselage.cfg',
 'benjee10.shuttle.deltaWing':'Benjee10_shuttleOrbiter/Parts/OV_deltaWing.cfg',
 'benjee10.shuttle.aftFuselage':'Benjee10_shuttleOrbiter/Parts/OV_aftFuselage.cfg',
@@ -136,6 +144,29 @@ def b9_visibility(cfg,craft_part):
             if (subtype.first('name') or '').lower()==wanted.lower():
                 selected.update(subtype.all('transform')); break
     return controlled,selected
+
+
+def jettisoned_transforms(cfg,part):
+    """Exclude only physically detached jettison meshes in saved vessels.
+
+    KSP preserves ModuleJettison.isJettisoned and activejettisonName in .sfs.
+    The engine's .mu still contains that fairing; drawing every renderer
+    makes a departed Vector shroud look like a plain cylinder over the nozzle.
+    Editor .craft sources have no departed state and retain their fairing.
+    """
+    definitions=[m for m in cfg.kids('MODULE') if m.first('name')=='ModuleJettison']
+    states=[m for m in part.kids('MODULE') if m.first('name')=='ModuleJettison']
+    hidden=set()
+    for index, state in enumerate(states):
+        if (state.first('isJettisoned','False') or '').lower()!='true':
+            continue
+        # A ModuleJettison can define several mutually exclusive variant
+        # shrouds (Terrier: ShortShroud,TallShroud). Once the actual shroud
+        # has been jettisoned none of its variants can remain on the vessel.
+        names=definitions[index].first('jettisonName','') if index<len(definitions) else ''
+        names+=','+(state.first('activejettisonName') or '')
+        hidden.update(name.strip() for name in names.split(',') if name.strip())
+    return hidden
 
 
 def sample_curve(curve,time_value):
@@ -261,7 +292,7 @@ def resolve_texture(model_path,texture_name):
 
 def web_texture(source,out_dir):
     if source is None: return None
-    texture_dir=out_dir/'sts-n-textures'; texture_dir.mkdir(parents=True,exist_ok=True)
+    texture_dir=out_dir/(ASSET_MODEL_ID+'-textures'); texture_dir.mkdir(parents=True,exist_ok=True)
     # Preserve the installed KSP source resolution.  DDS/TGA/MBM are converted
     # losslessly to browser-readable PNG, but are no longer downscaled.
     digest=hashlib.sha1((str(source)+'|web-v4-full').encode()).hexdigest()[:10]
@@ -278,7 +309,7 @@ def web_texture(source,out_dir):
             result=subprocess.run(['sips','-s','format','png',str(source),'--out',str(dest)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
             if result.returncode!=0:
                 subprocess.run(['ffmpeg','-v','error','-y','-i',str(source),str(dest)],check=True)
-    return f'/asset/sts-n-textures/{dest.name}'
+    return f'/asset/{ASSET_MODEL_ID}-textures/{dest.name}'
 
 
 def material_spec(mu,material_index,model_path,out_dir,renderer_path):
@@ -342,7 +373,7 @@ def append_mesh(output_vertices,groups,mesh,matrix,material_indices,mu,model_pat
         for a,b,c in submesh: bucket.extend((base+a,base+c,base+b))
 
 
-def walk_mu(obj,parent,visible,controlled,selected,vertices,groups,mu,model_path,out_dir,overrides,apply_local=True,object_path=''):
+def walk_mu(obj,parent,visible,controlled,selected,jettisoned,vertices,groups,mu,model_path,out_dir,overrides,apply_local=True,object_path=''):
     transform=obj.transform
     pos,rot,scale=animated_transform(transform,overrides.get(id(obj)))
     local=trs(pos,rot,scale)
@@ -350,7 +381,7 @@ def walk_mu(obj,parent,visible,controlled,selected,vertices,groups,mu,model_path
     # exports retain editor-scene offsets on that root, so do not apply it.
     matrix=mmul(parent,local) if apply_local else parent
     renderer_path=f'{object_path}/{transform.name}' if object_path else transform.name
-    node_visible=visible and (transform.name not in controlled or transform.name in selected)
+    node_visible=visible and transform.name not in jettisoned and (transform.name not in controlled or transform.name in selected)
     if node_visible:
         renderer=getattr(obj,'renderer',None)
         append_mesh(vertices,groups,getattr(obj,'shared_mesh',None),matrix,list(getattr(renderer,'materials',[]) or []),mu,model_path,out_dir,renderer_path)
@@ -358,7 +389,7 @@ def walk_mu(obj,parent,visible,controlled,selected,vertices,groups,mu,model_path
         if skinned is not None:
             append_mesh(vertices,groups,getattr(skinned,'mesh',None),matrix,list(getattr(skinned,'materials',[]) or []),mu,model_path,out_dir,renderer_path+'#skinned')
     for child in getattr(obj,'children',[]):
-        walk_mu(child,matrix,node_visible,controlled,selected,vertices,groups,mu,model_path,out_dir,overrides,True,renderer_path)
+        walk_mu(child,matrix,node_visible,controlled,selected,jettisoned,vertices,groups,mu,model_path,out_dir,overrides,True,renderer_path)
 
 def load_part_cfg(name):
     relative=PART_CFG.get(name)
@@ -369,8 +400,47 @@ def load_part_cfg(name):
     if cfg is None: raise RuntimeError(f'No PART node in {path}')
     return path,cfg
 
-def build(craft_path,out_dir):
-    craft=parse_cfg(craft_path)
+def load_source_craft(source_path, vessel_name):
+    source=parse_cfg(source_path)
+    if source_path.suffix.lower()!='.sfs':
+        return source
+    vessels=[]
+    def visit(node):
+        if node.name=='VESSEL' and node.first('name')==vessel_name and node.kids('PART'):
+            vessels.append(node)
+        for child in node.children: visit(child)
+    visit(source)
+    if not vessels:
+        raise ValueError(f'No saved {vessel_name} vessel in {source_path}')
+    # Save files may contain the same craft at previous epochs. The most recent
+    # live vessel, not the older packed/backup instance, defines the model.
+    selected=max(vessels,key=lambda v:float(v.first('lastUT','0')))
+    parts=[]
+    for index,part in enumerate(selected.kids('PART')):
+        name=part.first('name')
+        if not name:raise ValueError(f'Saved part {index} has no name')
+        # KSP flight saves use vessel-root coordinates (nose to tail = -Y),
+        # while SPH craft meshes use a +90-degree Unity-X editor basis
+        # (nose to tail = -Z). Apply that rigid rotation to every part pose.
+        px,py,pz=numbers(part.first('position'),3,(0,0,0))
+        x,y,z,w=numbers(part.first('rotation'),4,(0,0,0,1))
+        q=qmul(qaxis('x',math.pi/2),(w,x,y,z))
+        values={
+            'part':[f'{name}_{part.first("uid",str(index))}'],
+            'pos':[','.join(str(v) for v in (px,-pz,py))],
+            'rot':[','.join(str(v) for v in (q[1],q[2],q[3],q[0]))],
+            'mir':[part.first('mirror','1,1,1')],
+        }
+        parts.append(Node('PART',values,part.children))
+    return Node('ROOT',{'ship':[vessel_name]},parts)
+
+
+def build(craft_path,out_dir,model_id='sts-n',vessel_name='STS'):
+    global ASSET_MODEL_ID
+    if model_id not in ('sts','sts-n'):
+        raise ValueError('model_id must be sts or sts-n')
+    ASSET_MODEL_ID=model_id
+    craft=load_source_craft(craft_path,vessel_name)
     parts=craft.kids('PART')
     if not parts: raise RuntimeError(f'No PART records in {craft_path}')
     out_dir.mkdir(parents=True,exist_ok=True)
@@ -380,6 +450,7 @@ def build(craft_path,out_dir):
         name=part_base_name(saved)
         cfg_path,cfg=load_part_cfg(name)
         controlled,selected=b9_visibility(cfg,part)
+        jettisoned=jettisoned_transforms(cfg,part)
         raw_pos=numbers(part.first('pos'),3,(0.0,0.0,0.0))
         raw_rot=numbers(part.first('rot'),4,(0.0,0.0,0.0,1.0))
         raw_scale=numbers(part.first('mir'),3,(1.0,1.0,1.0))
@@ -390,11 +461,11 @@ def build(craft_path,out_dir):
             mu=Mu().read(str(model_path))
             if mu is None: raise RuntimeError(f'Could not parse {model_path}')
             overrides=animation_overrides(mu.obj,cfg,part)
-            walk_mu(mu.obj,mmul(part_matrix,model_matrix),True,controlled,selected,vertices,groups,mu,model_path,out_dir,overrides,False)
+            walk_mu(mu.obj,mmul(part_matrix,model_matrix),True,controlled,selected,jettisoned,vertices,groups,mu,model_path,out_dir,overrides,False)
             model_paths.append(str(model_path))
-        provenance.append({'ordinal':ordinal,'part':name,'saved':saved,'models':model_paths})
+        provenance.append({'ordinal':ordinal,'part':name,'saved':saved,'models':model_paths,'jettisonedTransforms':sorted(jettisoned)})
 
-    if not vertices or not groups: raise RuntimeError('STS-N assembly produced no visible triangles')
+    if not vertices or not groups: raise RuntimeError(f'{model_id} assembly produced no visible triangles')
     points=[vertices[offset:offset+3] for offset in range(0,len(vertices),8)]
     low=[min(p[axis] for p in points) for axis in range(3)]
     high=[max(p[axis] for p in points) for axis in range(3)]
@@ -403,7 +474,7 @@ def build(craft_path,out_dir):
         vertices[offset]-=center[0]; vertices[offset+1]-=center[1]; vertices[offset+2]-=center[2]
     bounds={'span':high[0]-low[0],'length':high[1]-low[1],'height':high[2]-low[2]}
     craft_size=numbers(craft.first('size'),3,(0.0,0.0,0.0))
-    expected={'span':craft_size[0],'height':craft_size[1],'length':craft_size[2]}
+    expected={'span':craft_size[0],'height':craft_size[1],'length':craft_size[2]} if any(craft_size) else bounds.copy()
 
     indices=[]; draw_groups=[]
     for group in groups.values():
@@ -429,26 +500,28 @@ def build(craft_path,out_dir):
     index_bytes=struct.pack('<'+'I'*len(indices),*indices)
     binary=vertex_bytes+index_bytes
     binary_hash=hashlib.sha1(binary).hexdigest()[:12]
-    (out_dir/'sts-n-model.bin').write_bytes(binary)
+    (out_dir/f'{model_id}-model.bin').write_bytes(binary)
     metadata={
-        'format':'stsn-webgpu-5','ship':craft.first('ship','STS-N'),'craft':str(craft_path),
+        'format':'stsn-webgpu-5','ship':craft.first('ship',vessel_name),'craft':str(craft_path),
         'partCount':len(parts),'parts':provenance,'vertexCount':len(vertices)//8,'indexCount':len(indices),
         'vertexByteOffset':0,'vertexByteLength':len(vertex_bytes),'indexByteOffset':len(vertex_bytes),
-        'indexByteLength':len(index_bytes),'groups':draw_groups,'bounds':bounds,'craftSize':expected,'binary':f'/asset/sts-n-model.bin?v={binary_hash}',
-        'generatedFrom':'STS-N.craft part list + saved B9/animation state + installed .mu renderer meshes + exact renderer/material texture provenance + full-resolution KSP textures',
+        'indexByteLength':len(index_bytes),'groups':draw_groups,'bounds':bounds,'craftSize':expected,'binary':f'/asset/{model_id}-model.bin?v={binary_hash}',
+        'generatedFrom':f'{craft_path.name} vessel/part positions + saved B9/animation state + installed .mu render meshes and KSP textures',
     }
-    (out_dir/'sts-n-model.json').write_text(json.dumps(metadata,separators=(',',':')),encoding='utf-8')
+    (out_dir/f'{model_id}-model.json').write_text(json.dumps(metadata,separators=(',',':')),encoding='utf-8')
     return metadata
 
 def main():
-    parser=argparse.ArgumentParser(description='Build telemetry STS-N WebGPU mesh from real KSP parts')
-    parser.add_argument('--craft',type=Path,default=DEFAULT_CRAFT)
+    parser=argparse.ArgumentParser(description='Build STS or STS-N WebGPU meshes from real KSP parts')
+    parser.add_argument('--craft',type=Path,default=DEFAULT_CRAFT,help='KSP .craft or .sfs saved vessel')
+    parser.add_argument('--model',choices=('sts','sts-n'),default='sts-n')
+    parser.add_argument('--vessel',default=None,help='name of the .sfs vessel to extract')
     parser.add_argument('--out',type=Path,default=OUT_DIR)
     parser.add_argument('--quiet',action='store_true')
     args=parser.parse_args()
-    result=build(args.craft.expanduser(),args.out.expanduser())
+    result=build(args.craft.expanduser(),args.out.expanduser(),args.model,args.vessel or ('STS' if args.model=='sts' else 'STS-N'))
     if not args.quiet:
-        print(f"STS-N {result['partCount']} parts, {result['vertexCount']} vertices, {result['indexCount']//3} triangles")
+        print(f"{args.model.upper()} {result['partCount']} parts, {result['vertexCount']} vertices, {result['indexCount']//3} triangles")
         print('assembled bounds',json.dumps(result['bounds'],separators=(',',':')))
         print('craft size',json.dumps(result['craftSize'],separators=(',',':')))
     return 0

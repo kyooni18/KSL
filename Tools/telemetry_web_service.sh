@@ -23,6 +23,7 @@ find_python() {
   local candidates=()
   [[ -n ${KSP_LANDER_WEB_PYTHON:-} ]] && candidates+=("$KSP_LANDER_WEB_PYTHON")
   candidates+=(
+    "$ROOT/.venv/bin/python"
     "$ROOT/Runtime/PythonBridge/.venv/bin/python"
     "$HOME/Code/Python/KSPFlightComputer/Shuttle/venv/bin/python"
   )

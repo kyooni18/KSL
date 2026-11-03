@@ -1,0 +1,220 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 40] KSLLanding
+[2 / 25] KSLGuidance
+[5 / 28] KSLGuidance
+[6 / 29] KSLGuidance
+[12 / 36] KSLRuntime
+[14 / 37] KSLGuidance
+[22 / 43] KSLSimulation
+[24 / 45] KSLSimulation
+[30 / 46] GuidanceTests-product
+[35 / 51] KSLLanding
+[39 / 53] GuidanceTests-product
+[44 / 54] GuidanceTests-product
+[45 / 53] GuidanceTests-product
+[54 / 61] ksl-landing-product
+[55 / 63] SimulationTests-product
+[58 / 64] GuidanceTests-product
+[67 / 67] ksl-landing-product
+Build complete! (3.54초)
+Test Suite 'Selected tests' started at 2026-11-02 10:00:09.113.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 10:00:09.114.
+Test Suite 'TAEMTransitionTests' started at 2026-11-02 10:00:09.114.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' passed (0.001 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' passed (0.005 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary]' passed (0.000 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testRecordedShortDownmodeRequiresImpossiblePushOver]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testRecordedShortDownmodeRequiresImpossiblePushOver]' passed (0.000 seconds).
+Test Suite 'TAEMTransitionTests' passed at 2026-11-02 10:00:09.120.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.006 (0.007) seconds
+Test Suite 'ZZSamePathDiagnosticTests' started at 2026-11-02 10:00:09.120.
+Test Case '-[GuidanceTests.ZZSamePathDiagnosticTests testRecordedHandoff]' started.
+Test Case '-[GuidanceTests.ZZSamePathDiagnosticTests testRecordedHandoff]' passed (38.658 seconds).
+Test Suite 'ZZSamePathDiagnosticTests' passed at 2026-11-02 10:00:47.778.
+	 Executed 1 test, with 0 failures (0 unexpected) in 38.658 (38.658) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 10:00:47.778.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 38.664 (38.665) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 10:00:47.778.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 38.664 (38.666) seconds
+PLANNED TAEM TAEMStatus(phase: KSLGuidance.TAEMPhase.acquisition, side: 1, remainingTurn: 6.312976107231663, range: 52216.20869652884, energyHeight: 52923.68875680495, nominalEnergy: 201542.76544048192, minimumEnergy: 50614.748669223176, referenceHeight: 26388.20198701818, referenceDynamicPressure: 3115.793085514554, minimumDynamicPressure: 0.0, finalRadius: 3000.0, growth: 0.07599088773175333, downmoded: false, insufficientEnergy: false, descentPlanFits: true, descentCheckFailure: Optional("negativeNormalLift"), predictedNEPEnergy: nil) GuidanceTarget(angleOfAttack: 0.03839908222526781, bank: -0.16541331016306215, desiredSpeed: 738.3985493325365, desiredHeight: 26456.641987018178, desiredFlightPath: -0.12193678313117381, gearDown: false, speedbrakeFraction: nil)
+CHECK 0.0 negativeNormalLift nil
+CHECK 2.099999998899875 negativeNormalLift nil
+CHECK 4.099999997852137 negativeNormalLift nil
+CHECK 6.099999996804399 negativeNormalLift nil
+CHECK 8.099999995756662 negativeNormalLift nil
+CHECK 10.099999994708924 negativeNormalLift nil
+CHECK 12.099999993661186 negativeNormalLift nil
+CHECK 14.099999992613448 negativeNormalLift nil
+CHECK 16.09999999156571 negativeNormalLift nil
+CHECK 18.099999990517972 negativeNormalLift nil
+CHECK 20.099999989470234 negativeNormalLift nil
+CHECK 22.099999988422496 bank nil
+CHECK 24.09999998737476 bank nil
+CHECK 26.09999998632702 bank nil
+CHECK 28.099999985279283 bank nil
+CHECK 30.099999984231545 bank nil
+CHECK 32.09999998318381 bank nil
+CHECK 34.09999998213607 bank nil
+CHECK 36.09999998108833 bank nil
+CHECK 38.09999998004059 bank nil
+CHECK 40.099999978992855 bank nil
+CHECK 42.09999997794512 bank nil
+CHECK 44.09999997689738 bank nil
+CHECK 46.09999997584964 bank nil
+CHECK 48.099999974801904 bank nil
+CHECK 50.099999973754166 bank nil
+CHECK 52.09999997270643 dynamicPressure nil
+CHECK 54.09999997165869 dynamicPressure nil
+CHECK 56.09999997061095 dynamicPressure nil
+CHECK 58.099999969563214 dynamicPressure nil
+CHECK 60.099999968515476 dynamicPressure nil
+CHECK 62.09999996746774 dynamicPressure nil
+CHECK 64.09999996642 dynamicPressure nil
+CHECK 66.09999996537226 dynamicPressure nil
+CHECK 68.09999996432452 bank nil
+CHECK 70.09999996327679 bank nil
+CHECK 72.09999996222905 passed Optional(1706.585239642812)
+CHECK 74.09999996118131 passed Optional(1706.585239642812)
+CHECK 76.09999996013357 passed Optional(1706.585239642812)
+CHECK 78.09999995908584 trimLift nil
+CHECK 80.0999999580381 trimLift nil
+CHECK 82.09999995699036 kineticEnergy nil
+CHECK 84.09999995594262 kineticEnergy nil
+CHECK 86.09999995489488 kineticEnergy nil
+CHECK 88.09999995384715 kineticEnergy nil
+CHECK 90.09999995279941 kineticEnergy nil
+CHECK 92.09999995175167 kineticEnergy nil
+CHECK 94.09999995070393 kineticEnergy nil
+CHECK 96.0999999496562 kineticEnergy nil
+CHECK 98.09999994860846 kineticEnergy nil
+CHECK 100.09999994756072 kineticEnergy nil
+CHECK 102.09999994651298 kineticEnergy nil
+CHECK 104.09999994546524 kineticEnergy nil
+CHECK 106.0999999444175 kineticEnergy nil
+CHECK 108.09999994336977 kineticEnergy nil
+CHECK 110.09999994232203 kineticEnergy nil
+CHECK 112.09999994127429 kineticEnergy nil
+CHECK 114.09999994022655 kineticEnergy nil
+CHECK 116.09999993917882 kineticEnergy nil
+CHECK 118.09999993813108 kineticEnergy nil
+CHECK 120.09999993708334 kineticEnergy nil
+CHECK 122.0999999360356 kineticEnergy nil
+CHECK 124.09999993498786 kineticEnergy nil
+CHECK 126.09999993394013 kineticEnergy nil
+CHECK 128.0999999328924 kineticEnergy nil
+CHECK 130.09999993184465 kineticEnergy nil
+CHECK 132.0999999307969 kineticEnergy nil
+CHECK 134.09999992974917 kineticEnergy nil
+CHECK 136.09999992870144 kineticEnergy nil
+CHECK 138.0999999276537 kineticEnergy nil
+CHECK 140.09999992660596 kineticEnergy nil
+CHECK 142.09999992555822 kineticEnergy nil
+CHECK 144.09999992451048 kineticEnergy nil
+CHECK 146.09999992346275 kineticEnergy nil
+CHECK 148.099999922415 kineticEnergy nil
+CHECK 150.09999992136727 kineticEnergy nil
+CHECK 152.09999992031953 kineticEnergy nil
+CHECK 154.0999999192718 kineticEnergy nil
+CHECK 156.09999991822406 kineticEnergy nil
+CHECK 158.09999991717632 kineticEnergy nil
+CHECK 160.09999991612858 kineticEnergy nil
+CHECK 162.09999991508084 kineticEnergy nil
+CHECK 164.0999999140331 kineticEnergy nil
+CHECK 166.09999991298537 kineticEnergy nil
+CHECK 168.09999991193763 kineticEnergy nil
+CHECK 170.0999999108899 kineticEnergy nil
+CHECK 172.09999990984215 kineticEnergy nil
+CHECK 174.09999990879442 kineticEnergy nil
+CHECK 176.09999990774668 kineticEnergy nil
+CHECK 178.09999990669894 kineticEnergy nil
+CHECK 180.0999999056512 kineticEnergy nil
+CHECK 182.09999990460346 kineticEnergy nil
+CHECK 184.09999990355573 kineticEnergy nil
+CHECK 186.099999902508 kineticEnergy nil
+CHECK 188.09999990146025 kineticEnergy nil
+CHECK 190.0999999004125 kineticEnergy nil
+CHECK 192.09999989936478 kineticEnergy nil
+CHECK 194.09999989831704 kineticEnergy nil
+CHECK 196.0999998972693 kineticEnergy nil
+CHECK 198.09999989622156 kineticEnergy nil
+CHECK 200.09999989517382 kineticEnergy nil
+CHECK 202.09999989412609 kineticEnergy nil
+CHECK 204.09999989307835 kineticEnergy nil
+CHECK 206.0999998920306 kineticEnergy nil
+CHECK 208.09999989098287 kineticEnergy nil
+CHECK 210.09999988993513 kineticEnergy nil
+CHECK 212.0999998888874 kineticEnergy nil
+CHECK 214.09999988783966 kineticEnergy nil
+CHECK 216.09999988679192 kineticEnergy nil
+CHECK 218.09999988574418 kineticEnergy nil
+CHECK 220.09999988469644 kineticEnergy nil
+CHECK 222.0999998836487 kineticEnergy nil
+CHECK 224.09999988260097 kineticEnergy nil
+CHECK 226.09999988155323 kineticEnergy nil
+CHECK 228.0999998805055 kineticEnergy nil
+CHECK 230.09999987945776 kineticEnergy nil
+CHECK 232.09999987841002 kineticEnergy nil
+CHECK 234.09999987736228 kineticEnergy nil
+CHECK 236.09999987631454 kineticEnergy nil
+CHECK 238.0999998752668 kineticEnergy nil
+CHECK 240.09999987421907 kineticEnergy nil
+CHECK 242.09999987317133 kineticEnergy nil
+CHECK 244.0999998721236 kineticEnergy nil
+CHECK 246.09999987107585 kineticEnergy nil
+CHECK 248.0999998700281 kineticEnergy nil
+CHECK 250.09999986898038 kineticEnergy nil
+CHECK 252.09999986793264 kineticEnergy nil
+CHECK 254.0999998668849 kineticEnergy nil
+CHECK 256.09999986583716 kineticEnergy nil
+CHECK 258.0999998647894 kineticEnergy nil
+CHECK 260.0999998637417 kineticEnergy nil
+CHECK 262.09999986269395 kineticEnergy nil
+CHECK 264.0999998616462 kineticEnergy nil
+CHECK 266.0999998605985 kineticEnergy nil
+CHECK 268.09999985955073 kineticEnergy nil
+CHECK 270.099999858503 kineticEnergy nil
+CHECK 272.09999985745526 kineticEnergy nil
+CHECK 274.0999998564075 kineticEnergy nil
+CHECK 276.0999998553598 kineticEnergy nil
+CHECK 278.09999985431205 kineticEnergy nil
+CHECK 280.0999998532643 kineticEnergy nil
+CHECK 282.09999985221657 kineticEnergy nil
+CHECK 284.09999985116883 kineticEnergy nil
+CHECK 286.0999998501211 kineticEnergy nil
+CHECK 288.09999984907336 kineticEnergy nil
+CHECK 290.0999998480256 kineticEnergy nil
+CHECK 292.0999998469779 kineticEnergy nil
+CHECK 294.09999984593014 kineticEnergy nil
+CHECK 296.0999998448824 kineticEnergy nil
+CHECK 298.09999984383467 kineticEnergy nil
+CHECK 300.09999984278693 kineticEnergy nil
+CHECK 302.0999998417392 kineticEnergy nil
+CHECK 304.09999984069145 kineticEnergy nil
+CHECK 306.0999998396437 kineticEnergy nil
+CHECK 308.099999838596 kineticEnergy nil
+CHECK 310.09999983754824 kineticEnergy nil
+CHECK 312.0999998365005 kineticEnergy nil
+CHECK 314.09999983545276 kineticEnergy nil
+CHECK 316.099999834405 kineticEnergy nil
+CHECK 318.0999998333573 kineticEnergy nil
+CHECK 320.09999983230955 kineticEnergy nil
+CHECK 322.0999998312618 kineticEnergy nil
+CHECK 324.0999998302141 kineticEnergy nil
+CHECK 326.09999982916634 kineticEnergy nil
+CHECK 328.0999998281186 kineticEnergy nil
+CHECK 330.09999982707086 kineticEnergy nil
+CHECK 332.0999998260231 kineticEnergy nil
+CHECK 334.0999998249754 kineticEnergy nil
+CHECK 336.09999982392765 kineticEnergy nil
+CHECK 338.0999998228799 kineticEnergy nil
+CHECK 340.09999982183217 kineticEnergy nil
+CHECK 342.09999982078443 kineticEnergy nil
+CHECK 344.0999998197367 kineticEnergy nil
+CHECK 346.09999981868896 kineticEnergy nil
+CHECK 348.0999998176412 kineticEnergy nil
+CHECK 350.0999998165935 kineticEnergy nil
+FINAL RECOVERY 350.2999998164887 RunwayCoordinates(along: -4331.275511281584, cross: 5344.694016552389, height: 961.2334569414984) 41.31849012674175

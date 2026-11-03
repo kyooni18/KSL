@@ -1,0 +1,51 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 647]
+[Planning deferred tasks]
+[2 / 4] KSLGuidance
+[4 / 6] KSLGuidance
+[6 / 8] KSLGuidance
+[14 / 17] KSLRuntime
+[15 / 17] KSLRuntime
+[17 / 19] KSLRuntime
+[20 / 22] KSLSimulation
+[22 / 25] KSLSimulation
+[25 / 27] ksl-landing-product
+[27 / 27] ksl-landing-product
+[28 / 29] ksl-landing-product
+[47 / 70] PhysicsTests-product
+[47 / 67] KSLLanding
+[49 / 69] SimulationTests-product
+[63 / 83] GuidanceTests-product
+[68 / 83] GuidanceTests-product
+[74 / 85] IntegrationTests-product
+[75 / 84] SimulationTests-product
+[77 / 85] GuidanceTests-product
+[79 / 85] IntegrationTests-product
+[84 / 88] GuidanceTests-product
+[88 / 88] ksl-landing-product
+Build complete! (8.10초)
+Test Suite 'Selected tests' started at 2026-11-02 11:06:46.032.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 11:06:46.033.
+Test Suite 'TAEMReferenceRecoveryTests' started at 2026-11-02 11:06:46.034.
+Test Case '-[GuidanceTests.TAEMReferenceRecoveryTests testRejectedRecordedReferenceCannotCommandBallisticDive]' started.
+Test Case '-[GuidanceTests.TAEMReferenceRecoveryTests testRejectedRecordedReferenceCannotCommandBallisticDive]' passed (0.512 seconds).
+Test Suite 'TAEMReferenceRecoveryTests' passed at 2026-11-02 11:06:46.546.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.512 (0.512) seconds
+Test Suite 'TAEMTransitionTests' started at 2026-11-02 11:06:46.546.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' passed (0.000 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' passed (0.004 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testInsideHACCannotSpendMoreReferenceArcThanGroundTravel]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testInsideHACCannotSpendMoreReferenceArcThanGroundTravel]' passed (0.000 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary]' passed (0.000 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testRecordedShortDownmodeRequiresImpossiblePushOver]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testRecordedShortDownmodeRequiresImpossiblePushOver]' passed (0.000 seconds).
+Test Suite 'TAEMTransitionTests' passed at 2026-11-02 11:06:46.551.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.005 (0.005) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 11:06:46.551.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.517 (0.518) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 11:06:46.551.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.517 (0.519) seconds

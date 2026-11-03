@@ -1,0 +1,21 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 37] GuidanceTests-product
+[2 / 8] GuidanceTests-product
+[4 / 10] GuidanceTests-product
+[8 / 12] GuidanceTests-product
+[10 / 12] GuidanceTests-product
+Build complete! (2.53초)
+Test Suite 'Selected tests' started at 2026-11-02 04:27:50.101.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 04:27:50.102.
+Test Suite 'ZZScratchPlannedTAEMTests' started at 2026-11-02 04:27:50.102.
+Test Case '-[GuidanceTests.ZZScratchPlannedTAEMTests testRecordedHandoff]' started.
+Test Case '-[GuidanceTests.ZZScratchPlannedTAEMTests testRecordedHandoff]' passed (64.382 seconds).
+Test Suite 'ZZScratchPlannedTAEMTests' passed at 2026-11-02 04:28:54.485.
+	 Executed 1 test, with 0 failures (0 unexpected) in 64.382 (64.383) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 04:28:54.485.
+	 Executed 1 test, with 0 failures (0 unexpected) in 64.382 (64.383) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 04:28:54.485.
+	 Executed 1 test, with 0 failures (0 unexpected) in 64.382 (64.384) seconds
+PLANNED TAEM TAEMStatus(phase: KSLGuidance.TAEMPhase.acquisition, side: 1, remainingTurn: 6.312848965136574, range: 74895.09732913437, energyHeight: 52923.68875680495, nominalEnergy: 248128.5142373039, minimumEnergy: 146958.85136985852, referenceHeight: 26388.201987018187, referenceDynamicPressure: 3115.793085514554, minimumDynamicPressure: 3257.656155625886, finalRadius: 6609.454585183046, growth: 0.07599088773175333, downmoded: false, insufficientEnergy: true, descentPlanFits: true) GuidanceTarget(angleOfAttack: 0.2806345350270968, bank: -0.29685447517894203, desiredSpeed: 738.3985493325365, desiredHeight: 26456.641987018185, desiredFlightPath: -0.12193678313117311, gearDown: false, speedbrakeFraction: nil)
+FINAL RECOVERY 550.4999997116101 RunwayCoordinates(along: 28839.31682130155, cross: -13148.526828040485, height: 961.1278952923044) 41.052939282248744

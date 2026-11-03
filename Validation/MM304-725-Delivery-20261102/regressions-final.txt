@@ -1,0 +1,50 @@
+Another instance of SwiftPM (PID: 5139) is already running using '/Users/kyooni18/Code/KSL/swift/KSL-Landing/.build', waiting until that process has finished execution...Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 647]
+[Planning deferred tasks]
+[14 / 79] KSLCore
+[16 / 80] KSLCore
+[23 / 92] KSLDiagnostics
+[29 / 95] KSLControl
+[36 / 87]
+[36 / 86] KSLPhysics
+[38 / 87] KSLPhysics
+[44 / 81] KSLGuidance
+[48 / 85] KSLGuidance
+[52 / 87] KSLGuidance
+[54 / 87] KSLGuidance
+[59 / 94] GuidanceTests-product
+[71 / 107] GuidanceTests-product
+[72 / 107] KSLRuntime
+[80 / 108] GuidanceTests-product
+[80 / 109] KSLSimulation
+[82 / 109] GuidanceTests-product
+[82 / 109] KSLSimulation
+[89 / 96] GuidanceTests-product
+[91 / 96] ksl-landing-product
+[91 / 96] SimulationTests-product
+[95 / 97] SimulationTests-product
+[95 / 99] GuidanceTests-product
+[99 / 99] ksl-landing-product
+Build complete! (7.98초)
+Test Suite 'Selected tests' started at 2026-11-02 04:02:37.318.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 04:02:37.319.
+Test Suite 'EntryCaptureRecoveryTests' started at 2026-11-02 04:02:37.319.
+Test Case '-[GuidanceTests.EntryCaptureRecoveryTests testHACAdvisoryCannotTakeOverMM304RangeReference]' started.
+Test Case '-[GuidanceTests.EntryCaptureRecoveryTests testHACAdvisoryCannotTakeOverMM304RangeReference]' passed (0.014 seconds).
+Test Suite 'EntryCaptureRecoveryTests' passed at 2026-11-02 04:02:37.333.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.014 (0.014) seconds
+Test Suite 'EntryRangeTruthRegressionTests' started at 2026-11-02 04:02:37.334.
+Test Case '-[GuidanceTests.EntryRangeTruthRegressionTests testRecordedEntryReferenceSolvesInterfaceLocationBeforeSpendingEnergy]' started.
+Test Case '-[GuidanceTests.EntryRangeTruthRegressionTests testRecordedEntryReferenceSolvesInterfaceLocationBeforeSpendingEnergy]' passed (0.081 seconds).
+Test Suite 'EntryRangeTruthRegressionTests' passed at 2026-11-02 04:02:37.415.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.081 (0.082) seconds
+Test Suite 'TerminalRecoveryOwnershipTests' started at 2026-11-02 04:02:37.415.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testTAEMHandoffRequiresInterfaceRangeAndEnergyWithRecoveryDeadlines]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testTAEMHandoffRequiresInterfaceRangeAndEnergyWithRecoveryDeadlines]' passed (0.004 seconds).
+Test Suite 'TerminalRecoveryOwnershipTests' passed at 2026-11-02 04:02:37.420.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.004 (0.005) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 04:02:37.420.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.100 (0.101) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 04:02:37.420.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.100 (0.102) seconds

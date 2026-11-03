@@ -1,0 +1,27 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 22] ksl-landing-product
+[2 / 7] GuidanceTests-product
+[4 / 9] GuidanceTests-product
+[7 / 10] GuidanceTests-product
+[9 / 13] GuidanceTests-product
+Build complete! (2.66초)
+Test Suite 'Selected tests' started at 2026-11-02 11:31:36.671.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 11:31:36.675.
+Test Suite 'ZZLiveOvershootDiagnosisTests' started at 2026-11-02 11:31:36.675.
+Test Case '-[GuidanceTests.ZZLiveOvershootDiagnosisTests testRecordedAuthorityHistory]' started.
+Test Case '-[GuidanceTests.ZZLiveOvershootDiagnosisTests testRecordedAuthorityHistory]' passed (10.312 seconds).
+Test Suite 'ZZLiveOvershootDiagnosisTests' passed at 2026-11-02 11:31:46.988.
+	 Executed 1 test, with 0 failures (0 unexpected) in 10.312 (10.313) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 11:31:46.988.
+	 Executed 1 test, with 0 failures (0 unexpected) in 10.312 (10.313) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 11:31:46.988.
+	 Executed 1 test, with 0 failures (0 unexpected) in 10.312 (10.317) seconds
+GEOMETRY REPLAY 0.0 ceiling nil 0.07599088773175333 52299.03661142224 194482.74087492772
+AUTH 0.0 liftGain 1.023863679029412 dragGain 1.1515393709494999 bestAlpha 12.0 bestLift 3.6848472388695033 support 8.076370248071091 turnAllowance 0.0 bankCommand 0.0
+GEOMETRY REPLAY 0.0999999999476131 ceiling nil 2138.290600089816 233824.3170138621 510885.2538716316
+AUTH 30.039999984262977 liftGain 0.8729706892167887 dragGain 1.1108156615512386 bestAlpha 25.0 bestLift 6.698025329888833 support 8.487268968353636 turnAllowance 0.0 bankCommand 0.0
+AUTH 60.03999996854691 liftGain 0.8415114381463182 dragGain 1.2128451593154794 bestAlpha 21.999999999999996 bestLift 4.650223891732551 support 8.377238362132262 turnAllowance 0.0 bankCommand 0.0
+AUTH 90.01999995284132 liftGain 0.8010868360885725 dragGain 0.8527552283017752 bestAlpha 18.0 bestLift 7.332670901729566 support 7.607999338095204 turnAllowance 0.0 bankCommand 0.0
+AUTH 120.01999993712525 liftGain 0.8479022997706435 dragGain 0.8187938604446665 bestAlpha 10.0 bestLift 7.492956651487541 support 8.885115457144497 turnAllowance 0.0 bankCommand 0.0
+AUTH 150.0399999213987 liftGain 0.9338612337109615 dragGain 0.849080778764184 bestAlpha 10.0 bestLift 9.326513330230199 support 9.093437233271946 turnAllowance 2.0720159708614823 bankCommand -6.358462439931885

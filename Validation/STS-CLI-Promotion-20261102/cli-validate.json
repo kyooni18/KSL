@@ -1,0 +1,25 @@
+{
+  "ok": true,
+  "checks": [
+    {
+      "check": "profile",
+      "ok": true,
+      "detail": "sts-kerbin (/Users/kyooni18/Code/KSL/Configuration/missions/sts-kerbin.json)"
+    },
+    {
+      "check": "landing backend",
+      "ok": true,
+      "detail": "/Users/kyooni18/Code/KSL/swift/KSL-Landing/.build/release/ksl-landing"
+    },
+    {
+      "check": "krpc package",
+      "ok": true,
+      "detail": "importable"
+    },
+    {
+      "check": "scenario l5-mm305",
+      "ok": true,
+      "detail": "inputs present"
+    }
+  ]
+}

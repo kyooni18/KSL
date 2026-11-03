@@ -1,0 +1,37 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 27] KSLSimulation
+[2 / 24] KSLGuidance
+[5 / 27] KSLGuidance
+[7 / 30] KSLGuidance
+[14 / 38] KSLGuidance-product
+[16 / 40] GuidanceTests-product
+[18 / 42] KSLRuntime
+[22 / 43] GuidanceTests-product
+[26 / 45] KSLSimulation
+[32 / 46] KSLLanding
+[40 / 51] SimulationTests-product
+[46 / 51] ksl-landing-product
+[50 / 56] SimulationTests-product
+[53 / 57] IntegrationTests-product
+[60 / 60]
+Build complete! (3.51초)
+Test Suite 'Selected tests' started at 2026-11-02 03:35:19.360.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 03:35:19.361.
+Test Suite 'TerminalRecoveryOwnershipTests' started at 2026-11-02 03:35:19.361.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testMissionActuallyEntersMM305WithNoQualifiedRoute]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testMissionActuallyEntersMM305WithNoQualifiedRoute]' passed (1.121 seconds).
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testTAEMHandoffRequiresInterfaceRangeAndEnergyWithRecoveryDeadlines]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testTAEMHandoffRequiresInterfaceRangeAndEnergyWithRecoveryDeadlines]' passed (0.004 seconds).
+Test Suite 'TerminalRecoveryOwnershipTests' passed at 2026-11-02 03:35:20.486.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 1.125 (1.125) seconds
+Test Suite 'ZZScratchEntryRangeProbeTests' started at 2026-11-02 03:35:20.486.
+Test Case '-[GuidanceTests.ZZScratchEntryRangeProbeTests testRecordedDragRecovery]' started.
+Test Case '-[GuidanceTests.ZZScratchEntryRangeProbeTests testRecordedDragRecovery]' passed (0.008 seconds).
+Test Suite 'ZZScratchEntryRangeProbeTests' passed at 2026-11-02 03:35:20.495.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.008 (0.008) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 03:35:20.495.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 1.133 (1.134) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 03:35:20.495.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 1.133 (1.135) seconds
+RECORDED RANGE RECOVERY GuidanceTarget(angleOfAttack: 0.3490149279661397, bank: -0.0548307203352026, desiredSpeed: 756.3374816326142, desiredHeight: 25000.0, desiredFlightPath: 0.3276505632355097, gearDown: false, speedbrakeFraction: nil) EntryDiagnostics(phase: KSLCore.EntryPhase.equilibriumGlide, referenceDrag: 5.1177884216387, observedDrag: 6.507486518879395, verticalLift: 267.06016200393066, predictedRange: 138828.34771656504, requiredRange: 156065.58975642308, rangeError: -17237.242039858043, referenceTargetRange: Optional(156065.58975642308), dragScale: 0.7405877262163862, confidence: 1.0, referenceBallisticCoefficient: Optional(528.0370268431876), referenceLiftToDrag: Optional(0.6343243082149415), referencePolarEvidence: Optional(KSLCore.EvidenceKind.measured), degraded: false, dragFloorActive: true, energyBank: 0.0, commandedBank: -0.0548307203352026, reversalTime: Optional(2.6497668085539328), reversalAvailableTime: Optional(98.96748958489687), reversalCount: 1, reversalArmed: true, reversalFeasible: true, projectedCrossrange: -1539.9896567081382, rollRateLimit: 0.07853981633974483, limitingReason: "lateral force deficit", captureSpecificEnergy: Optional(-5381141.0121168215), captureEnergyMargin: Optional(800107.6971164185), energyDragBudget: Optional(5.1177884216387), energyReserve: Optional(241298.4812807462), recoveryAlpha: Optional(0.3817907738737596), bestRangeRecovery: Optional(true), lateralDemand: Optional(-0.3075927272671714), lateralAuthority: Optional(0.0), lateralAllocationTarget: Optional(-0.0), selectedDragAcceleration: Optional(11.465267391125892), dragTrackingResidual: Optional(6.347478969487192), jointRequiredLift: Optional(267.06033914239595), jointMaximumLift: Optional(4.174499481219215), jointMaximumLateral: Optional(0.0), jointMinimumDrag: nil, jointDragBudgetDeficit: nil, jointForceAttainable: Optional(false), terminalLookaheadDistance: nil, terminalLookaheadHeadingError: nil, minimumTurnTime: nil, terminalAdviceAge: nil, terminalSteeringActive: Optional(false), energyBudgetEndpoint: Optional("entry-objective"), energyAllocationMode: Optional("density-drag-recovery"), terminalDeficit: nil)

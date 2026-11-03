@@ -1,0 +1,32 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 4] KSLRuntime
+[2 / 7] GuidanceTests-product
+[4 / 9] GuidanceTests-product
+[7 / 10] GuidanceTests-product
+[9 / 13] GuidanceTests-product
+Build complete! (2.78초)
+Test Suite 'Selected tests' started at 2026-11-02 03:53:03.064.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 03:53:03.067.
+Test Suite 'ZZScratchEntryDeliveryTests' started at 2026-11-02 03:53:03.067.
+Test Case '-[GuidanceTests.ZZScratchEntryDeliveryTests testBestGlideRangeDiagnostic]' started.
+Test Case '-[GuidanceTests.ZZScratchEntryDeliveryTests testBestGlideRangeDiagnostic]' passed (0.758 seconds).
+Test Suite 'ZZScratchEntryDeliveryTests' passed at 2026-11-02 03:53:03.825.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.758 (0.759) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 03:53:03.825.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.758 (0.759) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 03:53:03.825.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.758 (0.762) seconds
+BRACKET (224766.9067743093, 25476.95520340663) (-231607.53782824005, 26903.89248717064)
+REFERENCE 0.5 (-12397.729297886746, 26621.659033023287)
+REFERENCE 0.75 (-149740.52435870792, 26578.3369936127)
+REFERENCE 0.625 (-89341.68066148266, 26593.595221081516)
+REFERENCE 0.5625 (-53374.62088342101, 26615.372514104587)
+REFERENCE 0.53125 (-33421.13608064157, 26618.545288378024)
+REFERENCE 0.546875 (-43392.100221296, 26619.749990500393)
+REFERENCE 0.5390625 (-38336.73598448528, 26610.581186089083)
+REFERENCE 0.53515625 (-35887.40279548657, 26613.884843816515)
+REFERENCE 0.533203125 (-34732.726636852705, 26624.134661096497)
+REFERENCE 0.5341796875 (-35238.210581587366, 26610.4167730005)
+REFERENCE 0.53369140625 (-34909.90683040088, 26608.449966844637)
+REFERENCE 0.533935546875 (-35146.05567051826, 26618.353534189868)

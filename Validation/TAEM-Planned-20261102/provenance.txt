@@ -1,0 +1,6 @@
+Checkpoint: da7cfffa057cff05c3adced0b9b88e2b77324f7e
+Release SHA256: 00524117fb24ce5c1b6f81cd4b1e18900578c85692901155373fb82cd83abc8a
+Live source/configuration: runs/20261102T040424-mm304-shooting-live-72km
+Focused tests: focused-tests.txt
+Release build: release-build.txt
+Continuation: continuation-final.txt and continuation.json

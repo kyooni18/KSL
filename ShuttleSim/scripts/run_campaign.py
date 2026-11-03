@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 """Queued ShuttleSim campaign: broad 1-hour-simulated mission exploration.
 
-Every case has a 3600 s simulated horizon. The campaign mixes:
-- real Guidance-in-the-loop parameter sweeps,
-- dynamics / aerodynamic / atmosphere / actuator perturbations,
-- combined deterministic Monte Carlo cases,
-- alternate aerodynamic algorithms,
-- open-loop fixed/reversal/profile controls,
-- historical replay controls.
+Every case has a 3600 s simulated horizon. The campaign uses the same
+unmodified vehicle and atmospheric data for nominal guidance policy,
+numerical-resolution, open-loop-control and historical-replay comparisons.
+It does not generate synthetic aerodynamic, thrust or actuator perturbations.
 
 No live KSP connection is used.
 """
@@ -22,7 +19,6 @@ import json
 import math
 import os
 import pathlib
-import random
 import re
 import shutil
 import subprocess
@@ -88,58 +84,6 @@ def set_nested(obj: dict[str, Any], dotted: str, value: Any) -> None:
     for p in parts[:-1]:
         cur = cur[p]
     cur[parts[-1]] = value
-
-
-def scaled_atmos(src: pathlib.Path, dst: pathlib.Path, scale: float) -> None:
-    with src.open(newline="") as f, dst.open("w", newline="") as g:
-        r = csv.DictReader(f)
-        w = csv.DictWriter(g, fieldnames=r.fieldnames)
-        w.writeheader()
-        for row in r:
-            row["density_kg_m3"] = f"{float(row['density_kg_m3']) * scale:.12g}"
-            row["pressure_pa"] = f"{float(row['pressure_pa']) * scale:.12g}"
-            w.writerow(row)
-
-
-def scaled_book(src: pathlib.Path, dst: pathlib.Path, lift_scale: float, drag_scale: float) -> None:
-    with src.open(newline="") as f, dst.open("w", newline="") as g:
-        r = csv.DictReader(f)
-        w = csv.DictWriter(g, fieldnames=r.fieldnames)
-        w.writeheader()
-        for row in r:
-            row["lift_per_q_m2"] = f"{float(row['lift_per_q_m2']) * lift_scale:.12g}"
-            row["drag_per_q_m2"] = f"{float(row['drag_per_q_m2']) * drag_scale:.12g}"
-            w.writerow(row)
-
-
-def scaled_attitude(src: pathlib.Path, dst: pathlib.Path, scale: float) -> None:
-    vals = load_ini(src)
-    # The simulator follows the commanded attitude directly.  Only the
-    # configured followable rate is part of its response model; the legacy
-    # natural-frequency/damping and acceleration fields remain metadata.
-    for k in ("max_pitch_rate_deg_s", "max_roll_rate_deg_s"):
-        if k in vals:
-            vals[k] = f"{float(vals[k]) * scale:.9g}"
-    write_ini(dst, vals, f"attitude-following rate x{scale:.3f}")
-
-
-def scenario_variant(src: pathlib.Path, dst: pathlib.Path, *,
-                     mass_scale: float = 1.0,
-                     speed_delta_mps: float = 0.0,
-                     cross_velocity_delta_mps: float = 0.0) -> None:
-    v = load_ini(src)
-    v["mass_kg"] = f"{float(v['mass_kg']) * mass_scale:.12g}"
-    vx, vy, vz = (float(v["velocity_x_mps"]), float(v["velocity_y_mps"]), float(v["velocity_z_mps"]))
-    speed = math.sqrt(vx * vx + vy * vy + vz * vz)
-    if speed_delta_mps:
-        vx += vx / speed * speed_delta_mps
-        vy += vy / speed * speed_delta_mps
-        vz += vz / speed * speed_delta_mps
-    vz += cross_velocity_delta_mps
-    v["velocity_x_mps"] = f"{vx:.12g}"
-    v["velocity_y_mps"] = f"{vy:.12g}"
-    v["velocity_z_mps"] = f"{vz:.12g}"
-    write_ini(dst, v, f"mass x{mass_scale:.5f}, speed delta {speed_delta_mps:+.3f}, cross-v {cross_velocity_delta_mps:+.3f}")
 
 
 def write_reversal_replay(path: pathlib.Path, aoa: float, bank: float, period: float) -> None:
@@ -293,10 +237,9 @@ class Factory:
     def __init__(self, cdir: pathlib.Path):
         self.cdir = cdir
         self.inputs = cdir / "inputs"
-        for sub in ("configs","scenarios","atmospheres","aero_books","attitudes","replays"):
+        for sub in ("configs","replays"):
             (self.inputs / sub).mkdir(parents=True, exist_ok=True)
         self.base_config = json.loads(BASE_CONFIG.read_text())
-        self.cache: dict[tuple, pathlib.Path] = {}
 
     def config(self, case_id: str, changes: dict[str, Any]) -> pathlib.Path:
         p = self.inputs / "configs" / f"{case_id}.json"
@@ -304,43 +247,6 @@ class Factory:
         for k, v in changes.items():
             set_nested(cfg, k, v)
         p.write_text(json.dumps(cfg, indent=2, sort_keys=True) + "\n")
-        return p
-
-    def atmosphere(self, scale: float) -> pathlib.Path:
-        if abs(scale - 1.0) < 1e-12:
-            return BASE_ATMOS
-        key = ("atmos", round(scale, 6))
-        if key not in self.cache:
-            p = self.inputs / "atmospheres" / f"density-{scale:.4f}.csv"
-            scaled_atmos(BASE_ATMOS, p, scale)
-            self.cache[key] = p
-        return self.cache[key]
-
-    def book(self, lift: float, drag: float) -> pathlib.Path:
-        if abs(lift - 1.0) < 1e-12 and abs(drag - 1.0) < 1e-12:
-            return BASE_BOOK
-        key = ("book", round(lift, 6), round(drag, 6))
-        if key not in self.cache:
-            p = self.inputs / "aero_books" / f"book-L{lift:.4f}-D{drag:.4f}.csv"
-            scaled_book(BASE_BOOK, p, lift, drag)
-            self.cache[key] = p
-        return self.cache[key]
-
-    def attitude(self, scale: float) -> pathlib.Path:
-        if abs(scale - 1.0) < 1e-12:
-            return BASE_ATT
-        key = ("att", round(scale, 6))
-        if key not in self.cache:
-            p = self.inputs / "attitudes" / f"response-{scale:.4f}.ini"
-            scaled_attitude(BASE_ATT, p, scale)
-            self.cache[key] = p
-        return self.cache[key]
-
-    def scenario(self, case_id: str, mass: float = 1.0, speed_delta: float = 0.0, cross_v: float = 0.0) -> pathlib.Path:
-        if abs(mass-1)<1e-12 and abs(speed_delta)<1e-12 and abs(cross_v)<1e-12:
-            return BASE_SCENARIO
-        p = self.inputs / "scenarios" / f"{case_id}.ini"
-        scenario_variant(BASE_SCENARIO, p, mass_scale=mass, speed_delta_mps=speed_delta, cross_velocity_delta_mps=cross_v)
         return p
 
     def reversal(self, case_id: str, aoa: float, bank: float, period: float) -> pathlib.Path:
@@ -401,7 +307,7 @@ def make_open_case(idx: int, family: str, desc: str, *,
     }
 
 
-def build_queue(factory: Factory, seed: int) -> list[dict[str, Any]]:
+def build_queue(factory: Factory) -> list[dict[str, Any]]:
     q: list[dict[str, Any]] = []
     gi = 0
     oi = 0
@@ -454,69 +360,9 @@ def build_queue(factory: Factory, seed: int) -> list[dict[str, Any]]:
     ]:
         G("algorithm_toggle", desc, changes, params=changes)
 
-    # Dynamics/model/numerics one-factor sweeps (37).
-    for scale in (0.90,0.95,1.05,1.10):
-        cid = f"tmp-mass-{scale}"
-        sc = factory.scenario(cid, mass=scale)
-        G("dynamics", f"vehicle mass x{scale:.2f}", scenario=sc, params={"mass_scale":scale})
-    for dv in (-20,-10,10,20):
-        sc = factory.scenario(f"tmp-speed-{dv}", speed_delta=dv)
-        G("dynamics", f"postburn inertial speed {dv:+.0f} m/s", scenario=sc, params={"speed_delta_mps":dv})
-    for cv in (-15,-5,5,15):
-        sc = factory.scenario(f"tmp-cross-{cv}", cross_v=cv)
-        G("dynamics", f"cross-plane velocity {cv:+.0f} m/s", scenario=sc, params={"cross_velocity_delta_mps":cv})
-    for scale in (0.90,0.95,1.05,1.10):
-        G("atmosphere", f"Kerbin density x{scale:.2f}", atmosphere=factory.atmosphere(scale), params={"density_scale":scale})
-    for scale in (0.90,0.95,1.05,1.10):
-        G("aero", f"lift/q x{scale:.2f}", aero_book=factory.book(scale,1.0), params={"lift_scale":scale})
-    for scale in (0.90,0.95,1.05,1.10):
-        G("aero", f"drag/q x{scale:.2f}", aero_book=factory.book(1.0,scale), params={"drag_scale":scale})
-    for ls, ds in ((0.90,1.10),(1.10,0.90),(0.95,0.90),(1.05,1.10)):
-        G("aero", f"coupled lift x{ls:.2f} drag x{ds:.2f}", aero_book=factory.book(ls,ds),
-          params={"lift_scale":ls,"drag_scale":ds})
-    for scale in (0.70,0.85,1.15,1.30):
-        G("actuator", f"attitude response x{scale:.2f}", attitude=factory.attitude(scale), params={"attitude_scale":scale})
+    # Numerical-resolution comparisons use the identical nominal plant.
     for dt in (0.01,0.04,0.08):
         G("numerics", f"physics dt={dt}", dt=dt, params={"dt":dt})
-    G("aero_algorithm", "robust Mach/AoA fallback only", aero_book=None, params={"aero_algorithm":"fallback_robust"})
-    # Explicit string "none" is handled after construction.
-    q[-1]["aero_book"] = "none"
-    G("aero_algorithm", "seed Mach/AoA model only", aero=SEED_AERO, aero_book=None, params={"aero_algorithm":"seed"})
-    q[-1]["aero_book"] = "none"
-
-    # 40 deterministic combined Monte Carlo / policy co-variation cases.
-    rng = random.Random(seed)
-    for j in range(40):
-        mass = rng.uniform(0.95,1.05)
-        dv = rng.uniform(-12,12)
-        cv = rng.uniform(-5,5)
-        density = rng.uniform(0.93,1.07)
-        lift = rng.uniform(0.92,1.08)
-        drag = rng.uniform(0.90,1.10)
-        att = rng.uniform(0.80,1.20)
-        cfg = {
-            "vehicle.entryAngleOfAttack": round(rng.uniform(16,24),3),
-            "vehicle.maximumAngleOfAttack": round(rng.uniform(30,36),3),
-            "vehicle.maximumBankAngle": round(rng.uniform(60,80),3),
-            "guidance.entryRollRate": round(rng.uniform(3.5,6.5),3),
-            "guidance.sTurnMinimumLegDuration": round(rng.uniform(18,36),3),
-            "guidance.taemInterfaceAltitude": round(rng.uniform(14000,19000),1),
-            "guidance.taemInterfaceRange": round(rng.uniform(28000,43000),1),
-            "guidance.hacRadius": round(rng.uniform(9000,15000),1),
-            "guidance.finalGlideSlope": round(rng.uniform(17,23),3),
-            "guidance.flareAltitude": round(rng.uniform(40,80),2),
-        }
-        sc = factory.scenario(f"mc-{j:02d}", mass=mass, speed_delta=dv, cross_v=cv)
-        params = {
-            **cfg, "mass_scale":mass, "speed_delta_mps":dv, "cross_velocity_delta_mps":cv,
-            "density_scale":density, "lift_scale":lift, "drag_scale":drag, "attitude_scale":att,
-            "seed":seed, "mc_index":j,
-        }
-        G("monte_carlo", f"combined deterministic Monte Carlo {j:02d}", cfg,
-          scenario=sc, atmosphere=factory.atmosphere(density), aero_book=factory.book(lift,drag),
-          attitude=factory.attitude(att), params=params)
-
-    assert gi == 154, gi
 
     # 46 open-loop / alternate strategy controls.
     for aoa in (15,20,25,30,35):
@@ -549,7 +395,7 @@ def build_queue(factory: Factory, seed: int) -> list[dict[str, Any]]:
           params={"algorithm":"fixed","aoa":25,"bank":0,"dt":dt})
 
     assert oi == 46, oi
-    assert len(q) == 200, len(q)
+    assert len(q) == gi + oi, len(q)
     return q
 
 
@@ -672,7 +518,6 @@ def execute_case(case: dict[str, Any], campaign: pathlib.Path, retain: bool = Fa
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--workers", type=int, default=4)
-    ap.add_argument("--seed", type=int, default=20260918)
     ap.add_argument("--campaign-dir")
     ap.add_argument("--generate-only", action="store_true")
     ap.add_argument("--resume", action="store_true")
@@ -695,12 +540,12 @@ def main() -> int:
     runner_lock.write(f"pid={os.getpid()} started_utc={stamp}\n")
     runner_lock.flush()
     factory = Factory(campaign)
-    queue_cases = build_queue(factory, args.seed)
+    queue_cases = build_queue(factory)
     qpath = campaign / "queue.jsonl"
     qpath.write_text("".join(json.dumps(c,sort_keys=True,separators=(",",":"))+"\n" for c in queue_cases))
 
     manifest = {
-        "created_utc": stamp, "seed": args.seed, "simulated_horizon_s_per_case": HORIZON,
+        "created_utc": stamp, "simulated_horizon_s_per_case": HORIZON,
         "case_count": len(queue_cases), "guidance_cases": sum(c["mode"]=="guidance" for c in queue_cases),
         "open_loop_cases": sum(c["mode"]=="open_loop" for c in queue_cases),
         "workers": args.workers, "live_ksp_used": False,

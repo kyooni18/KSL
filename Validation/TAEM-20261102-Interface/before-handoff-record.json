@@ -1,0 +1,700 @@
+{
+  "calibration": {
+    "acceptedPassiveSamples": 210,
+    "acceptedTrajectorySamples": 210,
+    "altitudeResidual": 0,
+    "autoApplyRequested": true,
+    "bankEffectiveness": 1.0000364097505683,
+    "certifiedProfileChanged": false,
+    "currentRegime": 2,
+    "environment": {
+      "densityScale": 0.9998911837159448,
+      "evidence": "measured",
+      "observedAt": 216790.3123526989,
+      "soundSpeedScale": 1.0000020024898832
+    },
+    "observation": {
+      "forceEvidence": "measured",
+      "informationBlend": 0.0010554090765522042,
+      "informationIncrement": 0.0010559664128913682,
+      "passiveEligible": true,
+      "rejectionReasons": [],
+      "stallEvidence": "provisional",
+      "stallFraction": 0,
+      "trajectoryEligible": true
+    },
+    "rangeResidual": 0,
+    "regimes": [
+      {
+        "ballisticCoefficient": 700,
+        "confidence": 0,
+        "liftToDrag": 0.4,
+        "machAnchor": 0.35
+      },
+      {
+        "ballisticCoefficient": 700,
+        "confidence": 0,
+        "liftToDrag": 0.4,
+        "machAnchor": 1.05
+      },
+      {
+        "ballisticCoefficient": 677.2310895705789,
+        "confidence": 0.28534394040436517,
+        "liftToDrag": 0.4621254553096341,
+        "machAnchor": 2.6
+      },
+      {
+        "ballisticCoefficient": 700,
+        "confidence": 0,
+        "liftToDrag": 0.4,
+        "machAnchor": 6
+      }
+    ],
+    "rejectedPassiveSamples": 0,
+    "speedResidual": 0,
+    "trajectoryConfidence": 0.28534394040436517
+  },
+  "command": {
+    "gearDown": false,
+    "pitch": 0.45736919042583724,
+    "rcsEnabled": true,
+    "roll": 0.0027455105582650115,
+    "wheelBrake": 0,
+    "wheelSteering": 0,
+    "yaw": 0.023294636122956784
+  },
+  "control": {
+    "aerodynamicRate": {
+      "x": 0.014883158888726501,
+      "y": 0.008271989710430349,
+      "z": 0.00025975083122646906
+    },
+    "appliedDemand": {
+      "x": 0.0027455105582650115,
+      "y": 0.45736919042583724,
+      "z": 0.023294636122956784
+    },
+    "authority": {
+      "x": 0.8289980570690015,
+      "y": 0.0678200694040435,
+      "z": 0.06904231790054571
+    },
+    "authorityConfidence": {
+      "x": 0.9999917811136184,
+      "y": 1,
+      "z": 0.9999999999999998
+    },
+    "authorityEvidence": "measured",
+    "bankError": -0.02584999560742439,
+    "betaConfidence": 0.12127247841823269,
+    "betaRollGain": 0.03327617749130465,
+    "betaYawGain": -0.0588477077870072,
+    "bodyRate": {
+      "x": 0.013856458387188611,
+      "y": 0.006152168384571785,
+      "z": 0.00545238754288245
+    },
+    "pitchBandwidthScale": 0.9999999999999689,
+    "pitchError": 0.0002586451317455607,
+    "pitchFeedforward": 0,
+    "pitchResponseSeconds": 2.2310423020181553,
+    "pitchSaturated": false,
+    "pitchTrim": 0.48327370662322194,
+    "quaternionError": {
+      "x": -0.024704501713736744,
+      "y": 0.0002666735006108528,
+      "z": -0.00825593177127393
+    },
+    "rawDemand": {
+      "x": 0.0027455105582650115,
+      "y": 0.4585833082756904,
+      "z": 0.023294636122956784
+    },
+    "recoveryRateFirst": false,
+    "relativeRate": {
+      "x": -0.007231258827537807,
+      "y": 0.0009660838129266335,
+      "z": -0.002085350775019726
+    },
+    "reportedAuthority": {
+      "x": 0.21490334613341994,
+      "y": 0.0678200694040435,
+      "z": 0.043085347489119394
+    },
+    "rollResponseSeconds": 4.934322715914407,
+    "rollSaturated": false,
+    "rollTrim": 0,
+    "sampleInterval": 0.07999999995809048,
+    "touchdownPitchGuardActive": false,
+    "trimEvidence": "unavailable",
+    "yawSaturated": false
+  },
+  "guidance": {
+    "admission": {
+      "accepted": false,
+      "altitudeMargin": 5036.159652111819,
+      "controlOwnershipTransferred": false,
+      "headingMargin": 0.5231430020198405,
+      "machMargin": 0.3252147588825114,
+      "physicallyFeasible": true,
+      "planAge": 0.2999999998428393,
+      "positionMargin": 991.1413142851441,
+      "violations": [
+        {
+          "kind": "modelUncertainty",
+          "limit": 0,
+          "message": "MM305 nominal closed-loop assessment failed; candidate remains advisory",
+          "value": 0
+        },
+        {
+          "kind": "modelUncertainty",
+          "limit": 0,
+          "message": "MM305 nominal closed-loop touchdown and rollout unconfirmed (advisory)",
+          "value": 0
+        }
+      ]
+    },
+    "capture": {
+      "actualAlong": -66831.79934770538,
+      "actualCross": -5852.73200788035,
+      "actualRunwayRange": 67087.5836202797,
+      "advisoryPlanFeasible": true,
+      "advisoryPlanID": 2167893,
+      "advisoryReference": [
+        [
+          216789.1923526995,
+          0.5205122859669271,
+          -81.18783366750178,
+          24972.090522514423,
+          765.9932250976562
+        ],
+        [
+          216796.2505846575,
+          0.44297130899816106,
+          -80.69062871044963,
+          24719.78400061594,
+          713.3254580780258
+        ],
+        [
+          216803.68154238482,
+          0.3408128921812617,
+          -80.20990471887988,
+          24232.481730027823,
+          658.3174799275882
+        ],
+        [
+          216811.53753338783,
+          0.20656111343835726,
+          -79.75492588468465,
+          23427.418437191634,
+          605.2951241436598
+        ],
+        [
+          216819.83964333296,
+          0.044831795177289344,
+          -79.3286871797737,
+          22301.06193697988,
+          561.4596572817047
+        ],
+        [
+          216828.49168681158,
+          -0.1309762926102384,
+          -78.92910608514137,
+          20899.02933194395,
+          533.041131243169
+        ],
+        [
+          216837.30960297416,
+          -0.30199794783880307,
+          -78.55021897918968,
+          19295.348647267325,
+          505.7781327328075
+        ],
+        [
+          216846.39430527991,
+          -0.44722184863784975,
+          -78.18338382992653,
+          17568.00510843855,
+          457.4839045594306
+        ],
+        [
+          216856.48066794686,
+          -0.5468121781540356,
+          -77.81848830193336,
+          15764.998101807549,
+          370.7104880136103
+        ],
+        [
+          216869.73223000066,
+          -0.5854307852856305,
+          -77.4451600307045,
+          13876.44165760011,
+          268.2477364378627
+        ],
+        [
+          216888.0916490306,
+          -0.5555603819109632,
+          -77.05397435508662,
+          11843.666954605142,
+          225.91188055217222
+        ],
+        [
+          216911.0040096618,
+          -0.4608297219661653,
+          -76.63765516395335,
+          9616.370947924908,
+          206.85394834312274
+        ],
+        [
+          216938.16399584015,
+          -0.3193410314716441,
+          -76.19226782846209,
+          7215.480901265284,
+          186.99384285610824
+        ],
+        [
+          216970.6991808311,
+          -0.16699811873614664,
+          -75.71840922343029,
+          4743.524233778589,
+          159.72658023051852
+        ],
+        [
+          217009.34874245536,
+          -0.060831186449799124,
+          -75.222404791096,
+          2320.7374460761202,
+          137.04175164507055
+        ],
+        [
+          217026.86904458096,
+          -0.04861050102925485,
+          -75.01538529197214,
+          1350.566322971601,
+          130.06148941049625
+        ],
+        [
+          217033.289446475,
+          -0.04861077036598239,
+          -74.94285835830289,
+          1012.364279553527,
+          127.99521016773832
+        ],
+        [
+          217034.30379374718,
+          -0.04861080536444474,
+          -74.93154243777643,
+          959.604680344346,
+          127.64721786298864
+        ],
+        [
+          217035.32092786577,
+          -0.048610838466781416,
+          -74.92022651724996,
+          906.8450811352814,
+          127.29210145015897
+        ],
+        [
+          217036.34092104912,
+          -0.04861086967299114,
+          -74.90891059672349,
+          854.0854819262167,
+          126.92996435985116
+        ],
+        [
+          217037.3638457596,
+          -0.04861089898307266,
+          -74.89759467619699,
+          801.3258827172685,
+          126.5609144139667
+        ],
+        [
+          217038.38977468517,
+          -0.04861092639702485,
+          -74.88627875567049,
+          748.5662835083203,
+          126.185063872555
+        ],
+        [
+          217039.4187807193,
+          -0.04861095191484665,
+          -74.87496283514399,
+          695.8066842991393,
+          125.80252947095191
+        ],
+        [
+          217040.45093693884,
+          -0.04861097553653708,
+          -74.86364691461748,
+          643.0470850899583,
+          125.41343244676311
+        ],
+        [
+          217041.48631658065,
+          -0.04861099726209518,
+          -74.85233099409095,
+          590.2874858810101,
+          125.01789855624943
+        ],
+        [
+          217042.52499301644,
+          -0.04861101709152013,
+          -74.84101507356442,
+          537.5278866719455,
+          124.6160580797853
+        ],
+        [
+          217043.56703972578,
+          -0.04861103502481113,
+          -74.82969915303788,
+          484.76828746288083,
+          124.20804581553008
+        ],
+        [
+          217044.61253026756,
+          -0.04861105106196749,
+          -74.81838323251135,
+          432.00868825393263,
+          123.7940010616354
+        ],
+        [
+          217045.6615382499,
+          -0.04861106520298859,
+          -74.8070673119848,
+          379.249089044868,
+          123.37406758597791
+        ],
+        [
+          217046.71413729814,
+          -0.0486110774478739,
+          -74.79575139145825,
+          326.4894898358034,
+          122.94839358342016
+        ],
+        [
+          217047.7703216645,
+          -0.04861108779662291,
+          -74.7844354709317,
+          273.8297435279237,
+          122.44607320176983
+        ],
+        [
+          217048.82759255928,
+          -0.048611096249235236,
+          -74.77311955040514,
+          223.37011552019976,
+          121.03012899649214
+        ],
+        [
+          217049.88479370857,
+          -0.04861110280571053,
+          -74.76180362987857,
+          178.45108121959493,
+          118.49351089742412
+        ],
+        [
+          217050.94639603278,
+          -0.048611107466048555,
+          -74.75048770935202,
+          141.3560925675556,
+          114.98746201219674
+        ],
+        [
+          217052.0219577488,
+          -0.04861111023024911,
+          -74.73917178882544,
+          113.22022328176536,
+          110.67343487146204
+        ],
+        [
+          217053.12502120275,
+          -0.04861111109831211,
+          -74.72785586829889,
+          94.03016885672696,
+          105.78180061693956
+        ],
+        [
+          217054.27044378454,
+          -0.0486111100702375,
+          -74.71653994777232,
+          82.62424656446092,
+          100.60712291804036
+        ],
+        [
+          217055.4709539658,
+          -0.04861110714602535,
+          -74.70522402724576,
+          76.69239545299206,
+          95.50619435099756
+        ],
+        [
+          217056.73357116137,
+          -0.04861110232567573,
+          -74.69390810671919,
+          72.88133750867564,
+          90.86817339744854
+        ],
+        [
+          217057.16848141665,
+          -0.04861110029752867,
+          -74.69013613321033,
+          71.64000000001397,
+          89.37178304390633
+        ]
+      ],
+      "availableTurnRate": 0.008725557038798914,
+      "deficitEnergyMargin": 132.41308106871205,
+      "excessEnergyMargin": 299.0449623287888,
+      "mm305Advisory": "MM305 nominal closed-loop assessment failed; candidate remains advisory; MM305 nominal closed-loop touchdown and rollout unconfirmed (advisory)",
+      "mm305Deficit": "none",
+      "mm305MaximumSearchedLength": 220000,
+      "mm305MinimumRequiredLength": 68303.38359556244,
+      "mm305PlanAccepted": false,
+      "mm305SearchHorizonExceeded": false,
+      "mm305Searched": true,
+      "mm305TurnAuthorityAssessed": true,
+      "mm305Violations": [],
+      "nominalEnergyAirspeed": 120.88481443198567,
+      "nominalEnergyAlong": -2286,
+      "nominalEnergyFlightPath": -0.41887902047863906,
+      "nominalEnergyHeight": 961.5108126231888,
+      "nominalEnergyPredictedTouchdownSpeed": 85.00001732788661,
+      "plannedCrossAim": -6316.5376273857955,
+      "predictedAlong": -56414.623385240164,
+      "predictedAltitude": 24279.877864418962,
+      "predictedAt": 216789.1923526995,
+      "predictedCaptureTime": 216805.9923526907,
+      "predictedCross": -4271.832877765184,
+      "predictedDeficit": "none",
+      "predictedFeasible": true,
+      "predictedHACRadius": 3000,
+      "predictedHACSide": -1,
+      "predictedHACTurnAngle": 0.22395695851374042,
+      "predictedMach": 2.114669517194468,
+      "predictedPathLength": 57112.533766799694,
+      "predictedTrack": [],
+      "rangeMultiplier": 1,
+      "requiredHeadingChange": 0.15336490199041863
+    },
+    "diagnostic": "Entry receding-horizon candidates=3, reversals=2",
+    "entry": {
+      "bestRangeRecovery": true,
+      "captureEnergyMargin": 356329.47261293826,
+      "captureSpecificEnergy": -5896990.885397226,
+      "commandedBank": 0.11236309149362012,
+      "confidence": 1,
+      "degraded": false,
+      "dragFloorActive": true,
+      "dragScale": 0.9992226413906664,
+      "dragTrackingResidual": 8.968560841320674,
+      "energyAllocationMode": "altitude-budgeted-turn-recovery",
+      "energyBank": 0.917034737025725,
+      "energyBudgetEndpoint": "terminal-touchdown",
+      "energyDragBudget": 5.094827679650879,
+      "energyReserve": 160063.95134341586,
+      "jointForceAttainable": false,
+      "jointMaximumLateral": 4.826379029872558,
+      "jointMaximumLift": 8.683292664950208,
+      "jointRequiredLift": 9.765406004836175,
+      "lateralAllocationTarget": 6.577044737122129,
+      "lateralAuthority": 5.087510050282391,
+      "lateralDemand": 6.577044737122129,
+      "limitingReason": "lateral force deficit",
+      "minimumTurnTime": 22.446685523767222,
+      "observedDrag": 7.678898946388079,
+      "phase": 4,
+      "predictedRange": 93.28825274760214,
+      "projectedCrossrange": -3045.473846419809,
+      "rangeError": -32292.45285271374,
+      "recoveryAlpha": 0.4908738521234052,
+      "referenceBallisticCoefficient": 752.6728881514418,
+      "referenceDrag": 5.094827679650879,
+      "referenceLiftToDrag": 0.8424005564503632,
+      "referencePolarEvidence": "measured",
+      "referenceTargetRange": 32385.741105461344,
+      "requiredRange": 32385.741105461344,
+      "reversalArmed": false,
+      "reversalAvailableTime": 43.207219915760184,
+      "reversalCount": 2,
+      "reversalFeasible": true,
+      "reversalTime": 15.74993545769696,
+      "rollRateLimit": 0.07853981633974483,
+      "selectedDragAcceleration": 14.063388520971552,
+      "terminalAdviceAge": 1.1199999994132668,
+      "terminalDeficit": "none",
+      "terminalLookaheadDistance": 24784.303604733166,
+      "terminalLookaheadHeadingError": 0.14262846627341563,
+      "terminalSteeringActive": true,
+      "verticalLift": 7.218423440418588
+    },
+    "pathRemaining": 0,
+    "phase": "entry",
+    "target": {
+      "angleOfAttack": 0.2989316278152649,
+      "bank": 0.09776276472784269,
+      "desiredFlightPath": -0.060814048178886346,
+      "desiredHeight": 25000,
+      "desiredSpeed": 756.3400484724514,
+      "gearDown": false
+    },
+    "violations": []
+  },
+  "planningMode": "external-proposals-v1",
+  "sequence": 4601,
+  "state": {
+    "aerodynamics": {
+      "airspeed": 757.7564086914062,
+      "angleOfAttack": 0.29867298268351933,
+      "bank": 0.12361276033526708,
+      "drag": 195132.58054173275,
+      "dynamicPressure": 4391.72900390625,
+      "force": {
+        "x": -161495.95623360467,
+        "y": -196082.68338353804,
+        "z": 8480.590820768393
+      },
+      "lift": 162863.6209670163,
+      "mach": 2.5050880296112994,
+      "measuredForces": true,
+      "sideslip": -0.000617736955330183
+    },
+    "angularVelocity": {
+      "x": 0.013856458387188611,
+      "y": 0.006152168384571785,
+      "z": 0.00545238754288245
+    },
+    "appliedControls": {
+      "gearDown": false,
+      "pitch": 0.45621854066848755,
+      "roll": 0.002071894472464919,
+      "wheelBrake": 0,
+      "wheelSteering": 0,
+      "yaw": 0.01788838766515255
+    },
+    "atmosphere": {
+      "density": 0.015297000933428744,
+      "evidence": "measured",
+      "pressure": 999.7501220703125,
+      "speedOfSound": 302.4869384765625,
+      "temperature": 227.67491149902344,
+      "wind": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    "attitude": {
+      "w": 0.7316522667251998,
+      "x": -0.674037017695719,
+      "y": 0.1000221778306742,
+      "z": 0.018831444813053176
+    },
+    "contact": "airborne",
+    "controlAuthority": {
+      "actuatorSources": "aerodynamic-surfaces+active-powered-reaction-wheels+rcs",
+      "evidence": "measured",
+      "inertia": {
+        "x": 84856.515625,
+        "y": 913819.375,
+        "z": 948698.75
+      },
+      "negativeTorque": {
+        "x": -18235.949149035332,
+        "y": -61975.29343525966,
+        "z": -40960.05235912692
+      },
+      "positiveTorque": {
+        "x": 280099.7998904657,
+        "y": 333203.2002397788,
+        "z": 40875.01530624321
+      },
+      "rcsExcludedNegativeTorque": {
+        "x": -18235.84032058716,
+        "y": -61484.639388741925,
+        "z": -37156.82411193848
+      },
+      "rcsExcludedPositiveTorque": {
+        "x": 280099.7772216797,
+        "y": 327961.6504367441,
+        "z": 37072.10731506348
+      }
+    },
+    "mass": 25411.53125,
+    "position": {
+      "x": 96568.39017177866,
+      "y": -617409.6695398594,
+      "z": 5556.418420123815
+    },
+    "propulsion": {
+      "availableThrust": 120000,
+      "dryMass": 19965.50390625,
+      "evidence": "measured",
+      "specificImpulse": 345,
+      "thrustDirectionBody": {
+        "x": 0.9379882861606631,
+        "y": 3.026228260683393e-08,
+        "z": 0.34666695115828544
+      }
+    },
+    "radarAltitude": 22828.357690106495,
+    "snapshotSpan": 0,
+    "systems": {
+      "airbrakes": false,
+      "brakes": false,
+      "gearDown": false,
+      "rcs": true,
+      "sas": false,
+      "speedbrakeFraction": 0,
+      "throttle": 0,
+      "thrust": 0
+    },
+    "time": 216790.3123526989,
+    "velocity": {
+      "x": 736.2548712211668,
+      "y": 143.02509563594606,
+      "z": -108.015630464087
+    },
+    "vesselConfiguration": {
+      "anchorPart": 94,
+      "centerOfMassBodyFRD": {
+        "x": 1.73216922581196,
+        "y": -9.716404398850266,
+        "z": 1.3674371930906986
+      },
+      "centerOfMassEvidence": "measured",
+      "centerOfMassFromAnchor": {
+        "x": -0.00012702959076471565,
+        "y": -9.95929750142592,
+        "z": 0.3019973639775637
+      },
+      "inertiaTensorFRD": [
+        84856.5078125,
+        -31.356029510498047,
+        -1495.707763671875,
+        -31.355791091918945,
+        913819.5,
+        49.05009460449219,
+        -1495.709716796875,
+        49.049739837646484,
+        948698.5625
+      ],
+      "measuredAt": 216790.3123526989,
+      "partCount": 26,
+      "revision": 1
+    },
+    "wheelContact": {
+      "evidence": "measured",
+      "mainGear": false,
+      "noseGear": false,
+      "wheelCount": 3
+    }
+  },
+  "timing": {
+    "acquisitionSeconds": 0.003188917,
+    "commandSeconds": 0.000312666,
+    "computationSeconds": 0.00022675,
+    "missedDeadlines": 23,
+    "simulationInterval": 0.07999999995809048,
+    "wallInterval": 0.103924
+  }
+}

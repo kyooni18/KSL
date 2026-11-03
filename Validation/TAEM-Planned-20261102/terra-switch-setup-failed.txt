@@ -1,0 +1,12 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 647]
+[Planning deferred tasks]
+[1 / 5]
+[12 / 21] GuidanceTests-product
+[25 / 34] GuidanceTests-product
+[29 / 33] GuidanceTests-product
+[31 / 33] GuidanceTests-product
+[42 / 43] SimulationTests-product
+Build complete! (2.43초)
+warning: No matching test cases were run

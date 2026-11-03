@@ -1,0 +1,223 @@
+{
+  "constraintOccurrences" : {
+    "insufficientEnergy" : 1565,
+    "invalidGeometry" : 1
+  },
+  "elapsed" : 2000.0999989522097,
+  "evidence" : "offline-model-only",
+  "finalState" : {
+    "aerodynamics" : {
+      "airspeed" : 0,
+      "angleOfAttack" : 0,
+      "bank" : 0,
+      "drag" : 0,
+      "dynamicPressure" : 0,
+      "force" : {
+        "x" : 0,
+        "y" : 0,
+        "z" : 0
+      },
+      "lift" : 0,
+      "mach" : 0,
+      "measuredForces" : false,
+      "sideslip" : 0
+    },
+    "angularVelocity" : {
+      "x" : 0,
+      "y" : 3.1166880315040246,
+      "z" : 0
+    },
+    "appliedControls" : {
+      "gearDown" : true,
+      "pitch" : -0.6368036281342114,
+      "roll" : 0.0007094260210127185,
+      "wheelBrake" : 0,
+      "wheelSteering" : 0,
+      "yaw" : -0.005724594381272303
+    },
+    "atmosphere" : {
+      "density" : 1.1145280915776372,
+      "evidence" : "provisional",
+      "pressure" : 100289.33577512216,
+      "speedOfSound" : 354.9325930700595,
+      "temperature" : 313.4686340387464,
+      "wind" : {
+        "x" : 0,
+        "y" : 0,
+        "z" : 0
+      }
+    },
+    "attitude" : {
+      "w" : 0.5562112152367469,
+      "x" : -0.55585321167659,
+      "y" : 0.4370799986566083,
+      "z" : -0.436597487267186
+    },
+    "contact" : "mainGear",
+    "controlAuthority" : {
+      "actuatorSources" : "measured\/identified seed total torque and inertia held locally; q evolution unvalidated",
+      "evidence" : "identified",
+      "inertia" : {
+        "x" : 84205.84375,
+        "y" : 926859.0625,
+        "z" : 961540.1875
+      },
+      "negativeTorque" : {
+        "x" : -10000,
+        "y" : -20000,
+        "z" : -20000
+      },
+      "positiveTorque" : {
+        "x" : 10000,
+        "y" : 20000,
+        "z" : 20000
+      },
+      "rcsExcludedNegativeTorque" : {
+        "x" : -10000,
+        "y" : -20000,
+        "z" : -20000
+      },
+      "rcsExcludedPositiveTorque" : {
+        "x" : 10000,
+        "y" : 20000,
+        "z" : 20000
+      }
+    },
+    "mass" : 25183.71875,
+    "position" : {
+      "x" : 159725.63007688464,
+      "y" : -578420.7608284764,
+      "z" : -509.8687303927558
+    },
+    "propulsion" : {
+      "availableThrust" : 120000,
+      "dryMass" : 19965.5078125,
+      "evidence" : "measured",
+      "specificImpulse" : 345,
+      "thrustDirectionBody" : {
+        "x" : 0.9379882117869094,
+        "y" : -1.2584495788072763e-07,
+        "z" : 0.34666715239373375
+      }
+    },
+    "radarAltitude" : 0.8171920123882614,
+    "snapshotSpan" : 0,
+    "systems" : {
+      "airbrakes" : false,
+      "brakes" : false,
+      "gearDown" : true,
+      "rcs" : false,
+      "sas" : false,
+      "speedbrakeFraction" : 0,
+      "throttle" : 0,
+      "thrust" : 0
+    },
+    "time" : 211615.59256524604,
+    "velocity" : {
+      "x" : 0,
+      "y" : 0,
+      "z" : 0
+    },
+    "vesselConfiguration" : {
+      "anchorPart" : 109,
+      "centerOfMassBodyFRD" : {
+        "x" : -0.003583208890628242,
+        "y" : 2.9592024244575827,
+        "z" : 9.37338945500925
+      },
+      "centerOfMassEvidence" : "measured",
+      "centerOfMassFromAnchor" : {
+        "x" : 3.597619022590497e-06,
+        "y" : -9.82457511899457,
+        "z" : 0.30829439631621636
+      },
+      "inertiaTensorFRD" : [
+        84205.796875,
+        -19.3817138671875,
+        -1036.630859375,
+        -19.381460189819336,
+        926859.0625,
+        48.92119598388672,
+        -1036.6328125,
+        48.92146682739258,
+        961540.0625
+      ],
+      "measuredAt" : 209615.49256629383,
+      "partCount" : 26,
+      "revision" : 1
+    },
+    "wheelContact" : {
+      "evidence" : "provisional",
+      "mainGear" : true,
+      "noseGear" : false,
+      "wheelCount" : 3
+    }
+  },
+  "lastPlanningAdvisories" : {
+    "actuatorAuthority" : 70,
+    "excessiveBank" : 58,
+    "excessiveLoad" : 4,
+    "insufficientEnergy" : 15,
+    "insufficientLift" : 45,
+    "invalidGeometry" : 2
+  },
+  "lastTerminalAdvisory" : {
+    "feasible" : false,
+    "maximumBank" : 1.1373714232307688,
+    "maximumLoad" : 1.7108744121602617,
+    "maximumQ" : 21460.882940114534,
+    "minimumLiftMargin" : 2.0728604462361497,
+    "predictedThroughDistance" : 64988.072122171754,
+    "predictionComplete" : true,
+    "score" : 1000006.8766387976,
+    "touchdownSpeed" : 85.61468006751255,
+    "uncertaintyFraction" : 0.2,
+    "unpricedDistance" : 0,
+    "violations" : [
+      {
+        "kind" : "actuatorAuthority",
+        "limit" : 0,
+        "message" : "Path angle-of-attack rate exceeds the guidance slew envelope",
+        "value" : 0
+      },
+      {
+        "kind" : "actuatorAuthority",
+        "limit" : 0,
+        "message" : "Path angle-of-attack rate exceeds the guidance slew envelope",
+        "value" : 0
+      }
+    ]
+  },
+  "lastTerminalCandidateCount" : 74,
+  "maximumComputationMilliseconds" : 2619.611167,
+  "maximumDynamicPressure" : 9115.900659059642,
+  "maximumLoadFactor" : 2.608887107200711,
+  "meanComputationMilliseconds" : 4.874895804710112,
+  "outcome" : "timedOut",
+  "phases" : [
+    "entry",
+    "acquisition",
+    "headingAlignment",
+    "approach",
+    "preflare",
+    "flare",
+    "touchdown"
+  ],
+  "saturatedControlFraction" : 0.08264586770661467,
+  "scenario" : "72km",
+  "steps" : 20001,
+  "touchdown" : {
+    "acceptable" : true,
+    "along" : 1168.3299856319043,
+    "bank" : -0.0018008562682973871,
+    "cross" : 0.10317753961300673,
+    "horizontalSpeed" : 58.31506988414068,
+    "onRunway" : true,
+    "pitch" : 0.1932488418987962,
+    "time" : 210588.1882996596,
+    "verticalSpeed" : -2.0667332027652794
+  },
+  "violations" : [
+
+  ]
+}

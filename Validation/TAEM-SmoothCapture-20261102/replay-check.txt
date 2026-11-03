@@ -1,0 +1,21 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 45] ControlTests-product
+[2 / 24] KSLGuidance
+[4 / 26] KSLGuidance
+[7 / 28] KSLGuidance
+[15 / 19] ksl-landing-product
+[18 / 21] SimulationTests-product
+[21 / 21] GuidanceTests-product
+Build complete! (2.39초)
+Test Suite 'Selected tests' started at 2026-11-02 12:40:47.609.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 12:40:47.611.
+Test Suite 'ZZLocalReplayTests' started at 2026-11-02 12:40:47.611.
+Test Case '-[GuidanceTests.ZZLocalReplayTests testMatchedFlightHistory]' started.
+Test Case '-[GuidanceTests.ZZLocalReplayTests testMatchedFlightHistory]' passed (26.431 seconds).
+Test Suite 'ZZLocalReplayTests' passed at 2026-11-02 12:41:14.042.
+	 Executed 1 test, with 0 failures (0 unexpected) in 26.431 (26.432) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 12:41:14.042.
+	 Executed 1 test, with 0 failures (0 unexpected) in 26.431 (26.432) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 12:41:14.042.
+	 Executed 1 test, with 0 failures (0 unexpected) in 26.431 (26.433) seconds

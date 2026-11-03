@@ -1,0 +1,29 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 58] ControlTests-product
+[2 / 24] KSLGuidance
+[4 / 26] KSLGuidance
+[7 / 28] KSLGuidance
+[15 / 19] ksl-landing-product
+[15 / 19] SimulationTests-product
+[22 / 23] ksl-landing-product
+Build complete! (2.51초)
+Test Suite 'Selected tests' started at 2026-11-02 04:26:14.433.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 04:26:14.434.
+Test Suite 'TAEMTransitionTests' started at 2026-11-02 04:26:14.434.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' passed (0.001 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' passed (0.005 seconds).
+Test Suite 'TAEMTransitionTests' passed at 2026-11-02 04:26:14.440.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'ZZScratchPlannedTAEMTests' started at 2026-11-02 04:26:14.440.
+Test Case '-[GuidanceTests.ZZScratchPlannedTAEMTests testRecordedHandoff]' started.
+Test Case '-[GuidanceTests.ZZScratchPlannedTAEMTests testRecordedHandoff]' passed (0.679 seconds).
+Test Suite 'ZZScratchPlannedTAEMTests' passed at 2026-11-02 04:26:15.120.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.679 (0.679) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 04:26:15.120.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.685 (0.686) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 04:26:15.120.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.685 (0.687) seconds
+PLANNED TAEM TAEMStatus(phase: KSLGuidance.TAEMPhase.acquisition, side: 1, remainingTurn: 6.312848965136574, range: 74895.09732913437, energyHeight: 52923.68875680495, nominalEnergy: 248128.5142373039, minimumEnergy: 146958.85136985852, referenceHeight: 26388.201987018187, referenceDynamicPressure: 3115.793085514554, minimumDynamicPressure: 3257.656155625886, finalRadius: 6609.454585183046, growth: 0.07599088773175333, downmoded: false, insufficientEnergy: true, descentPlanFits: true) GuidanceTarget(angleOfAttack: 0.2806345350270968, bank: -0.29685447517894203, desiredSpeed: 738.3985493325365, desiredHeight: 26456.641987018185, desiredFlightPath: -0.12193678313117311, gearDown: false, speedbrakeFraction: nil)

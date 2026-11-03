@@ -57,6 +57,41 @@ command examples, and handoff details in investigation reports or run artifacts.
   configured RCS availability, and the ten-second RPC timeout with reconnect
   recovery. Do not disable protections or increase limits to make a run pass.
 
+## Testing policy: minimal evidence, no synthetic performance stress
+
+- Do not create, retain, restore, or execute tests that arbitrarily change the
+  physical capability of the vehicle or the simulation plant. In particular,
+  no percentage-based lift/drag changes, OMS thrust or delta-v scaling,
+  actuator-authority scaling, atmospheric-density scaling, or artificial
+  combinations of these values. Do not reintroduce the removed 15-case
+  deorbit-dispersion matrix, synthetic robustness sweeps, or Monte Carlo
+  campaigns under another name.
+- Validate the actual STS configuration using its real or identified
+  aerodynamic model, measured mass/inertia/control authority, known
+  propulsion, and genuine flight data. Runway 09 and 27, orbital windows, and
+  legitimate recorded initial states can be compared without inventing a
+  weaker or stronger shuttle. Do not manufacture a vehicle failure to measure
+  "robustness" when the task is to make the real vehicle land.
+- Tests must answer a specific, material engineering question. Before running
+  one, identify the observed failure or changed behavior, the smallest
+  decisive check, and what outcome will change the next action. Prefer code
+  inspection, historical matched-command replay, and narrow regression tests
+  over repeated end-to-end simulations. Do not run a whole suite or a
+  multi-case flight campaign just for coverage, reassurance, or to occupy time.
+- Do not launch long-running sweeps, broad robustness matrices, repeated
+  attempts, or overnight experiment loops unless the user specifically asks
+  for them. A failed nominal simulation calls for diagnosis of its actual
+  trajectory and model, not another set of arbitrary perturbations. Do not
+  leave background test processes running after the requested check.
+- Keep useful nominal-path tests and focused safety regressions. Removing
+  pointless synthetic tests must never be used to invent a passing result,
+  waive a physical flight limit, or disguise an unvalidated model. Explicitly
+  report unknown flight readiness as unknown. A modeled runway stop is not
+  proof of a successful live landing.
+- Never load or unpause KSP, initiate an OMS burn, or fly a live attempt as a
+  side effect of routine testing. Such actions require explicit authorization
+  and the existing flight safety gates.
+
 ## Experiment integrity and completion
 
 - Preserve pre-existing uncommitted work. A run's `source.patch` may be essential
@@ -74,9 +109,10 @@ command examples, and handoff details in investigation reports or run artifacts.
   intact. Check runway-relative geometry, contact/gear state, touchdown dynamics,
   ground speed and stability, and fresh continuous telemetry. An airborne phase
   transition, stopped controller, frozen log, or off-runway stop is not success.
-- Add only necessary regression tests for meaningful demonstrated behavior.
-  Use matched-state replay and focused live experiments for trajectory claims;
-  avoid large collections of compile-time tests that cannot establish them.
+- Add only necessary regression tests for demonstrated behavior. Use
+  matched-state historical replay for trajectory comparisons and explicitly
+  authorized live experiments only when required. Never substitute large test
+  counts or synthetic-plant stress cases for evidence about the actual STS.
 - Commit useful, coherent checkpoints without sweeping unrelated changes into
   a commit. Search Foundation Memory for **KSL TAEM capture** before this line
   of work; record durable findings and decisions with appropriate project tags.

@@ -1,0 +1,148 @@
+{
+  "aerodynamics": {
+    "airspeed": 756.7288208007812,
+    "angleOfAttack": 0.30008769788202067,
+    "bank": 0.12582996299634486,
+    "drag": 195805.94732770175,
+    "dynamicPressure": 4383.150390625,
+    "force": {
+      "x": -162040.97830023622,
+      "y": -196728.57068274968,
+      "z": 8182.609881305478
+    },
+    "lift": 163359.71127222944,
+    "mach": 2.5017181568928457,
+    "measuredForces": true,
+    "sideslip": -0.0005646960675554233
+  },
+  "angularVelocity": {
+    "x": 0.01518126999484328,
+    "y": 0.008510362020544202,
+    "z": 0.005725790828114241
+  },
+  "appliedControls": {
+    "gearDown": false,
+    "pitch": 0.4573691785335541,
+    "roll": 0.002745510544627905,
+    "wheelBrake": 0,
+    "wheelSteering": 0,
+    "yaw": 0.023294636979699135
+  },
+  "atmosphere": {
+    "density": 0.015308612074200114,
+    "evidence": "measured",
+    "pressure": 1000.4871826171875,
+    "speedOfSound": 302.483642578125,
+    "temperature": 227.66995239257812,
+    "wind": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
+  },
+  "attitude": {
+    "w": 0.7322898701746475,
+    "x": -0.6732506752510354,
+    "y": 0.10067973865438262,
+    "z": 0.01867256110199593
+  },
+  "contact": "airborne",
+  "controlAuthority": {
+    "actuatorSources": "aerodynamic-surfaces+active-powered-reaction-wheels+rcs",
+    "evidence": "measured",
+    "inertia": {
+      "x": 84856.0859375,
+      "y": 913804.875,
+      "z": 948684.1875
+    },
+    "negativeTorque": {
+      "x": -16770.47917567792,
+      "y": -60102.72508291727,
+      "z": -40941.231032241514
+    },
+    "positiveTorque": {
+      "x": 279798.4530805208,
+      "y": 332989.85757142294,
+      "z": 40863.109915496214
+    },
+    "rcsExcludedNegativeTorque": {
+      "x": -16770.371675491333,
+      "y": -59612.0693127159,
+      "z": -37138.02528381348
+    },
+    "rcsExcludedPositiveTorque": {
+      "x": 279798.4313964844,
+      "y": 327748.32678586245,
+      "z": 37060.21499633789
+    }
+  },
+  "mass": 25411.302734375,
+  "position": {
+    "x": 96671.37995967334,
+    "y": -617389.6370807353,
+    "z": 5541.29918775707
+  },
+  "propulsion": {
+    "availableThrust": 120000,
+    "dryMass": 19965.501953125,
+    "evidence": "measured",
+    "specificImpulse": 345,
+    "thrustDirectionBody": {
+      "x": 0.9379882861606631,
+      "y": 3.026228260683393e-08,
+      "z": 0.34666695115828544
+    }
+  },
+  "radarAltitude": 22805.195381444064,
+  "snapshotSpan": 0,
+  "systems": {
+    "airbrakes": false,
+    "brakes": false,
+    "gearDown": false,
+    "rcs": true,
+    "sas": false,
+    "speedbrakeFraction": 0,
+    "throttle": 0,
+    "thrust": 0
+  },
+  "time": 216790.45235269883,
+  "velocity": {
+    "x": 735.1809778664541,
+    "y": 143.136368434782,
+    "z": -107.9789219969624
+  },
+  "vesselConfiguration": {
+    "anchorPart": 94,
+    "centerOfMassBodyFRD": {
+      "x": 1.7411670982837695,
+      "y": -9.713511028886748,
+      "z": 1.376680230846278
+    },
+    "centerOfMassEvidence": "measured",
+    "centerOfMassFromAnchor": {
+      "x": -0.00012501385535665377,
+      "y": -9.959317463583915,
+      "z": 0.30199912976253973
+    },
+    "inertiaTensorFRD": [
+      84856.0859375,
+      -30.98484230041504,
+      -1495.461181640625,
+      -30.98484230041504,
+      913805,
+      49.04443359375,
+      -1495.462158203125,
+      49.044525146484375,
+      948684.0625
+    ],
+    "measuredAt": 216790.45235269883,
+    "partCount": 26,
+    "revision": 1
+  },
+  "wheelContact": {
+    "evidence": "measured",
+    "mainGear": false,
+    "noseGear": false,
+    "wheelCount": 3
+  }
+}

@@ -1,0 +1,30 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 21] ksl-landing-product
+[1 / 10] IntegrationTests-product
+[2 / 8] GuidanceTests-product
+[4 / 10] GuidanceTests-product
+[8 / 12] GuidanceTests-product
+[10 / 12] GuidanceTests-product
+Build complete! (2.53초)
+Test Suite 'Selected tests' started at 2026-11-02 04:00:41.563.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 04:00:41.564.
+Test Suite 'EntryCaptureRecoveryTests' started at 2026-11-02 04:00:41.564.
+Test Case '-[GuidanceTests.EntryCaptureRecoveryTests testHACAdvisoryCannotTakeOverMM304RangeReference]' started.
+Test Case '-[GuidanceTests.EntryCaptureRecoveryTests testHACAdvisoryCannotTakeOverMM304RangeReference]' passed (0.009 seconds).
+Test Suite 'EntryCaptureRecoveryTests' passed at 2026-11-02 04:00:41.573.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.009 (0.009) seconds
+Test Suite 'EntryRangeTruthRegressionTests' started at 2026-11-02 04:00:41.573.
+Test Case '-[GuidanceTests.EntryRangeTruthRegressionTests testRecordedEntryReferenceSolvesInterfaceLocationBeforeSpendingEnergy]' started.
+Test Case '-[GuidanceTests.EntryRangeTruthRegressionTests testRecordedEntryReferenceSolvesInterfaceLocationBeforeSpendingEnergy]' passed (0.083 seconds).
+Test Suite 'EntryRangeTruthRegressionTests' passed at 2026-11-02 04:00:41.657.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.083 (0.084) seconds
+Test Suite 'TerminalRecoveryOwnershipTests' started at 2026-11-02 04:00:41.657.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testTAEMHandoffRequiresInterfaceRangeAndEnergyWithRecoveryDeadlines]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testTAEMHandoffRequiresInterfaceRangeAndEnergyWithRecoveryDeadlines]' passed (0.006 seconds).
+Test Suite 'TerminalRecoveryOwnershipTests' passed at 2026-11-02 04:00:41.663.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 04:00:41.663.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.098 (0.099) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 04:00:41.663.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.098 (0.101) seconds

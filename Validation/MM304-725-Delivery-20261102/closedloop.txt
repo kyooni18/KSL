@@ -1,0 +1,27 @@
+Building for debugging...
+[Computing dependencies]
+[2 / 8] GuidanceTests-product
+[4 / 10] GuidanceTests-product
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/GuidanceTests/ZZScratchEntryDeliveryTests.swift:12:7: warning: initialization of immutable value 'translation' was never used; consider replacing with assignment to '_' or removing it [#NoUsage]
+10 |   let initial = try JSONDecoder().decode(VehicleState.self, from:Data(contentsOf:URL(fileURLWithPath:root+"Validation/MM304-725-Delivery-20261102/initial-state.json")))
+11 |   let atm = try AtmosphericModelEngine(planet:c.planet), aero = try AerodynamicsEngine(referenceArea:c.vehicle.referenceArea)
+12 |   let translation = TranslationalDynamicsEngine(planet:c.planet,atmosphere:atm,aerodynamics:aero)
+   |       `- warning: initialization of immutable value 'translation' was never used; consider replacing with assignment to '_' or removing it [#NoUsage]
+13 |   let frame = RunwayFrame(runway:c.runway,planet:c.planet)
+14 |   let law=EntryGuidanceEngine(configuration:c,atmosphere:atm,aerodynamics:aero,permitsReplanning:false)
+
+[#NoUsage]: <https://docs.swift.org/compiler/documentation/diagnostics/no-usage>
+[10 / 12] GuidanceTests-product
+Build complete! (1.90초)
+Test Suite 'Selected tests' started at 2026-11-02 03:56:16.258.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 03:56:16.260.
+Test Suite 'ZZScratchEntryDeliveryTests' started at 2026-11-02 03:56:16.260.
+Test Case '-[GuidanceTests.ZZScratchEntryDeliveryTests testBestGlideRangeDiagnostic]' started.
+Test Case '-[GuidanceTests.ZZScratchEntryDeliveryTests testBestGlideRangeDiagnostic]' passed (28.539 seconds).
+Test Suite 'ZZScratchEntryDeliveryTests' passed at 2026-11-02 03:56:44.799.
+	 Executed 1 test, with 0 failures (0 unexpected) in 28.539 (28.540) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 03:56:44.799.
+	 Executed 1 test, with 0 failures (0 unexpected) in 28.539 (28.540) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 03:56:44.799.
+	 Executed 1 test, with 0 failures (0 unexpected) in 28.539 (28.541) seconds
+CLOSEDLOOP 722.7999996213475 25251.21916968166 724.8924477713899 RunwayCoordinates(along: 158450.81340596188, cross: -2036.4095203458617, height: 25182.77916968166) []

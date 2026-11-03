@@ -1,0 +1,137 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 647]
+[Planning deferred tasks]
+[35 / 327] KSLRuntime
+[148 / 327]
+[149 / 328] KSLCore
+[159 / 375]
+[161 / 375]
+[166 / 375]
+[168 / 375]
+[172 / 375]
+[174 / 375]
+[177 / 375]
+[180 / 375]
+[182 / 375]
+[183 / 375]
+[195 / 375] KSLCore
+[196 / 375] KSLCore
+[209 / 378] KSLCore
+[213 / 379] KSLDiagnostics
+[225 / 403] KSLKRPC
+[240 / 403] KSLKRPC
+[244 / 403] KSLKRPC
+[246 / 403] KSLKRPC
+[248 / 403] KSLKRPC
+[255 / 403] KSLPhysics
+[260 / 404]
+[268 / 444]
+[270 / 444]
+[277 / 444] KSLControl
+[279 / 444]
+[282 / 445] KSLPhysics
+[285 / 459]
+[296 / 459] KSLPhysics
+[296 / 459]
+[299 / 459]
+[300 / 459]
+[303 / 459] KSLPhysics
+[309 / 459] KSLPhysics
+[311 / 459] PhysicsTests-product
+[315 / 460]
+[315 / 460] KSLPhysics
+[326 / 462] KSLGuidance
+[335 / 475] KSLGuidance
+[336 / 475]
+[337 / 475] KSLGuidance
+[339 / 475] KSLGuidance
+[348 / 475] KSLGuidance
+[351 / 476]
+[356 / 492]
+[363 / 492] PhysicsTests-product
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Sources/KSLGuidance/Entry/EntryDragReference.swift:60:28: [1;33mwarning: [1;39mimmutable value 'e' was never used; consider replacing with '_' or removing it[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/no-usage\NoUsage]8;;\]
+ [0;36m58 |[0;0m                referenceRangeScale: Double = 1,
+ [0;36m59 |[0;0m                objective: EntryCaptureObjective, maximumAlpha: Double) -> EntryDiagnostics {
+ [0;36m60 |[0;0m     let c = configuration, e = c.entrySettings, a = s.aerodynamics
+    [0;36m|[0;0m                            `- [1;33mwarning: [1;39mimmutable value 'e' was never used; consider replacing with '_' or removing it[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/no-usage\NoUsage]8;;\]
+ [0;36m61 |[0;0m     let targetAltitude = objective.altitude, targetSpeed = objective.speed
+ [0;36m62 |[0;0m     let speed = a.airspeed, height = s.position.length - c.planet.radius
+
+[#NoUsage]: <https://docs.swift.org/compiler/documentation/diagnostics/no-usage>
+[365 / 492] CoreTests-product
+[373 / 492] ControlTests-product
+[379 / 504] PhysicsTests-product
+[385 / 504] PhysicsTests-product
+[388 / 504] KSLGuidance
+[392 / 504] KSLRuntime
+[399 / 504] CoreTests-product
+[406 / 504] ControlTests-product
+[408 / 504] KSLRuntime
+[411 / 504] ControlTests-product
+[412 / 504] CoreTests-product
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/CoreTests/RunwayApproachSelectorTests.swift:6:9: [1;33mwarning: [1;39mvariable 'c' was never mutated; consider changing to 'let' constant[0;0m
+ [0;36m4 |[0;0m final class RunwayApproachSelectorTests: XCTestCase {
+ [0;36m5 |[0;0m   func testAutomaticSelectionPrefersInboundDirectionAndIsSymmetric() {
+ [0;36m6 |[0;0m     var c = MissionConfiguration()
+   [0;36m|[0;0m         `- [1;33mwarning: [1;39mvariable 'c' was never mutated; consider changing to 'let' constant[0;0m
+ [0;36m7 |[0;0m     let f = RunwayFrame(runway: c.runway, planet: c.planet)
+ [0;36m8 |[0;0m     // A vessel west of KSC heading east toward 09, but opposite to 27.
+
+/Users/kyooni18/Code/KSL/swift/KSL-Landing/Tests/CoreTests/RunwayApproachSelectorTests.swift:38:9: [1;33mwarning: [1;39mvariable 'c' was never mutated; consider changing to 'let' constant[0;0m
+[0;36m36 |[0;0m 
+[0;36m37 |[0;0m   func testSelectedRunwayIsConsistentWithMeasuredVelocityFrames() {
+[0;36m38 |[0;0m     var c = MissionConfiguration()
+   [0;36m|[0;0m         `- [1;33mwarning: [1;39mvariable 'c' was never mutated; consider changing to 'let' constant[0;0m
+[0;36m39 |[0;0m     let frame = RunwayFrame(runway: c.runway, planet: c.planet)
+[0;36m40 |[0;0m     let p = frame.position(along: -160_000, cross: 65_000, height: 35_000)
+[417 / 504] CoreTests-product
+[417 / 504]
+[420 / 506] GuidanceTests-product
+[425 / 506] ControlTests-product
+[429 / 506] CoreTests-product
+[433 / 506] KSLSimulation
+[440 / 511] KSLRuntime
+[443 / 511] KSLSimulation
+[459 / 513] KSLSimulation
+[471 / 526] GuidanceTests-product
+[471 / 526] KSLSimulation
+[475 / 542] ksl-landing-product
+[478 / 542] GuidanceTests-product
+[491 / 542] ksl-landing-product
+[495 / 542] ksl-landing-product
+[498 / 542] KSLLanding
+[500 / 542] GuidanceTests-product
+[502 / 542]
+[506 / 543] SimulationTests-product
+[510 / 544]
+[510 / 544] GuidanceTests-product
+[510 / 544] KSLLanding
+[512 / 544] KSLLanding
+[516 / 548] GuidanceTests-product
+[518 / 548] IntegrationTests-product
+[525 / 561] IntegrationTests-product
+[527 / 561] SimulationTests-product
+[528 / 561] IntegrationTests-product
+[533 / 561] SimulationTests-product
+[538 / 561]
+[545 / 561] IntegrationTests-product
+[547 / 561] IntegrationTests-product
+[548 / 561]
+[549 / 561] IntegrationTests-product
+[551 / 561] ksl-landing-product
+[555 / 561] IntegrationTests-product
+[557 / 561] ksl-landing-product
+Build complete! (26.10초)
+Test Suite 'Selected tests' started at 2026-11-02 04:46:45.179.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 04:46:45.180.
+Test Suite 'ZZTerraTAEMDiagnosticTests' started at 2026-11-02 04:46:45.180.
+Test Case '-[GuidanceTests.ZZTerraTAEMDiagnosticTests testRecordedHandoff]' started.
+Test Case '-[GuidanceTests.ZZTerraTAEMDiagnosticTests testRecordedHandoff]' passed (19.516 seconds).
+Test Suite 'ZZTerraTAEMDiagnosticTests' passed at 2026-11-02 04:47:04.697.
+	 Executed 1 test, with 0 failures (0 unexpected) in 19.516 (19.516) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 04:47:04.697.
+	 Executed 1 test, with 0 failures (0 unexpected) in 19.516 (19.516) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 04:47:04.697.
+	 Executed 1 test, with 0 failures (0 unexpected) in 19.516 (19.518) seconds
+PLANNED TAEM TAEMStatus(phase: KSLGuidance.TAEMPhase.acquisition, side: 1, remainingTurn: 6.312976107231663, range: 52216.20869652884, energyHeight: 52923.68875680495, nominalEnergy: 201542.76544048192, minimumEnergy: 50614.748669223176, referenceHeight: 26388.20198701818, referenceDynamicPressure: 3115.793085514554, minimumDynamicPressure: 0.0, finalRadius: 3000.0, growth: 0.07599088773175333, downmoded: false, insufficientEnergy: false, descentPlanFits: true) GuidanceTarget(angleOfAttack: 0.03839908222526781, bank: -0.16541331016306215, desiredSpeed: 738.3985493325365, desiredHeight: 26456.641987018178, desiredFlightPath: -0.12193678313117381, gearDown: false, speedbrakeFraction: nil)

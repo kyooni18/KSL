@@ -1,0 +1,62 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 1]
+[7 / 55] KSL-Landing_KSLPhysics
+[11 / 43] KSLGuidance
+[14 / 46] KSLGuidance
+[15 / 47] KSLGuidance
+[21 / 52] KSLRuntime
+[23 / 53] KSLGuidance
+[24 / 53] KSLGuidance
+[32 / 59] KSLSimulation
+[34 / 61] KSLSimulation
+[42 / 64] GuidanceTests-product
+[51 / 77] GuidanceTests-product
+[57 / 80] SimulationTests-product
+[70 / 80] KSLLanding
+[72 / 82] IntegrationTests-product
+[74 / 84] GuidanceTests-product
+[79 / 84] IntegrationTests-product
+[84 / 88] GuidanceTests-product
+Build complete! (3.21초)
+Test Suite 'Selected tests' started at 2026-11-02 12:42:30.013.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 12:42:30.015.
+Test Suite 'TAEMReferenceRecoveryTests' started at 2026-11-02 12:42:30.015.
+Test Case '-[GuidanceTests.TAEMReferenceRecoveryTests testRecordedLiveJoinDoesNotMoveAfterCommitment]' started.
+Test Case '-[GuidanceTests.TAEMReferenceRecoveryTests testRecordedLiveJoinDoesNotMoveAfterCommitment]' passed (0.228 seconds).
+Test Case '-[GuidanceTests.TAEMReferenceRecoveryTests testRejectedRecordedReferenceCannotCommandBallisticDive]' started.
+Test Case '-[GuidanceTests.TAEMReferenceRecoveryTests testRejectedRecordedReferenceCannotCommandBallisticDive]' passed (0.225 seconds).
+Test Suite 'TAEMReferenceRecoveryTests' passed at 2026-11-02 12:42:30.468.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.453 (0.453) seconds
+Test Suite 'TAEMTransitionTests' started at 2026-11-02 12:42:30.468.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testDescentPlanRequiresEnoughDistanceAndPreservesEndpointSlopes]' passed (0.000 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testHorizontalNEPCrossingCannotForceHighAltitudeFinal]' passed (0.002 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testInsideHACCannotSpendMoreReferenceArcThanGroundTravel]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testInsideHACCannotSpendMoreReferenceArcThanGroundTravel]' passed (0.000 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testOverheadProgressCannotLoseOneWindingAtTheAngleBoundary]' passed (0.000 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testRecordedShortDownmodeRequiresImpossiblePushOver]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testRecordedShortDownmodeRequiresImpossiblePushOver]' passed (0.000 seconds).
+Test Case '-[GuidanceTests.TAEMTransitionTests testSteepDescentRejoinPreservesMeasuredFlightPath]' started.
+Test Case '-[GuidanceTests.TAEMTransitionTests testSteepDescentRejoinPreservesMeasuredFlightPath]' passed (0.000 seconds).
+Test Suite 'TAEMTransitionTests' passed at 2026-11-02 12:42:30.471.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'TerminalRecoveryOwnershipTests' started at 2026-11-02 12:42:30.471.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testCrashContactRemainsAdvisoryAndNeverReportsCompletion]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testCrashContactRemainsAdvisoryAndNeverReportsCompletion]' passed (0.203 seconds).
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testLateralCorrectionPenalizesOpeningCrossVelocity]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testLateralCorrectionPenalizesOpeningCrossVelocity]' passed (0.000 seconds).
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testMissionActuallyEntersMM305WithNoQualifiedRoute]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testMissionActuallyEntersMM305WithNoQualifiedRoute]' passed (0.306 seconds).
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testSustainedPitchSaturationBoundsThenReleasesAttainableAoA]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testSustainedPitchSaturationBoundsThenReleasesAttainableAoA]' passed (0.000 seconds).
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testTAEMHandoffRequiresInterfaceRangeAndEnergyWithRecoveryDeadlines]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOwnershipTests testTAEMHandoffRequiresInterfaceRangeAndEnergyWithRecoveryDeadlines]' passed (0.003 seconds).
+Test Suite 'TerminalRecoveryOwnershipTests' passed at 2026-11-02 12:42:30.983.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.512 (0.512) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 12:42:30.983.
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.968 (0.969) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 12:42:30.983.
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.968 (0.970) seconds

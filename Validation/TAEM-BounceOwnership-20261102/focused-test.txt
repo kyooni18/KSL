@@ -1,0 +1,41 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 647]
+[Planning deferred tasks]
+[13 / 79] KSL-Landing_KSLPhysics
+[14 / 79] KSLCore
+[16 / 80] KSLCore
+[23 / 93] CoreTests-product
+[23 / 92] KSLDiagnostics
+[29 / 95] KSLControl
+[34 / 92] KSLKRPC
+[38 / 87] KSLPhysics
+[45 / 82] KSLGuidance
+[47 / 84] KSLGuidance
+[51 / 86] KSLRuntime
+[53 / 87] KSLGuidance
+[55 / 87] KSLGuidance
+[58 / 93] KSLGuidance-product
+[58 / 93] KSLRuntime
+[62 / 95] KSLSimulation
+[64 / 96] GuidanceTests-product
+[73 / 84] IntegrationTests-product
+[73 / 85] GuidanceTests-product
+[77 / 84] GuidanceTests-product
+[79 / 84] ksl-landing-product
+[79 / 84] IntegrationTests-product
+[83 / 85] IntegrationTests-product
+[83 / 87] GuidanceTests-product
+[87 / 87] ksl-landing-product
+Build complete! (9.35초)
+Test Suite 'Selected tests' started at 2026-11-02 12:15:00.389.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-02 12:15:00.392.
+Test Suite 'TouchdownBounceOwnershipTests' started at 2026-11-02 12:15:00.392.
+Test Case '-[GuidanceTests.TouchdownBounceOwnershipTests testRecordedBounceKeepsFinalOwnership]' started.
+Test Case '-[GuidanceTests.TouchdownBounceOwnershipTests testRecordedBounceKeepsFinalOwnership]' passed (0.013 seconds).
+Test Suite 'TouchdownBounceOwnershipTests' passed at 2026-11-02 12:15:00.406.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.013 (0.013) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-02 12:15:00.406.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.013 (0.013) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 12:15:00.406.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.013 (0.017) seconds
