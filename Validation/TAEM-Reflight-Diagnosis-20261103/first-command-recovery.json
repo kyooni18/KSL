@@ -1,0 +1,52 @@
+{
+  "time": 18628.42037600153,
+  "searchEnd": "familyExhausted",
+  "id": "28CA227F-F6CD-4A93-B3AE-789521C77F53",
+  "trials": [
+    {
+      "topology": "incumbent",
+      "candidateID": "28CA227F-F6CD-4A93-B3AE-789521C77F53/incumbent",
+      "prefixEnd": "unsupportedDynamics"
+    },
+    {
+      "topology": "protection",
+      "candidateID": "28CA227F-F6CD-4A93-B3AE-789521C77F53/protection",
+      "prefixEnd": "unsupportedDynamics"
+    },
+    {
+      "topology": "direct",
+      "candidateID": "28CA227F-F6CD-4A93-B3AE-789521C77F53/direct",
+      "prefixEnd": "scheduleExhausted"
+    },
+    {
+      "topology": "left",
+      "candidateID": "28CA227F-F6CD-4A93-B3AE-789521C77F53/0/left",
+      "prefixEnd": "unsupportedDynamics"
+    },
+    {
+      "topology": "right",
+      "candidateID": "28CA227F-F6CD-4A93-B3AE-789521C77F53/0/right",
+      "prefixEnd": "unsupportedDynamics"
+    },
+    {
+      "topology": "windingLeft",
+      "candidateID": "28CA227F-F6CD-4A93-B3AE-789521C77F53/0/windingLeft",
+      "prefixEnd": "unsupportedDynamics"
+    },
+    {
+      "topology": "windingRight",
+      "candidateID": "28CA227F-F6CD-4A93-B3AE-789521C77F53/0/windingRight",
+      "prefixEnd": "unsupportedDynamics"
+    },
+    {
+      "topology": "leftRight",
+      "candidateID": "28CA227F-F6CD-4A93-B3AE-789521C77F53/0/leftRight",
+      "prefixEnd": "unsupportedDynamics"
+    },
+    {
+      "topology": "rightLeft",
+      "candidateID": "28CA227F-F6CD-4A93-B3AE-789521C77F53/0/rightLeft",
+      "prefixEnd": "unsupportedDynamics"
+    }
+  ]
+}

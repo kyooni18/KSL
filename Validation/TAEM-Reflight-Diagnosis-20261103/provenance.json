@@ -1,0 +1,54 @@
+{
+  "revision": "c20514c69f5767d3781f3b610b03473cd8378d38",
+  "authorization": "User: reflight. and this time, create a checkpoint at 72km",
+  "initialInspection": {
+    "ut": 614.4800244138728,
+    "identity": {
+      "body": "Kerbin",
+      "name": "STS",
+      "partCount": 26,
+      "serverVersion": "0.6.0"
+    },
+    "propulsion": {
+      "availableThrust": 120000,
+      "dryMass": 21508.204231283613,
+      "evidence": "measured",
+      "specificImpulse": 345,
+      "thrustDirectionBody": {
+        "x": 0.9379884076966949,
+        "y": 1.7508023360489955e-07,
+        "z": 0.34666662231398654
+      }
+    }
+  },
+  "executableSHA256": "f883677cfef0fcefa75d41e15eda899c5812b0750eb7b5c9d1248124bc115556",
+  "configurationSHA256": "a07cd9929f4cc0e0060519b8777a30f3c273bf37e7d6fb21b87b916b3684ee2a",
+  "sourcePatchSHA256": "b6ab850917b1d24873b7e78278de32fe1c22db1ca35df1e128cc2f999e6efcdc",
+  "resources": {
+    "KSL-Landing_KSLPhysics.bundle/Contents/Info.plist": "a958b2317b1982bab813b32d2e237b9fe0c661b01f520d3422dc7547fa515faa",
+    "KSL-Landing_KSLPhysics.bundle/Contents/Resources/STSAerodynamics.csv": "6853ae2cfa0a0da9b9daf329238550c68f3e9e335f8ed47175be4fd4dcac9f71",
+    "KSL-Landing_KSLPhysics.bundle/Contents/Resources/KerbinCurves.json": "86a0ca44975b882dbdd1e7510e0fff5b7d0be1698297a19203fbca5fad7fc1ca"
+  },
+  "flightMode": "default-deorbit-coverage-and-advisory-recovery",
+  "saveOperations": {
+    "load": "ksl-20261013T164958Z-sts-85km-10deg-orbit",
+    "create": "unique descending 72km ASL checkpoint"
+  },
+  "normalEntryGates": true,
+  "sourceRun": "runs/20261103T052636Z-deorbit-coverage-reflight",
+  "analysisControlsChanged": false,
+  "newLiveAttemptStarted": false,
+  "recoverySearch": {
+    "proposals": 83,
+    "trials": 747,
+    "unsupportedDynamics": 664,
+    "scheduleExhausted": 83,
+    "selectedCompleteForecasts": 0
+  },
+  "artifacts": {
+    "matched-telemetry.jsonl": "015ece5dda0b5f2080eb811bc415fde2c68b3bae6cc752161486edc4c672f4d7",
+    "first-command-recovery.json": "7047c3a6d52224c6d73b5ad51e266f276888c64db025af299c71f6fa60dadc23",
+    "trajectory-summary.json": "7a6eafae090764753223cb6299439c57ad56106d2015768d6cc0c3df940d2c5e",
+    "last-advisory-proposal.json": "6995bcb6df7bf29e2e465e0d4556f74de60cca37acf21157425010c2ef0b6687"
+  }
+}

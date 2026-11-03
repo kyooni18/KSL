@@ -1,0 +1,548 @@
+{
+  "runway": {
+    "elevation": 820.95,
+    "heading": 0.016454362747342143,
+    "latitude": -0.11519718122401937,
+    "length": 1750,
+    "longitude": -2.5139869463627975,
+    "name": "Dessert Airfield Runway 36",
+    "width": 42.6
+  },
+  "transitions": [
+    {
+      "ut": 17498.30037597686,
+      "phase": "orbitalCoast",
+      "along": -243918.4,
+      "cross": 1720667.1,
+      "height": 84188.0,
+      "radar": 84022.3,
+      "speed": 2074.1,
+      "sink": -0.0,
+      "headingError": -79.1,
+      "bank": -12.7,
+      "cmdBank": 0.0,
+      "alpha": 24.0,
+      "cmdAlpha": 0.0,
+      "mode": null,
+      "pathError": null,
+      "station": null,
+      "planID": null,
+      "contact": "airborne",
+      "ground": {
+        "evidence": "measured",
+        "mainGear": false,
+        "noseGear": false,
+        "wheelCount": 3
+      },
+      "flare": {
+        "wheelHeight": null,
+        "desiredSink": null,
+        "triggerHeight": null,
+        "predictedTouchdownAlong": null
+      },
+      "force": {
+        "requestedForce": null,
+        "modeledForce": null,
+        "forceResidual": null
+      }
+    },
+    {
+      "ut": 17582.280375978695,
+      "phase": "burnSetup",
+      "along": -198002.5,
+      "cross": -1868851.9,
+      "height": 84187.3,
+      "radar": 84092.6,
+      "speed": 2074.0,
+      "sink": -0.01,
+      "headingError": -80.8,
+      "bank": 1.8,
+      "cmdBank": 0.0,
+      "alpha": -159.7,
+      "cmdAlpha": 0.0,
+      "mode": null,
+      "pathError": null,
+      "station": null,
+      "planID": null,
+      "contact": "airborne",
+      "ground": {
+        "evidence": "measured",
+        "mainGear": false,
+        "noseGear": false,
+        "wheelCount": 3
+      },
+      "flare": {
+        "wheelHeight": null,
+        "desiredSink": null,
+        "triggerHeight": null,
+        "predictedTouchdownAlong": null
+      },
+      "force": {
+        "requestedForce": null,
+        "modeledForce": null,
+        "forceResidual": null
+      }
+    },
+    {
+      "ut": 17594.320375978958,
+      "phase": "deorbitBurn",
+      "along": 150443.7,
+      "cross": -1851460.1,
+      "height": 84187.2,
+      "radar": 84182.3,
+      "speed": 2074.0,
+      "sink": -0.01,
+      "headingError": -81.1,
+      "bank": 1.8,
+      "cmdBank": 0.0,
+      "alpha": -159.7,
+      "cmdAlpha": 0.0,
+      "mode": null,
+      "pathError": null,
+      "station": null,
+      "planID": null,
+      "contact": "airborne",
+      "ground": {
+        "evidence": "measured",
+        "mainGear": false,
+        "noseGear": false,
+        "wheelCount": 3
+      },
+      "flare": {
+        "wheelHeight": null,
+        "desiredSink": null,
+        "triggerHeight": null,
+        "predictedTouchdownAlong": null
+      },
+      "force": {
+        "requestedForce": null,
+        "modeledForce": null,
+        "forceResidual": null
+      }
+    },
+    {
+      "ut": 17640.26037597996,
+      "phase": "entryCoast",
+      "along": 205340.4,
+      "cross": -1762773.6,
+      "height": 84141.1,
+      "radar": 84107.8,
+      "speed": 2044.5,
+      "sink": -3.69,
+      "headingError": -82.2,
+      "bank": 1.8,
+      "cmdBank": 0.0,
+      "alpha": -159.7,
+      "cmdAlpha": 18.0,
+      "mode": null,
+      "pathError": null,
+      "station": null,
+      "planID": null,
+      "contact": "airborne",
+      "ground": {
+        "evidence": "measured",
+        "mainGear": false,
+        "noseGear": false,
+        "wheelCount": 3
+      },
+      "flare": {
+        "wheelHeight": null,
+        "desiredSink": null,
+        "triggerHeight": null,
+        "predictedTouchdownAlong": null
+      },
+      "force": {
+        "requestedForce": null,
+        "modeledForce": null,
+        "forceResidual": null
+      }
+    },
+    {
+      "ut": 18053.840375988988,
+      "phase": "entry",
+      "along": 104868.3,
+      "cross": -1014793.1,
+      "height": 68674.3,
+      "radar": 69495.3,
+      "speed": 2101.5,
+      "sink": -59.26,
+      "headingError": -96.2,
+      "bank": -0.0,
+      "cmdBank": 0.0,
+      "alpha": 18.0,
+      "cmdAlpha": 18.2,
+      "mode": null,
+      "pathError": null,
+      "station": null,
+      "planID": null,
+      "contact": "airborne",
+      "ground": {
+        "evidence": "measured",
+        "mainGear": false,
+        "noseGear": false,
+        "wheelCount": 3
+      },
+      "flare": {
+        "wheelHeight": null,
+        "desiredSink": null,
+        "triggerHeight": null,
+        "predictedTouchdownAlong": null
+      },
+      "force": {
+        "requestedForce": null,
+        "modeledForce": null,
+        "forceResidual": null
+      }
+    },
+    {
+      "ut": 18628.320376001528,
+      "phase": "acquisition",
+      "along": -15340.1,
+      "cross": -15007.3,
+      "height": 27002.4,
+      "radar": 27377.2,
+      "speed": 877.8,
+      "sink": -89.84,
+      "headingError": -95.1,
+      "bank": 0.2,
+      "cmdBank": 0.0,
+      "alpha": 26.4,
+      "cmdAlpha": 27.4,
+      "mode": "local-advisory-path-no-complete-forecast",
+      "pathError": 101.03575200800738,
+      "station": 2760.5536869604625,
+      "planID": 186251,
+      "contact": "airborne",
+      "ground": {
+        "evidence": "measured",
+        "mainGear": false,
+        "noseGear": false,
+        "wheelCount": 3
+      },
+      "flare": {
+        "wheelHeight": null,
+        "desiredSink": null,
+        "triggerHeight": null,
+        "predictedTouchdownAlong": null
+      },
+      "force": {
+        "requestedForce": {
+          "x": 7.7046685744209515,
+          "y": 0.7412905865733119
+        },
+        "modeledForce": {
+          "x": 7.704668574420952,
+          "y": 0.7412905865733119
+        },
+        "forceResidual": {
+          "x": 8.881784197001252e-16,
+          "y": 0
+        }
+      }
+    },
+    {
+      "ut": 19046.64037601066,
+      "phase": "approach",
+      "along": 1930.6,
+      "cross": 460.4,
+      "height": 959.3,
+      "radar": 960.3,
+      "speed": 100.6,
+      "sink": -32.31,
+      "headingError": 156.2,
+      "bank": -6.9,
+      "cmdBank": -7.9,
+      "alpha": 3.9,
+      "cmdAlpha": 4.0,
+      "mode": null,
+      "pathError": null,
+      "station": null,
+      "planID": null,
+      "contact": "airborne",
+      "ground": {
+        "evidence": "measured",
+        "mainGear": false,
+        "noseGear": false,
+        "wheelCount": 3
+      },
+      "flare": {
+        "wheelHeight": 956.0823619506787,
+        "desiredSink": 32.30849933598978,
+        "triggerHeight": 258.9202096771179,
+        "predictedTouchdownAlong": null
+      },
+      "force": {
+        "requestedForce": null,
+        "modeledForce": null,
+        "forceResidual": null
+      }
+    },
+    {
+      "ut": 19058.800376010924,
+      "phase": "preflare",
+      "along": 838.9,
+      "cross": 71.4,
+      "height": 477.6,
+      "radar": 478.6,
+      "speed": 108.6,
+      "sink": -48.19,
+      "headingError": 162.8,
+      "bank": 4.8,
+      "cmdBank": 8.6,
+      "alpha": 2.8,
+      "cmdAlpha": 2.8,
+      "mode": null,
+      "pathError": null,
+      "station": null,
+      "planID": null,
+      "contact": "airborne",
+      "ground": {
+        "evidence": "measured",
+        "mainGear": false,
+        "noseGear": false,
+        "wheelCount": 3
+      },
+      "flare": {
+        "wheelHeight": 474.361486697942,
+        "desiredSink": 48.187741314526384,
+        "triggerHeight": 476.2727454863477,
+        "predictedTouchdownAlong": null
+      },
+      "force": {
+        "requestedForce": null,
+        "modeledForce": null,
+        "forceResidual": null
+      }
+    },
+    {
+      "ut": 19074.900376011276,
+      "phase": "flare",
+      "along": -472.1,
+      "cross": -732.0,
+      "height": 14.9,
+      "radar": 16.0,
+      "speed": 85.2,
+      "sink": -4.96,
+      "headingError": 128.0,
+      "bank": 16.6,
+      "cmdBank": 12.2,
+      "alpha": 5.6,
+      "cmdAlpha": 6.4,
+      "mode": null,
+      "pathError": null,
+      "station": null,
+      "planID": null,
+      "contact": "airborne",
+      "ground": {
+        "evidence": "measured",
+        "mainGear": false,
+        "noseGear": false,
+        "wheelCount": 3
+      },
+      "flare": {
+        "wheelHeight": 11.742281239153773,
+        "desiredSink": 3.5,
+        "triggerHeight": 26.987808994067976,
+        "predictedTouchdownAlong": null
+      },
+      "force": {
+        "requestedForce": null,
+        "modeledForce": null,
+        "forceResidual": null
+      }
+    },
+    {
+      "ut": 19089.560376011596,
+      "phase": "touchdown",
+      "along": -892.5,
+      "cross": -1605.2,
+      "height": 2.4,
+      "radar": 3.5,
+      "speed": 49.4,
+      "sink": -0.65,
+      "headingError": 103.3,
+      "bank": 7.4,
+      "cmdBank": 0.0,
+      "alpha": 10.1,
+      "cmdAlpha": 0.0,
+      "mode": null,
+      "pathError": null,
+      "station": null,
+      "planID": null,
+      "contact": "mainGear",
+      "ground": {
+        "evidence": "measured",
+        "mainGear": true,
+        "noseGear": false,
+        "wheelCount": 3
+      },
+      "flare": {
+        "wheelHeight": null,
+        "desiredSink": null,
+        "triggerHeight": null,
+        "predictedTouchdownAlong": null
+      },
+      "force": {
+        "requestedForce": null,
+        "modeledForce": null,
+        "forceResidual": null
+      }
+    },
+    {
+      "ut": 19091.840376011645,
+      "phase": "rollout",
+      "along": -915.7,
+      "cross": -1709.5,
+      "height": 1.4,
+      "radar": 3.1,
+      "speed": 45.6,
+      "sink": -0.5,
+      "headingError": 101.8,
+      "bank": 0.0,
+      "cmdBank": 0.0,
+      "alpha": -4.3,
+      "cmdAlpha": 0.0,
+      "mode": null,
+      "pathError": null,
+      "station": null,
+      "planID": null,
+      "contact": "rolling",
+      "ground": {
+        "evidence": "measured",
+        "mainGear": true,
+        "noseGear": true,
+        "wheelCount": 3
+      },
+      "flare": {
+        "wheelHeight": null,
+        "desiredSink": null,
+        "triggerHeight": null,
+        "predictedTouchdownAlong": null
+      },
+      "force": {
+        "requestedForce": null,
+        "modeledForce": null,
+        "forceResidual": null
+      }
+    }
+  ],
+  "modes": {
+    "local-advisory-path-no-complete-forecast": 4033
+  },
+  "referencePlans": {
+    "186251": 4033
+  },
+  "closestThreshold": {
+    "ut": 19066.48037601109,
+    "phase": "preflare",
+    "along": 125.8,
+    "cross": -215.7,
+    "height": 151.3,
+    "radar": 152.4,
+    "speed": 106.1,
+    "sink": -30.18,
+    "headingError": 150.4,
+    "bank": 20.6,
+    "cmdBank": 20.5,
+    "alpha": 5.1,
+    "cmdAlpha": 4.8,
+    "mode": null,
+    "pathError": null,
+    "station": null,
+    "planID": null,
+    "contact": "airborne",
+    "ground": {
+      "evidence": "measured",
+      "mainGear": false,
+      "noseGear": false,
+      "wheelCount": 3
+    },
+    "flare": {
+      "wheelHeight": 148.14924847744402,
+      "desiredSink": 26.21540646041582,
+      "triggerHeight": 212.24710790617877,
+      "predictedTouchdownAlong": null
+    },
+    "force": {
+      "requestedForce": null,
+      "modeledForce": null,
+      "forceResidual": null
+    }
+  },
+  "last": {
+    "ut": 19130.08037601248,
+    "phase": "rollout",
+    "along": -967.6,
+    "cross": -1945.5,
+    "height": -1.1,
+    "radar": 3.2,
+    "speed": 0.0,
+    "sink": 0.01,
+    "headingError": 49.7,
+    "bank": -4.8,
+    "cmdBank": 0.0,
+    "alpha": -32.0,
+    "cmdAlpha": 0.0,
+    "mode": null,
+    "pathError": null,
+    "station": null,
+    "planID": null,
+    "contact": "stopped",
+    "ground": {
+      "evidence": "measured",
+      "mainGear": true,
+      "noseGear": true,
+      "wheelCount": 3
+    },
+    "flare": {
+      "wheelHeight": null,
+      "desiredSink": null,
+      "triggerHeight": null,
+      "predictedTouchdownAlong": null
+    },
+    "force": {
+      "requestedForce": null,
+      "modeledForce": null,
+      "forceResidual": null
+    }
+  },
+  "firstContact": [
+    {
+      "ut": 19089.560376011596,
+      "phase": "touchdown",
+      "along": -892.5,
+      "cross": -1605.2,
+      "height": 2.4,
+      "radar": 3.5,
+      "speed": 49.4,
+      "sink": -0.65,
+      "headingError": 103.3,
+      "bank": 7.4,
+      "cmdBank": 0.0,
+      "alpha": 10.1,
+      "cmdAlpha": 0.0,
+      "mode": null,
+      "pathError": null,
+      "station": null,
+      "planID": null,
+      "contact": "mainGear",
+      "ground": {
+        "evidence": "measured",
+        "mainGear": true,
+        "noseGear": false,
+        "wheelCount": 3
+      },
+      "flare": {
+        "wheelHeight": null,
+        "desiredSink": null,
+        "triggerHeight": null,
+        "predictedTouchdownAlong": null
+      },
+      "force": {
+        "requestedForce": null,
+        "modeledForce": null,
+        "forceResidual": null
+      }
+    }
+  ]
+}
