@@ -61,7 +61,8 @@ public final class FlightController {
   /// non-RCS (surface and wheel) authority covers this attitude law's own
   /// demand on every axis: the bandwidth times the configured maximum pitch
   /// rate and TAEM roll rate, with the body yaw a stability-axis roll needs
-  /// at the measured AoA. Release then latches; approach and flare never use RCS.
+  /// at the measured AoA; pitch counts only the input left after trim.
+  /// Release then latches; approach and flare never use RCS.
   /// Missing non-RCS evidence keeps RCS rather than guessing authority.
   public func reactionControl(state: VehicleState, phase: MissionPhase) -> Bool {
     guard configuration.vehicle.rcsAttitudeControl else { return false }
@@ -76,7 +77,10 @@ public final class FlightController {
     let roll = wn.roll * rollRate
     let required = Vector3(roll, wn.pitch * p.maximumPitchRate, roll * abs(sin(a.angleOfAttack)))
     let available = report.minimumAcceleration
-    if available.x >= required.x, available.y >= required.y, available.z >= required.z {
+    // Pitch must also hold trim: only the input left after the controller's
+    // steady balancing input is free for manoeuvre.
+    let pitchHeadroom = available.y * max(0, 1 - abs(pitchTrim))
+    if available.x >= required.x, pitchHeadroom >= required.y, available.z >= required.z {
       reactionControlReleased = true
     }
     return !reactionControlReleased
