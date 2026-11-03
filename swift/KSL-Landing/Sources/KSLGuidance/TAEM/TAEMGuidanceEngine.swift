@@ -35,6 +35,7 @@ public struct TAEMStatus: Codable, Sendable {
   /// Necessary same-profile force check; not a flight certificate.
   public var descentCheckFailure: String?
   public var predictedNEPEnergy: Double?
+  public var forceFit: TAEMNormalForceFit? = nil
   public var referenceTracking: Bool?
 }
 
@@ -853,32 +854,19 @@ final class TAEMGuidanceEngine {
       vertical = max(vertical, support + speed * (pressureBound(v.maximumDynamicPressure) - state.flightPathAngle) / tau)
     }
 
-    // One lift vector: vertical first, lateral from what remains.
-    let floorAlpha = min(ceiling, max(0, v.minimumAngleOfAttack))
-    let cannotHoldReference = referenceUsable && vertical > attainableNormal && p.height < targetHeight
-      && a.dynamicPressure < frontQ
-    // Recovery uses the same jointly attainable force cone as tracking.
-    // Previously the best-L/D fallback tilted almost all efficient lift into
-    // a 70-degree turn, silently sacrificing descent support. Preserve the
-    // normal acceleration needed for the glide/pressure recovery and steer
-    // with what remains. Maximum lift/load/trim limits remain authoritative.
-    vertical = clamp(vertical, 0, maximumLift)
-    // A nearly ballistic descent has little lift to tilt. Do not turn a
-    // small lateral correction into a near-limit roll solely because the
-    // planned vertical component is small; defer that correction instead.
-    if referenceUsable, support > 0, vertical < support {lateral *= vertical/support}
-    let lateralLimit = min(sqrt(max(0, maximumLift * maximumLift - vertical * vertical)),
-      vertical * tan(v.maximumBank))
-    lateral = clamp(lateral, -lateralLimit, lateralLimit)
-    let total = hypot(vertical, lateral)
-    let solution = aero.liftSolution(acceleration: total / max(1e-9, liftGain), mass: state.mass,
-      dynamicPressure: a.dynamicPressure, mach: a.mach, minimumAlpha: floorAlpha, maximumAlpha: ceiling,
-      gear: state.systems.gearDown)
-    // If even maximum lift cannot hold a reference above the aircraft, more
-    // incidence only spends range. Best L/D is the attainable recovery;
-    // retain q/load protections and defer the turn until support returns.
-    let alpha = cannotHoldReference ? bestAlpha : solution.alpha
-    let bank = cannotHoldReference ? 0 : (total > 0 ? atan2(lateral, vertical) : 0)
+    // The desired vertical profile is an objective, not a reservation of
+    // every available newton. Fit one actual polar lift/bank/drag choice.
+    // An already exceeded configured q limit retains straight pressure recovery.
+    let requestedLateral = a.dynamicPressure > v.maximumDynamicPressure ? 0 : lateral
+    let fitted = try? TAEMNormalForceFitter.fit(vertical: vertical, lateral: requestedLateral,
+      state: state, configuration: c, aerodynamics: aero.scaled(lift: liftGain, drag: dragGain),
+      maximumAlpha: ceiling, baseTarget: .init())
+    status.forceFit = fitted
+    // Legacy spatial geometry stays advisory while the command-search worker
+    // establishes a complete continuation. Do not render it as tracked motion.
+    status.referenceTracking = false
+    let alpha = fitted?.target.angleOfAttack ?? bestAlpha
+    let bank = fitted?.target.bank ?? 0
     let gear = state.systems.gearDown || p.height <= (c.guidance.gearDeploymentAltitude ?? 1500)
     return .init(angleOfAttack: alpha, bank: bank,
       desiredSpeed: sqrt(2 * commandedQ / density),

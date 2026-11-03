@@ -35,8 +35,8 @@ public enum TerminalRecoveryOrder {
     guard let a = challenger.evaluation, let b = incumbent.evaluation,
       let ac = a.comparisonContext, let bc = b.comparisonContext else { return .unassessed }
     guard ac == bc else { return .contextMismatch }
-    let completeA = a.status == .complete && validAccounting(challenger)
-    let completeB = b.status == .complete && validAccounting(incumbent)
+    let completeA = hasCompleteAccounting(challenger)
+    let completeB = hasCompleteAccounting(incumbent)
     if completeA != completeB { return completeA ? .challengerPreferred : .incumbentPreferred }
     guard completeA else { return .unassessed }
     if challenger.qualified != incumbent.qualified {
@@ -64,6 +64,10 @@ public enum TerminalRecoveryOrder {
     if zip(av, bv).allSatisfy({ $0 <= $1 }) { return .challengerPreferred }
     if zip(bv, av).allSatisfy({ $0 <= $1 }) { return .incumbentPreferred }
     return .incomparableOutcomes
+  }
+
+  public static func hasCompleteAccounting(_ result: TerminalClosedLoopCase) -> Bool {
+    result.evaluation?.status == .complete && validAccounting(result)
   }
 
   private static func validAccounting(_ result: TerminalClosedLoopCase) -> Bool {

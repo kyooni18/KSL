@@ -1,0 +1,112 @@
+{
+  "exception": {
+    "codes": "0x0000000000000002, 0x000000016cfbbfe0",
+    "message": "Thread stack size exceeded",
+    "rawCodes": [
+      2,
+      6123405280
+    ],
+    "type": "EXC_BAD_ACCESS",
+    "signal": "SIGBUS",
+    "subtype": "KERN_PROTECTION_FAILURE at 0x000000016cfbbfe0"
+  },
+  "frames": [
+    {
+      "symbol": "stringRefEqualsCString(__swift::__runtime::llvm::StringRef, char const*)",
+      "offset": 4
+    },
+    {
+      "symbol": "descriptorFromStandardMangling(swift::Demangle::__runtime::Node*)",
+      "offset": 316
+    },
+    {
+      "symbol": "_findContextDescriptor(swift::Demangle::__runtime::Node*, swift::Demangle::__runtime::Demangler&)",
+      "offset": 184
+    },
+    {
+      "symbol": "swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledTypeDecl(swift::Demangle::__runtime::Node*, unsigned int, swift::TargetContextDescriptor<swift::InProcess> const*&, swift::MetadataPackOrValue&, bool&)",
+      "offset": 204
+    },
+    {
+      "symbol": "swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledType(swift::Demangle::__runtime::Node*, unsigned int, bool, bool)",
+      "offset": 6716
+    },
+    {
+      "symbol": "swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeGenericArgs(swift::Demangle::__runtime::Node*, unsigned int, __swift::__runtime::llvm::SmallVectorImpl<swift::MetadataPackOrValue>&)",
+      "offset": 456
+    },
+    {
+      "symbol": "swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledType(swift::Demangle::__runtime::Node*, unsigned int, bool, bool)",
+      "offset": 932
+    },
+    {
+      "symbol": "swift_getTypeByMangledNodeImpl(swift::MetadataRequest, swift::Demangle::__runtime::Demangler&, swift::Demangle::__runtime::Node*, void const* const*, std::__1::function<void const* (unsigned int, unsigned int)>, std::__1::function<swift::TargetWitnessTable<swift::InProcess> const* (swift::TargetMetadata<swift::InProcess> const*, unsigned int)>)",
+      "offset": 788
+    },
+    {
+      "symbol": "swift_getTypeByMangledNode",
+      "offset": 336
+    },
+    {
+      "symbol": "swift_getTypeByMangledNameImpl(swift::MetadataRequest, __swift::__runtime::llvm::StringRef, void const* const*, std::__1::function<void const* (unsigned int, unsigned int)>, std::__1::function<swift::TargetWitnessTable<swift::InProcess> const* (swift::TargetMetadata<swift::InProcess> const*, unsigned int)>)",
+      "offset": 1172
+    },
+    {
+      "symbol": "swift_getTypeByMangledName",
+      "offset": 336
+    },
+    {
+      "symbol": "swift_getTypeByMangledNameInContextImpl(char const*, unsigned long, swift::TargetContextDescriptor<swift::InProcess> const*, void const* const*)",
+      "offset": 188
+    },
+    {
+      "symbol": "__swift_instantiateConcreteTypeFromMangledNameV2",
+      "offset": 108
+    },
+    {
+      "symbol": "EnergyManagementEngine.evaluate(stations:from:dragMultiplier:liftMultiplier:advisoryOnly:trimAlphaCeiling:nominalEnergyPoint:)",
+      "offset": 2292
+    },
+    {
+      "symbol": "price #1 (_:) in NominalEnergyPointSolver.solve(from:trimAlphaCeiling:)",
+      "offset": 2012
+    },
+    {
+      "symbol": "NominalEnergyPointSolver.solve(from:trimAlphaCeiling:)",
+      "offset": 2612
+    },
+    {
+      "symbol": "HACPlanningEngine.plan(from:allowDirect:preview:controlSnapshot:previousTarget:targetLimiter:nativeSeed:context:)",
+      "offset": 3344
+    },
+    {
+      "symbol": "LandingMissionController.prepareUpdate(_:advisories:dt:)",
+      "offset": 3060
+    },
+    {
+      "symbol": "LandingMissionController.update(_:)",
+      "offset": 2340
+    },
+    {
+      "symbol": "TAEMMainstreamIntegrationTests.testDefaultMissionIssuesCoupledRecoveryAndDefaultWorkerRunsCommandSearch()",
+      "offset": 1544
+    },
+    {
+      "symbol": "@objc closure #1 in TAEMMainstreamIntegrationTests.testDefaultMissionIssuesCoupledRecoveryAndDefaultWorkerRunsCommandSearch()",
+      "offset": 1
+    },
+    {
+      "symbol": "partial apply for @objc closure #1 in TAEMMainstreamIntegrationTests.testDefaultMissionIssuesCoupledRecoveryAndDefaultWorkerRunsCommandSearch()",
+      "offset": 1
+    },
+    {
+      "symbol": "thunk for @escaping @callee_guaranteed @Sendable @async () -> ()",
+      "offset": 1
+    },
+    {
+      "symbol": "partial apply for thunk for @escaping @callee_guaranteed @Sendable @async () -> ()",
+      "offset": 1
+    }
+  ],
+  "resolution": "Remove external-planning synchronous first-tick HAC call; immutable heap recovery proposals; final focused checks pass"
+}

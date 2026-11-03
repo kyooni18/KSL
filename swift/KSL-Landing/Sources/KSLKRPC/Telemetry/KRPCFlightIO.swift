@@ -815,13 +815,25 @@ public actor KRPCFlightIO: OrbitalWarpFlightIO {
       return achieved.ut
     } catch {
       if ownsRailsWarp {
-        // A failed set-factor response can leave warp active. Reconnect the
-        // independent SpaceCenter session and explicitly demand 1x.
-        for _ in 0..<3 {
-          do { try await requestFactor(0); break }
-          catch { try? await Task.sleep(for: .milliseconds(250)) }
-        }
-        ownsRailsWarp = false
+        // Cancellation must not cancel its own physical cleanup. The prior
+        // cancelled-task retries all failed before sending a reset, then
+        // cleared ownership and left KSP in rails warp.
+        let cleanupSession = warpSession
+        let restored = await Task.detached { () -> Bool in
+          for _ in 0..<3 {
+            do {
+              try await cleanupSession.connect()
+              _ = try await cleanupSession.call([.init(procedure: "set_RailsWarpFactor",
+                arguments: [try KRPCValue.encodeRailsWarpFactor(0)])])
+              try await Task.sleep(for: .milliseconds(250))
+              let reply = try await cleanupSession.call([.init(procedure: "get_RailsWarpFactor")])
+              if try KRPCValue.decodeRailsWarpFactor(reply[0]) == 0 { return true }
+            } catch { try? await Task.sleep(for: .milliseconds(250)) }
+          }
+          return false
+        }.value
+        ownsRailsWarp = !restored
+        report(restored ? "cancel/fault cleanup verified 1x" : "warp cleanup unconfirmed; shutdown retains reset ownership")
       }
       throw error
     }

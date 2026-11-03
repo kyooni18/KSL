@@ -4,7 +4,7 @@ import KSLPhysics
 /// Commands, not attitude/position assignments. Segment duration is an explicit
 /// search variable in seconds, or time coverage for an achieved-course event.
 /// Topology interpretation belongs to the search.
-public struct TAEMCommandSegment: Sendable {
+public struct TAEMCommandSegment: Codable, Sendable {
   public let duration: Double
   public let command: GuidanceSolution
   /// Optional signed course work (radians, positive right). For this event

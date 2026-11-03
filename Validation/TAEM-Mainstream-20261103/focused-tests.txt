@@ -1,0 +1,79 @@
+Building for debugging...
+[Computing dependencies]
+[1 / 3]
+[1 / 2] SimulationTests-product
+[2 / 8] GuidanceTests-product
+[4 / 10] GuidanceTests-product
+[10 / 12] GuidanceTests-product
+Build complete! (1.86초)
+Test Suite 'Selected tests' started at 2026-11-03 12:34:16.800.
+Test Suite 'GuidanceTests.xctest' started at 2026-11-03 12:34:16.801.
+Test Suite 'JointNormalForceProjectionTests' started at 2026-11-03 12:34:16.801.
+Test Case '-[GuidanceTests.JointNormalForceProjectionTests testJointProjectionCanTradeDesiredSupportForTurnWithoutIncreasingVehicleLimits]' started.
+Test Case '-[GuidanceTests.JointNormalForceProjectionTests testJointProjectionCanTradeDesiredSupportForTurnWithoutIncreasingVehicleLimits]' passed (0.006 seconds).
+Test Suite 'JointNormalForceProjectionTests' passed at 2026-11-03 12:34:16.807.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'MM305AdmissionQualificationTests' started at 2026-11-03 12:34:16.807.
+Test Case '-[GuidanceTests.MM305AdmissionQualificationTests testPreviewPhysicalPassCannotTransferUnqualifiedNominalPlan]' started.
+Test Case '-[GuidanceTests.MM305AdmissionQualificationTests testPreviewPhysicalPassCannotTransferUnqualifiedNominalPlan]' passed (0.001 seconds).
+Test Suite 'MM305AdmissionQualificationTests' passed at 2026-11-03 12:34:16.808.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'NativeCommandRolloutTests' started at 2026-11-03 12:34:16.808.
+Test Case '-[GuidanceTests.NativeCommandRolloutTests testSharedRolloutMatchesNativePipelineWithWarmControllerAndLimiter]' started.
+Test Case '-[GuidanceTests.NativeCommandRolloutTests testSharedRolloutMatchesNativePipelineWithWarmControllerAndLimiter]' passed (0.003 seconds).
+Test Suite 'NativeCommandRolloutTests' passed at 2026-11-03 12:34:16.811.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.003 (0.003) seconds
+Test Suite 'TAEMMainstreamIntegrationTests' started at 2026-11-03 12:34:16.811.
+Test Case '-[GuidanceTests.TAEMMainstreamIntegrationTests testDefaultMissionIssuesCoupledRecoveryAndDefaultWorkerRunsCommandSearch]' started.
+Test Case '-[GuidanceTests.TAEMMainstreamIntegrationTests testDefaultMissionIssuesCoupledRecoveryAndDefaultWorkerRunsCommandSearch]' passed (0.236 seconds).
+Test Case '-[GuidanceTests.TAEMMainstreamIntegrationTests testScheduleCursorUsesMeasuredEpochAndDoesNotLoseTerminalHandoff]' started.
+Test Case '-[GuidanceTests.TAEMMainstreamIntegrationTests testScheduleCursorUsesMeasuredEpochAndDoesNotLoseTerminalHandoff]' passed (0.001 seconds).
+Test Suite 'TAEMMainstreamIntegrationTests' passed at 2026-11-03 12:34:17.048.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.237 (0.237) seconds
+Test Suite 'TAEMPredictionEvidenceTests' started at 2026-11-03 12:34:17.048.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandRefinementPollChangesRequestsWithinRealBoundsWithoutResettingOrigin]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandRefinementPollChangesRequestsWithinRealBoundsWithoutResettingOrigin]' passed (0.003 seconds).
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandSchedulePreservesHistoryAcrossSegmentsAndReturnsOnlyAPrefix]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandSchedulePreservesHistoryAcrossSegmentsAndReturnsOnlyAPrefix]' passed (0.005 seconds).
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandSearchRetainsUnsupportedCandidatesWithoutInventingContinuations]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testCommandSearchRetainsUnsupportedCandidatesWithoutInventingContinuations]' passed (0.002 seconds).
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testMeasuredMomentEvidenceExpiresWithoutRefreshFromModeledObservations]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testMeasuredMomentEvidenceExpiresWithoutRefreshFromModeledObservations]' passed (0.004 seconds).
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testRecordedRCSHandoffUsesExcludedTorqueAndRejectsMissingDecomposition]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testRecordedRCSHandoffUsesExcludedTorqueAndRejectsMissingDecomposition]' passed (0.002 seconds).
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testUnidentifiedPlantAndMissingSuffixNeverQualifyAsTerminalOutcomes]' started.
+Test Case '-[GuidanceTests.TAEMPredictionEvidenceTests testUnidentifiedPlantAndMissingSuffixNeverQualifyAsTerminalOutcomes]' passed (0.003 seconds).
+Test Suite 'TAEMPredictionEvidenceTests' passed at 2026-11-03 12:34:17.068.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.019 (0.020) seconds
+Test Suite 'TerminalRecoveryOrderTests' started at 2026-11-03 12:34:17.068.
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testComparisonRejectsMixedOriginsModelsAndPoliciesAndDoesNotRewardStopPrecision]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testComparisonRejectsMixedOriginsModelsAndPoliciesAndDoesNotRewardStopPrecision]' passed (0.004 seconds).
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testMissingSuffixCannotBeatCompleteFailedRecoveryAndBetterFailureNeedsNoQualification]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testMissingSuffixCannotBeatCompleteFailedRecoveryAndBetterFailureNeedsNoQualification]' passed (0.002 seconds).
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testPlanningRecordRetainsIncomparableTrialsAndDecodesLegacyAbsence]' started.
+Test Case '-[GuidanceTests.TerminalRecoveryOrderTests testPlanningRecordRetainsIncomparableTrialsAndDecodesLegacyAbsence]' passed (0.003 seconds).
+Test Suite 'TerminalRecoveryOrderTests' passed at 2026-11-03 12:34:17.077.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.009 (0.010) seconds
+Test Suite 'GuidanceTests.xctest' passed at 2026-11-03 12:34:17.077.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.275 (0.276) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 12:34:17.077.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.275 (0.277) seconds
+Test Suite 'Selected tests' started at 2026-11-03 12:34:17.161.
+Test Suite 'CoreTests.xctest' started at 2026-11-03 12:34:17.162.
+Test Suite 'GuidanceAuthorityRegressionTests' started at 2026-11-03 12:34:17.162.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testActiveAttitudeAuthorityRemainsContinuousAtAtmosphereBoundary]' started.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testActiveAttitudeAuthorityRemainsContinuousAtAtmosphereBoundary]' passed (0.002 seconds).
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testBrakingAReferenceCannotOvershootOrMoveAwayFromItsGoal]' started.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testBrakingAReferenceCannotOvershootOrMoveAwayFromItsGoal]' passed (0.000 seconds).
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testMeasuredZeroAuthorityDoesNotBecomeAnUnlimitedSlew]' started.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testMeasuredZeroAuthorityDoesNotBecomeAnUnlimitedSlew]' passed (0.000 seconds).
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testPredictionCopyPreservesSlewMomentumWithoutOvershoot]' started.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testPredictionCopyPreservesSlewMomentumWithoutOvershoot]' passed (0.000 seconds).
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testRequestedTargetsStayWithinTheConfiguredAttitudeEnvelope]' started.
+Test Case '-[CoreTests.GuidanceAuthorityRegressionTests testRequestedTargetsStayWithinTheConfiguredAttitudeEnvelope]' passed (0.000 seconds).
+Test Suite 'GuidanceAuthorityRegressionTests' passed at 2026-11-03 12:34:17.165.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.003 (0.004) seconds
+Test Suite 'CoreTests.xctest' passed at 2026-11-03 12:34:17.165.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.003 (0.004) seconds
+Test Suite 'Selected tests' passed at 2026-11-03 12:34:17.165.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.003 (0.005) seconds

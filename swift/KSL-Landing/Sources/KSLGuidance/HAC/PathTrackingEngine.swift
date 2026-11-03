@@ -163,32 +163,17 @@ public final class PathTrackingEngine {
       + speed * speed * ref.verticalCurvature
     let maxAlpha = rotation.supportedTrimAlpha(state, identifiedCeiling: identifiedTrimCeiling)
     let scale = max(Double.leastNormalMagnitude, liftEffectiveness)
-    let available = aero.liftSolution(acceleration: 0, mass: state.mass,
-      dynamicPressure: state.aerodynamics.dynamicPressure, mach: state.aerodynamics.mach,
-      minimumAlpha: configuration.vehicle.minimumAngleOfAttack, maximumAlpha: maxAlpha,
-      beta: state.aerodynamics.sideslip, gear: state.systems.gearDown).maximumAcceleration * scale
-    let force = NormalForceEnvelope(
-      maximumLift: min(available, configuration.vehicle.maximumLoadFactor * 9.80665),
-      maximumBank: configuration.vehicle.maximumBank)
-    // Follow the force required by the best available descending reference. A
-    // support floor here would turn every energy-short recovery into a pull-up
-    // and prevent the vehicle from exchanging height for airspeed. The force
-    // allocator itself limits normal force to the physically positive cone.
-    let allocation = force.allocate(vertical: vertical, lateral: lateral)
-    allocatedLateralAcceleration = allocation.lateral
-    let lift = aero.liftSolution(acceleration: allocation.lift / scale, mass: state.mass,
-      dynamicPressure: state.aerodynamics.dynamicPressure, mach: state.aerodynamics.mach,
-      minimumAlpha: configuration.vehicle.minimumAngleOfAttack, maximumAlpha: maxAlpha,
-      beta: state.aerodynamics.sideslip, gear: state.systems.gearDown)
-    // Past best L/D, extra alpha only buys drag. When the demand is out of
-    // reach, or speed nears the safe floor, give up height to protect speed
-    // rather than mushing at the trim ceiling.
-    var alpha = lift.alpha
     let safeSpeed = configuration.vehicle.minimumSafeSpeed ?? configuration.vehicle.landingSpeed
-    if !lift.achievable || speed < 1.15 * safeSpeed {
-      alpha = min(alpha, aero.bestGlideAlpha(mach: state.aerodynamics.mach, maximumAlpha: maxAlpha,
-        dynamicPressure: state.aerodynamics.dynamicPressure, gear: state.systems.gearDown))
-    }
+    let ceiling = speed < 1.15*safeSpeed
+      ? min(maxAlpha, aero.bestGlideAlpha(mach: state.aerodynamics.mach, maximumAlpha: maxAlpha,
+          dynamicPressure: state.aerodynamics.dynamicPressure, gear: state.systems.gearDown)) : maxAlpha
+    let fitted = try? TAEMNormalForceFitter.fit(vertical: vertical,
+      lateral: state.aerodynamics.dynamicPressure > configuration.vehicle.maximumDynamicPressure ? 0 : lateral,
+      state: state, configuration: configuration, aerodynamics: aero.scaled(lift: scale, drag: 1),
+      maximumAlpha: ceiling, baseTarget: .init())
+    allocatedLateralAcceleration = fitted?.modeled.y ?? 0
+    let alpha = fitted?.target.angleOfAttack ?? ceiling
+    let bank = fitted?.target.bank ?? 0
     let brake: Double
     if ref.segment != .final, priced, let nepDistance = plan.nominalEnergyStation?.distance {
       let existing = a.dynamicPressure * (configuration.vehicle.speedbrakeFullDeploymentDragArea ?? 0)
@@ -201,7 +186,7 @@ public final class PathTrackingEngine {
         mass: state.mass, remainingDistance: nepDistance-ref.distance,
         target: plan.nominalEnergyPoint, cleanDragAcceleration: cleanDrag)
     } else { brake = 0 }
-    return (.init(angleOfAttack: alpha, bank: allocation.bank,
+    return (.init(angleOfAttack: alpha, bank: bank,
       desiredSpeed: priced ? ref.speed : (configuration.vehicle.minimumSafeSpeed ?? configuration.vehicle.landingSpeed),
       desiredHeight: heightTarget, desiredFlightPath: desiredGamma,
       gearDown: state.systems.gearDown || p.height <= (configuration.guidance.gearDeploymentAltitude ?? 1500),

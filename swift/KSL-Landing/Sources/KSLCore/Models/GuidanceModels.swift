@@ -73,6 +73,7 @@ public struct GuidanceSolution: Codable, Sendable {
   public let pathRemaining: Double
   public var diagnostic: String
   /// Absent in legacy records and commands that bypass the airborne limiter.
+  public var commandRecovery: CommandRecoveryDiagnostics?
   public var targetHistory: GuidanceCommandTrace?
   public var entry: EntryDiagnostics?
   public var approach: ApproachDiagnostics?
@@ -128,5 +129,27 @@ public struct TrajectoryPrediction: Codable, Sendable {
     self.violations = violations
     self.duration = duration
     self.reachedTerminalRegion = reachedTerminalRegion
+  }
+}
+
+/// Default TAEM command owner; absent in older recordings.
+public struct CommandRecoveryDiagnostics: Codable, Sendable {
+  public var mode: String
+  public var proposalID: String?
+  public var candidateID: String?
+  public var evaluatedCandidates: Int
+  public var forecastComplete: Bool
+  public var runwayQualified: Bool
+  public var sourceTime: Double?
+  public var forecastFailure: String? = nil
+  public var requestedForce: Vector2? = nil
+  public var modeledForce: Vector2? = nil
+  public var forceResidual: Vector2? = nil
+  public init(mode: String, proposalID: String? = nil, candidateID: String? = nil,
+              evaluatedCandidates: Int = 0, forecastComplete: Bool = false,
+              runwayQualified: Bool = false, sourceTime: Double? = nil) {
+    self.mode = mode; self.proposalID = proposalID; self.candidateID = candidateID
+    self.evaluatedCandidates = evaluatedCandidates; self.forecastComplete = forecastComplete
+    self.runwayQualified = runwayQualified; self.sourceTime = sourceTime
   }
 }

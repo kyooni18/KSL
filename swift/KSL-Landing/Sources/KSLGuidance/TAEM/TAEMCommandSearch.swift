@@ -8,7 +8,7 @@ public enum TAEMCommandTopology: String, Codable, Sendable {
   case windingLeft, windingRight, returnLeft, returnRight
   case leftRight, rightLeft, incumbent, protection
 }
-public struct TAEMCommandCandidate: Sendable {
+public struct TAEMCommandCandidate: Codable, Sendable {
   public let id: String
   public let topology: TAEMCommandTopology
   public let segments: [TAEMCommandSegment]

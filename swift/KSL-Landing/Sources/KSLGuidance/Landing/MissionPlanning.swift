@@ -16,6 +16,8 @@ public struct MissionPlanningRequest: Sendable {
   public var environment = EnvironmentCalibration()
   public var hac: HACFitContext? = nil
   /// Dynamics revision observed before taking the planning snapshot.
+  public var taemRecovery = false
+  public var taemIncumbent: [TAEMCommandSegment]? = nil
   public var dynamicsRevision: UInt64? = nil
 
   /// Preserve one immutable flight snapshot, but hand each independent worker
@@ -28,7 +30,7 @@ public struct MissionPlanningRequest: Sendable {
   public func terminalOnly() -> Self {
     .init(time: time, entry: nil, terminalState: terminalState, controls: controls,
       previousTarget: previousTarget, targetLimiter: targetLimiter, approach: approach, environment: environment,
-      hac: hac, dynamicsRevision: dynamicsRevision)
+      hac: hac, taemRecovery: taemRecovery, taemIncumbent: taemIncumbent, dynamicsRevision: dynamicsRevision)
   }
 }
 
@@ -36,6 +38,7 @@ public struct MissionPlanningProposal: Codable, Sendable {
   public let time: Double
   public let entry: EntryPlanningProposal?
   public let terminal: PlanningResult?
+  public var recovery: TAEMRecoveryProposal? = nil
   public var approach: ApproachPlanningProposal?
   /// Nil in historical records, which must retain their conservative time rule.
   public var dynamicsRevision: UInt64? = nil
@@ -66,6 +69,15 @@ public actor MissionPlanningWorker {
   public func plan(_ request: MissionPlanningRequest) -> MissionPlanningProposal {
     if let final = request.approach {
       return .init(time: request.time, entry: nil, terminal: nil, approach: approach.plan(final),
+        dynamicsRevision: request.dynamicsRevision)
+    }
+    if request.taemRecovery, let state = request.terminalState {
+      let model = request.hac.map { aerodynamics.scaled(lift: $0.liftScale, drag: $0.dragScale) } ?? aerodynamics
+      let recovery = TAEMRecoveryPlanner.plan(state: state, configuration: configuration,
+        atmosphere: atmosphere.corrected(request.environment), aerodynamics: model,
+        controls: request.controls, limiter: request.targetLimiter ?? .init(previous: request.previousTarget),
+        context: request.hac, incumbent: request.taemIncumbent)
+      return .init(time: request.time, entry: nil, terminal: nil, recovery: recovery,
         dynamicsRevision: request.dynamicsRevision)
     }
     let terminalResult = request.terminalState.map {

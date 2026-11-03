@@ -28,6 +28,11 @@ public final class LandingMissionController {
   public private(set) var advisoryPlan: TerminalPlan?
   public var controlFeedback: ControlDiagnostics?
   public var controlSnapshot: FlightControlSnapshot?
+  public private(set) var lastRecoveryProposal: TAEMRecoveryProposal?
+  private var recoveryCursor: TAEMCommandCursor?
+  private var recoveryContinuation: TerminalPlan?
+  private var activeRecoveryProposal: TAEMRecoveryProposal?
+  private let permitsSynchronousCommandPlanning: Bool
   private var lastPlanAttempt = -Double.infinity
   private var stoppedSince: Double?
   private var poorTrackingSince: Double?
@@ -66,6 +71,7 @@ public final class LandingMissionController {
     controlSnapshot = nil; controlFeedback = nil
     lastPlanningResult = nil; lastAdmission = nil; lastPlanAttempt = -.infinity
     lastCapture = nil; advisoryPlan = nil; publishedTerminalEpoch = nil
+    lastRecoveryProposal = nil; recoveryCursor = nil; recoveryContinuation = nil; activeRecoveryProposal = nil
     if plan != nil {
       activePlanDynamicsCurrent = false; activeReferenceCache = nil
       poorTrackingSince = nil
@@ -79,6 +85,7 @@ public final class LandingMissionController {
     initialPlan: TerminalPlan? = nil, entryReplanning: Bool = true
   ) {
     self.configuration = configuration
+    permitsSynchronousCommandPlanning = entryReplanning
     self.atmosphere = atmosphere; self.aerodynamics = aerodynamics
     self.externalPlanning = externalPlanning
     phase = initialPhase
@@ -163,8 +170,8 @@ public final class LandingMissionController {
   }
   private func terminalSearchDue(_ state: VehicleState) -> Bool {
     // HAC previews advise MM304 only; TAEM owns MM305 without a certificate.
-    phase == .entry && !hacCompleted
-      && (plan != nil || inTerminalSearchEnvelope(state))
+    [.entry, .acquisition, .headingAlignment].contains(phase) && !hacCompleted
+      && (phase != .entry || plan != nil || inTerminalSearchEnvelope(state))
       && state.time - lastPlanAttempt >= configuration.guidance.terminalReplanInterval
   }
   public func shouldPrioritizeTerminalSearch(_ state: VehicleState) -> Bool {
@@ -194,7 +201,9 @@ public final class LandingMissionController {
       ? entry.request(from: state, controls: controls, previousTarget: limiter.previous, targetLimiter: limiter) : nil
     guard entryRequest != nil || terminalState != nil else { return nil }
     return .init(time: state.time, entry: entryRequest, terminalState: terminalState,
-      controls: controls, previousTarget: limiter.previous, targetLimiter: limiter, environment: environment, hac: hacContext())
+      controls: controls, previousTarget: limiter.previous, targetLimiter: limiter, environment: environment, hac: hacContext(),
+      taemRecovery: phase == .acquisition || phase == .headingAlignment,
+      taemIncumbent: recoveryCursor?.tail)
   }
   public func accept(_ proposal: MissionPlanningProposal, state: VehicleState) {
     guard proposal.time <= state.time else { return }
@@ -206,6 +215,22 @@ public final class LandingMissionController {
     // an old plan, but acceptTerminal also updates MM304's advisory and the
     // last physical verdict before admission; do not let an expired result
     // overwrite either of them.
+    if let recovery = proposal.recovery,
+      state.time-proposal.time <= 2*configuration.guidance.terminalReplanInterval,
+      lastRecoveryProposal.map({ recovery.time > $0.time }) ?? true {
+      lastRecoveryProposal = recovery
+      // A model forecast is not a license to replay a stale join. A fresh
+      // first command uses the existing limiter; otherwise keep measured-state
+      // local recovery and ask the next worker to rebase the incumbent.
+      if recovery.candidate != nil,
+        recovery.outcome.map({ TerminalRecoveryOrder.hasCompleteAccounting($0) }) == true,
+        state.time-recovery.time <= configuration.guidance.maximumSnapshotSpan {
+        recoveryCursor = .init(proposal: recovery, state: state, configuration: configuration)
+        recoveryContinuation = recovery.candidate?.segments.isEmpty == true ? recovery.continuation : nil
+        activeRecoveryProposal = recovery
+        tracker.reset()
+      }
+    }
     if let result = proposal.terminal,
       state.time - proposal.time <= 2 * configuration.guidance.terminalReplanInterval,
       publishedTerminalEpoch.map({ proposal.time > $0 }) ?? true {
@@ -240,7 +265,13 @@ public final class LandingMissionController {
     // Mach and TAEM regenerates its ground track every cycle.
   }
   /// Keep the active route and target limiter, but restart the sample clock.
-  public func resumeAfterTelemetryGap() { previousTime = nil }
+  public func resumeAfterTelemetryGap() {
+    previousTime = nil
+    recoveryCursor = nil; recoveryContinuation = nil; activeRecoveryProposal = nil
+    lastPlanAttempt = -.infinity
+    // Preserve limiter history; recover locally from the fresh measured state
+    // until the worker rebases a new command forecast.
+  }
   private func prepareUpdate(_ state: VehicleState, advisories: inout [ConstraintViolation],
                              dt: inout Double) throws -> GuidanceSolution? {
     try state.validate(configuration: configuration)
@@ -253,7 +284,7 @@ public final class LandingMissionController {
     if previousTime == nil && [.approach, .preflare, .flare].contains(phase), !approach.canCapture(state) {
       advisories.append(.init(.modelUncertainty, "Initial Final capture/energy model advisory"))
     }
-    if previousTime == nil && [.acquisition, .headingAlignment].contains(phase) {
+    if previousTime == nil && !externalPlanning && [.acquisition, .headingAlignment].contains(phase) {
       if plan == nil {
         acceptTerminal(planner.plan(from: state, allowDirect: !hacContext().onSpiral,
           controlSnapshot: controlSnapshot, previousTarget: limiter.previous, targetLimiter: limiter), state: state)
@@ -419,10 +450,33 @@ public final class LandingMissionController {
             ?? nominalEnergyPoint?.point)
         }
         if let nep = nominalEnergyPoint?.point, !approach.recoveryDue(state) {
-          let target = taem.update(state, nep: nep, liftGain: authority.liftEffectiveness,
+          var target = taem.update(state, nep: nep, liftGain: authority.liftEffectiveness,
             dragGain: authority.dragEffectiveness, attainableAlphaCeiling: attainableAlphaCeiling,
             pitchResponseSeconds: controlFeedback?.pitchResponseSeconds,
             rollResponseSeconds: controlFeedback?.rollResponseSeconds)
+          if !externalPlanning && permitsSynchronousCommandPlanning && state.time-lastPlanAttempt >= configuration.guidance.terminalReplanInterval {
+            let context = hacContext()
+            let recovery = TAEMRecoveryPlanner.plan(state: state, configuration: configuration,
+              atmosphere: atmosphere.corrected(environment),
+              aerodynamics: aerodynamics.scaled(lift: context.liftScale, drag: context.dragScale),
+              controls: controlSnapshot, limiter: limiter, context: context, incumbent: recoveryCursor?.tail)
+            lastPlanAttempt = state.time
+            accept(.init(time: state.time, entry: nil, terminal: nil, recovery: recovery), state: state)
+          }
+          if var cursor = recoveryCursor {
+            if let command = cursor.update(state) { target = command; recoveryCursor = cursor }
+            else {
+              if cursor.finished { recoveryContinuation = cursor.proposal.continuation }
+              recoveryCursor = nil
+              if recoveryContinuation == nil { activeRecoveryProposal = nil }
+            }
+          }
+          if let continuation = recoveryContinuation {
+            target = tracker.update(state, plan: continuation, liftEffectiveness: authority.liftEffectiveness,
+              identifiedTrimCeiling: attainableAlphaCeiling,
+              rollResponseSeconds: controlFeedback?.rollResponseSeconds,
+              pitchResponseSeconds: controlFeedback?.pitchResponseSeconds).0
+          }
           let s = taem.status
           var violations: [ConstraintViolation] = []
           if s.insufficientEnergy {
@@ -501,7 +555,9 @@ public final class LandingMissionController {
       aerodynamics: aerodynamics, identifiedTrimCeiling: attainableAlphaCeiling,
       liftEffectiveness: authority.liftEffectiveness)
     if [.acquisition, .headingAlignment].contains(phase) {
-      if taem.status.referenceTracking == true, let nep = nominalEnergyPoint?.point {
+      if recoveryCursor != nil || recoveryContinuation != nil {
+        // Preserve the drag-device command that was actually priced.
+      } else if taem.status.referenceTracking == true, let nep = nominalEnergyPoint?.point {
         requested.speedbrakeFraction = speedbrake.feedback(state, target: nep,
           remainingDistance: taem.status.range, dt: dt,
           responseSeconds: max(configuration.guidance.pathLookaheadTime, controlFeedback?.pitchResponseSeconds ?? 0),
@@ -527,6 +583,21 @@ public final class LandingMissionController {
       phase: raw.phase, target: target, violations: raw.violations, planID: raw.planID,
       pathRemaining: raw.pathRemaining, diagnostic: raw.diagnostic)
     solution.targetHistory = .init(requested: requested, before: limiterBefore, after: limiter)
+    if [.acquisition, .headingAlignment].contains(phase) {
+      solution.commandRecovery = .init(mode: recoveryContinuation != nil ? "command-terminal-continuation" : (recoveryCursor == nil ? "local-coupled-no-complete-forecast" : "command-schedule"),
+        proposalID: (activeRecoveryProposal ?? lastRecoveryProposal)?.id, candidateID: (recoveryCursor != nil || recoveryContinuation != nil) ? activeRecoveryProposal?.candidate?.id : nil,
+        evaluatedCandidates: lastRecoveryProposal?.trials.count ?? 0,
+        forecastComplete: recoveryCursor != nil || recoveryContinuation != nil,
+        runwayQualified: (recoveryCursor != nil || recoveryContinuation != nil) ? activeRecoveryProposal?.outcome?.qualified ?? false : false,
+        sourceTime: (activeRecoveryProposal ?? lastRecoveryProposal)?.time)
+      solution.commandRecovery?.forecastFailure = lastRecoveryProposal?.failure
+      if recoveryCursor == nil && recoveryContinuation == nil, let fit = taem.status.forceFit {
+        solution.commandRecovery?.requestedForce = fit.requested
+        solution.commandRecovery?.modeledForce = fit.modeled
+        solution.commandRecovery?.forceResidual = fit.residual
+      }
+      solution.diagnostic += "; commandRecovery=\(solution.commandRecovery!.mode) evaluated=\(solution.commandRecovery!.evaluatedCandidates)"
+    }
     solution.violations += advisories
     // The airborne NEP continues to steer TAEM even when the selected
     // pavement cannot support its modeled rollout. Keep that deficit visible
